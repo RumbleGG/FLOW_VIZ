@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="flowviz-doc" content="{{DOC}}">
+<meta name="flowviz-kind" content="report">
+<title>{{TITLE}}</title>
+<!-- flowviz:head -->
+</head>
+<body>
+
+<!-- ══════════════ LAYER 1 — THE CARD ══════════════
+     One screen, never scrolls. The title is a claim with a verb, ≤70 chars.
+     Verdict ≤50 words · so what ≤30 · ≤5 vitals · ≤4 next, each tagged. -->
+<div class="card">
+  <div class="top">
+    <span class="chip warn"><span class="d"></span>Status in two to four words</span>
+    <span class="meta">{{DATE}} · what this covers</span>
+  </div>
+
+  <h1>{{TITLE}}</h1>
+
+  <div class="slot">
+    <span class="k">Verdict</span>
+    <div class="v" data-slot="verdict">The answer in one or two sentences, the way you would say it in a hallway, with the evidence that settles it.</div>
+  </div>
+
+  <div class="slot wh">
+    <span class="k">So what</span>
+    <div class="v" data-slot="sowhat">The consequence, or the decision this forces, in one sentence that does not repeat the verdict.</div>
+  </div>
+
+  <div class="vitals">
+    <div><div class="n">0</div><div class="l">first measure</div></div>
+    <div><div class="n">0</div><div class="l">second measure</div></div>
+    <div><div class="n">0</div><div class="l">third measure</div></div>
+  </div>
+
+  <div class="next">
+    <span class="k">Next</span>
+    <ol>
+      <li>Name the first thing the reader should do <span class="badge ro">read-only</span></li>
+      <li>Name the change the reader should approve <span class="badge w">write</span></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══════════════ LAYER 2 — THE SPINE ══════════════
+     Exactly one diagram. The default is a drawing (≤9 boxes): write its spec and
+     depth, the runtime draws it. A hand-written <div class="dia"><svg>…</svg></div>
+     is allowed instead. Extra diagrams go inside rows. -->
+<div class="spine">
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "spine",
+  "name": "System name",
+  "title": "Say what this picture shows, as a claim with a verb",
+  "lede": "Two sentences at most: what the drawing shows and the one thing to notice in it.",
+  "grid": { "cols": 4, "rows": 1 },
+  "zones": [
+    { "id": "zone1", "label": "Zone name", "cols": [1, 3], "rows": [0, 0], "tone": "neutral" }
+  ],
+  "nodes": [
+    { "id": "box1", "label": "Box 1", "kind": "client", "icon": "user", "at": [0, 0], "tech": "technology",
+      "peek": "One sentence: what this box does, and the number that matters most.", "facts": ["a fact with a number"] },
+    { "id": "box2", "label": "Box 2", "kind": "service", "icon": "service", "at": [1, 0], "tech": "technology",
+      "peek": "One sentence: what this box does, and the number that matters most.", "facts": ["a fact with a number"] },
+    { "id": "box3", "label": "Box 3", "kind": "service", "icon": "service", "at": [2, 0], "tech": "technology",
+      "peek": "One sentence: what this box does, and the number that matters most.", "facts": ["a fact with a number"] },
+    { "id": "box4", "label": "Box 4", "kind": "data", "icon": "db", "at": [3, 0], "tech": "technology",
+      "peek": "One sentence: what this box does, and the number that matters most.", "facts": ["a fact with a number"] }
+  ],
+  "edges": [
+    { "id": "box1-box2", "from": "box1", "to": "box2", "mode": "sync", "label": "protocol", "ms": "latency",
+      "peek": "One sentence: what travels on this connection and why." },
+    { "id": "box2-box3", "from": "box2", "to": "box3", "mode": "sync", "label": "protocol", "ms": "latency",
+      "peek": "One sentence: what travels on this connection and why." },
+    { "id": "box3-box4", "from": "box3", "to": "box4", "mode": "sync", "label": "protocol", "ms": "latency",
+      "peek": "One sentence: what travels on this connection and why." }
+  ],
+  "flows": [
+    { "id": "flow1", "label": "Flow 1", "summary": "One sentence: how many steps there are, and the one to watch.",
+      "steps": [
+        { "id": "f1s1", "path": ["box1", "box2"], "msg": "message", "say": "One sentence: what this step establishes or changes." },
+        { "id": "f1s2", "path": ["box2", "box3"], "msg": "message", "say": "One sentence: what this step establishes or changes." },
+        { "id": "f1s3", "path": ["box3", "box4"], "msg": "message", "say": "One sentence: what this step establishes or changes." }
+      ] }
+  ]
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="box1">
+  <p>Layer 3 for this box: tables, logs and <code>file:line</code> citations, as long as it needs.</p>
+</section>
+</div>
+</figure>
+</div>
+
+<div class="ctl">
+  <button id="flowExpand">Expand all</button>
+  <button id="flowCollapse">Collapse all</button>
+  <button id="flowAgentCopy">Copy captures for agent</button>
+  <button id="flowEvidence">Save evidence</button>
+  <span class="hint">nothing is open at load, by design</span>
+</div>
+
+<!-- ══════════════ THE ROWS ══════════════
+     ≤6. Each summary is a claim with a verb, ≤14 words, so the collapsed spine
+     reads as the argument. Layer 3 — logs, tables, citations — goes inside. -->
+<!-- row:begin -->
+<details class="row" data-row="{{ROW_ID}}">
+<summary><span class="ord">{{ROW_N}}</span><span class="cl">State this row's idea as a claim with a verb</span><span class="rt">1 min</span></summary>
+<div class="in">
+<p>Layer 3 for this idea: logs, tables, stack traces and <code>file:line</code> citations, as long as it needs.</p>
+<!-- playbook -->
+</div>
+</details>
+<!-- row:end -->
+
+<!-- ══════════════ PLAYBOOK SHAPES ══════════════
+     A step is a checkbox, a number and ONE sentence (≤20 words). Ids are the join
+     key for the human's pasted output: rename the scaffold's s1…sN to mnemonic ids
+     now, and never renumber one after a human may have pasted.
+     data-pass / data-fail: anchor every literal (\bFull\b, never Full). -->
+<!-- pb:begin -->
+<div class="pb" data-pb="playbook">
+  <div class="hd">
+    <span class="t">Name the playbook by what running it achieves</span>
+    <span class="tgt">target <input data-var="host" placeholder="the machine these commands run on" spellcheck="false"></span>
+    <span class="prog">0 / 0 done</span>
+  </div>
+  <ol class="steps">
+<!-- steps -->
+  </ol>
+</div>
+<!-- pb:end -->
+
+<!-- step-ro:begin -->
+    <li class="step" data-step="{{STEP_ID}}" data-risk="ro"{{AFTER}}>
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">State in one sentence what this step establishes.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>echo replace-with-the-command</code></pre></div>
+          <p class="expect"><b>Pass:</b> what good output looks like &nbsp;·&nbsp; <i>Fail:</i> what bad output looks like</p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["{{STEP_ID}}"]</span></div>
+            <textarea data-cap="{{STEP_ID}}" data-pass="\bPASS_SIGNAL\b" data-fail="\bFAIL_SIGNAL\b"
+              placeholder="paste the terminal output here — it saves as you type"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="{{STEP_ID}}" placeholder="0"></span>
+              <span data-cnt="{{STEP_ID}}">empty</span><span data-at="{{STEP_ID}}"></span>
+              <span class="rn" data-run="{{STEP_ID}}"></span>
+              <button class="rr" data-rr="{{STEP_ID}}" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="{{STEP_ID}}" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>Traps, fallbacks and <code>file:line</code> citations, as long as it needs.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="{{STEP_ID}}">—</span></span>
+    </li>
+<!-- step-ro:end -->
+
+<!-- step-w:begin -->
+    <li class="step" data-step="{{STEP_ID}}" data-risk="w"{{AFTER}}>
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">State in one sentence what this step changes.</span></summary>
+        <div class="in">
+          <label class="gate"><input type="checkbox" class="ack">
+            I accept that this writes to the target: name exactly what it changes.</label>
+          <div class="cmd"><button class="copy">copy</button><pre><code>echo replace-with-the-command-that-writes</code></pre></div>
+          <p class="expect"><b>Pass:</b> what good output looks like &nbsp;·&nbsp; <i>Fail:</i> what bad output looks like</p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["{{STEP_ID}}"]</span></div>
+            <textarea data-cap="{{STEP_ID}}" data-pass="\bPASS_SIGNAL\b" data-fail="\bFAIL_SIGNAL\b"
+              placeholder="paste the terminal output here — it saves as you type"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="{{STEP_ID}}" placeholder="0"></span>
+              <span data-cnt="{{STEP_ID}}">empty</span><span data-at="{{STEP_ID}}"></span>
+              <span class="rn" data-run="{{STEP_ID}}"></span>
+              <button class="rr" data-rr="{{STEP_ID}}" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="{{STEP_ID}}" placeholder="note for the agent (optional)">
+          </div>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge w">write</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="{{STEP_ID}}">—</span></span>
+    </li>
+<!-- step-w:end -->
+
+<!-- flowviz:foot -->
+<!-- flowviz:js -->
+</body>
+</html>

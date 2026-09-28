@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="flowviz-doc" content="flowviz-plan">
+<meta name="flowviz-kind" content="report">
+<title>FLOW_VIZ now draws systems as well as it writes reports</title>
+<!-- flowviz:head -->
+</head>
+<body>
+
+<!-- ══════════════ LAYER 1 — THE CARD ══════════════ -->
+<div class="card">
+  <div class="top">
+    <span class="chip ok"><span class="d"></span>Rebuilt, with drawings</span>
+    <span class="meta">v0.6.0 · 2026-09-28 · the toolkit, written to its own standard</span>
+  </div>
+
+  <h1>FLOW_VIZ now draws systems as well as it writes reports</h1>
+
+  <div class="slot">
+    <span class="k">Verdict</span>
+    <div class="v" data-slot="verdict">One toolkit now makes two deliverables. Reports keep the card, the
+    rows and the checklist playbook with paste boxes. Drawings put a system on a grid with motion, peeks,
+    a drawer, a walkthrough and segments. Both save what you type to a sidecar I read back with one command.</div>
+  </div>
+
+  <div class="slot wh">
+    <span class="k">So what</span>
+    <div class="v" data-slot="sowhat">Point any agent at <code>AGENTS.md</code>: it scaffolds, fills, builds
+    and audits either kind, and your pastes and notes come back to it structured.</div>
+  </div>
+
+  <div class="vitals">
+    <div><div class="n">2</div><div class="l">deliverables</div></div>
+    <div><div class="n">42</div><div class="l">caps measured</div></div>
+    <div><div class="n">11</div><div class="l">author checks</div></div>
+    <div><div class="n">39</div><div class="l">box icons</div></div>
+    <div><div class="n">0</div><div class="l">network deps</div></div>
+  </div>
+
+  <div class="next">
+    <span class="k">Next</span>
+    <ol>
+      <li>Serve this folder, then walk the checklist in row 3 <span class="badge ro">read-only</span></li>
+      <li>Open the checkout drawing and try hover, click and play <span class="badge ro">read-only</span></li>
+      <li>Decide on the two gated steps in row 6 <span class="badge w">write</span></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══════════════ LAYER 2 — THE SPINE ══════════════ -->
+<div class="spine">
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "roundtrip",
+  "name": "The round trip",
+  "title": "Your paste reaches me because every save lands in one sidecar",
+  "lede": "The top row hands a report to you; the bottom row brings what you typed back to me.",
+  "grid": { "cols": 4, "rows": 2 },
+  "zones": [
+    { "id": "out", "label": "Hand over", "cols": [0, 3], "rows": [0, 0], "tone": "sync" },
+    { "id": "back", "label": "Read back", "cols": [0, 3], "rows": [1, 1], "tone": "async", "tag": "bl" }
+  ],
+  "nodes": [
+    { "id": "agent", "label": "Agent", "kind": "client", "icon": "agent", "at": [0, 0], "tech": "any work folder",
+      "peek": "Works in the project folder, reads only AGENTS.md from here, and hands back one file.",
+      "facts": ["reads 1 doc"] },
+    { "id": "src", "label": "Source", "kind": "data", "icon": "file", "at": [1, 0], "tech": "NAME.src.html",
+      "peek": "The words and the drawing spec. No CSS, no JavaScript and no coordinates: those come from the toolkit.",
+      "facts": ["slots · spec · depth"] },
+    { "id": "build", "label": "Build + audit", "kind": "service", "icon": "gear", "at": [2, 0], "tech": "flowviz build, audit",
+      "peek": "Inlines the runtime, stamps the version, snapshots the old file, then measures every cap.",
+      "facts": ["exit 1 on OVER"] },
+    { "id": "html", "label": "Deliverable", "kind": "data", "icon": "browser", "at": [3, 0], "tech": "NAME.html",
+      "peek": "One self-contained file: styles, scripts and icons inline. Opens offline and prints cleanly.",
+      "facts": ["no network"] },
+    { "id": "you", "label": "You", "kind": "client", "icon": "user", "at": [3, 1], "tech": "a browser",
+      "peek": "You read the card, run the checklist, paste the output and leave notes on boxes.",
+      "facts": ["saves as you type"] },
+    { "id": "serve", "label": "Server", "kind": "service", "icon": "server", "at": [2, 1], "tech": "flowviz serve",
+      "peek": "Serves the folder on localhost and writes the sidecar atomically each time the page saves.",
+      "facts": ["127.0.0.1 only"] },
+    { "id": "sidecar", "label": "Sidecar", "kind": "data", "icon": "json", "at": [1, 1], "tech": "NAME.flow.json",
+      "peek": "The only state: captures, superseded runs, notes and ticks, all keyed by stable ids.",
+      "facts": ["schema 3"] },
+    { "id": "captures", "label": "Captures", "kind": "service", "icon": "terminal", "at": [0, 1], "tech": "flowviz captures",
+      "peek": "Joins each capture to its step and re-derives its verdict from the current rules.",
+      "facts": ["error is not fail"] }
+  ],
+  "edges": [
+    { "id": "agent-src", "from": "agent", "to": "src", "mode": "sync", "label": "writes", "ms": "minutes",
+      "peek": "The agent fills slots in a scaffold; it never invents structure." },
+    { "id": "src-build", "from": "src", "to": "build", "mode": "sync", "label": "build", "ms": "< 1 s",
+      "peek": "One command inlines the runtime and parses every drawing spec." },
+    { "id": "build-html", "from": "build", "to": "html", "mode": "sync", "label": "writes", "ms": "< 1 s",
+      "peek": "The previous output is copied to .flowviz/history before it is overwritten." },
+    { "id": "html-you", "from": "html", "to": "you", "mode": "sync", "label": "HTTP", "ms": "localhost",
+      "peek": "Served by flowviz serve. Opened from Finder instead, nothing you type reaches disk." },
+    { "id": "you-serve", "from": "you", "to": "serve", "mode": "async", "label": "PUT state", "ms": "700 ms debounce",
+      "peek": "Every tick, paste and note saves on its own, 700 ms after you stop typing." },
+    { "id": "serve-sidecar", "from": "serve", "to": "sidecar", "mode": "sync", "label": "atomic write", "ms": "fsync",
+      "peek": "mkstemp, fsync, os.replace: a crash mid-save leaves the old file, never half of one." },
+    { "id": "sidecar-captures", "from": "sidecar", "to": "captures", "mode": "sync", "label": "reads", "ms": "on demand",
+      "peek": "The read-back reads the sidecar, never the HTML, which holds no state." },
+    { "id": "captures-agent", "from": "captures", "to": "agent", "mode": "sync", "label": "joined output", "ms": "on demand",
+      "peek": "Each capture arrives attributed to its step, with its superseded attempts." }
+  ],
+  "flows": [
+    { "id": "handover", "label": "Hand over", "summary": "4 steps from a blank folder to a file you can open.",
+      "steps": [
+        { "id": "h1", "path": ["agent", "src"], "msg": "new + fill", "say": "The agent scaffolds a source file and writes every slot." },
+        { "id": "h2", "path": ["src", "build"], "msg": "build", "say": "The toolkit inlines the runtime, stamps the version and audits every cap." },
+        { "id": "h3", "path": ["build", "html"], "msg": "NAME.html", "say": "One self-contained file lands in the work folder." },
+        { "id": "h4", "path": ["html", "you"], "msg": "served", "say": "You open it through flowviz serve, never from Finder." }
+      ] },
+    { "id": "readback", "label": "Read back", "summary": "4 steps from your paste to my next move.",
+      "steps": [
+        { "id": "r1", "path": ["you", "serve"], "msg": "PUT state", "say": "Every tick, paste and note saves itself as you work." },
+        { "id": "r2", "path": ["serve", "sidecar"], "msg": "atomic write", "say": "The server writes the sidecar atomically and keeps one backup per run." },
+        { "id": "r3", "path": ["sidecar", "captures"], "msg": "read", "say": "flowviz captures reads the sidecar, never the HTML." },
+        { "id": "r4", "path": ["captures", "agent"], "msg": "joined output", "say": "Each capture reaches me joined to its step, its verdict re-derived." }
+      ] },
+    { "id": "finder", "label": "Opened from Finder", "summary": "3 steps showing the one way the loop fails silently.",
+      "steps": [
+        { "id": "x1", "path": ["html", "you"], "msg": "file://", "say": "Opened from Finder, the page has no server to save to." },
+        { "id": "x2", "path": ["you", "serve"], "msg": "PUT state", "fail": true, "say": "Saves stay in the browser, and the pill says local only." },
+        { "id": "x3", "path": ["sidecar", "captures"], "msg": "no sidecar", "fail": true, "say": "The read-back finds no sidecar and says so instead of guessing." }
+      ] }
+  ]
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="sidecar">
+  <p>The sidecar is the only state. It is keyed by ids that never change, so I can rewrite the report and
+  your captures, ticks and notes re-attach on load.</p>
+  <div class="cmd fig"><pre><code>{
+  "schema": 3, "doc": "flowviz-plan", "flowviz": "0.6.0",
+  "savedAt": "2026-09-28T21:14:08Z",
+  "captures": { "ap": { "text": "result: clean", "exit": "0",
+                        "verdict": "pass", "at": "2026-09-28T21:13:57Z",
+                        "runs": [ { "text": "result: 1 over", "verdict": "fail" } ] } },
+  "notes": { "roundtrip/node:serve": { "text": "port 8787 was taken", "at": "..." } }
+}</code></pre></div>
+</section>
+<section data-for="serve">
+  <table>
+    <thead><tr><th>Request</th><th>Does</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /</code></td><td>indexes every report and drawing under the folder, with capture and note counts</td></tr>
+      <tr><td><code>PUT …/_flow/state/&lt;doc&gt;</code></td><td>atomic write of <code>&lt;doc&gt;.flow.json</code> beside the page that saved it</td></tr>
+      <tr><td>first overwrite per run</td><td>copies the old sidecar to <code>.flowviz/state-backup/</code></td></tr>
+    </tbody>
+  </table>
+  <p>Binds <code>127.0.0.1</code> only. Refuses a doc id outside <code>[A-Za-z0-9._-]</code>, a body over
+  4 MB, a doc that does not match the URL, and any path outside the served folder.</p>
+</section>
+<section data-for="captures">
+  <p>What I see when you say "look at step 4":</p>
+  <div class="cmd fig"><pre><code>step 3  ap  read  PASS  Audit this plan against its own standard, layout caps included.
+  exit 0 · captured 14:13:57 PDT (2026-09-28T21:13:57Z)
+  | result: clean
+  run 1  14:09:02 PDT  fail
+  | result: 1 over, 0 failing checks</code></pre></div>
+</section>
+</div>
+</figure>
+</div>
+
+<div class="ctl">
+  <button id="flowExpand">Expand all</button>
+  <button id="flowCollapse">Collapse all</button>
+  <button id="flowAgentCopy">Copy captures for agent</button>
+  <button id="flowEvidence">Save evidence</button>
+  <span class="hint">nothing is open at load, by design</span>
+</div>
+
+<!-- ─────────── ROW 1 ─────────── -->
+<details class="row" data-row="r1">
+<summary><span class="ord">1</span><span class="cl">Two deliverables share one toolkit, one token layer and one state file</span><span class="rt">2 min</span></summary>
+<div class="in">
+
+<table>
+<thead><tr><th></th><th>Report</th><th>Drawing</th></tr></thead>
+<tbody>
+<tr><td>For</td><td>an answer, a root cause, a plan, commands to run</td><td>a system: what talks to what, in what order, what breaks</td></tr>
+<tr><td>Lands in</td><td>two minutes: card, then six collapsed rows</td><td>ten seconds: boxes and one moving flow</td></tr>
+<tr><td>Depth</td><td>inside rows, unlimited</td><td>in the drawer, unlimited</td></tr>
+<tr><td>You type</td><td>pasted output per step, a note per step</td><td>a note per box, connection or step</td></tr>
+<tr><td>Look</td><td>journal light, traditional dark</td><td>canvas light, night dark</td></tr>
+</tbody>
+</table>
+
+<p>A report's spine diagram is now a drawing by default: the same component, capped at nine boxes,
+wearing the report's paper and ink. The one you are looking at above is real — hover it, click a box,
+press <b>Walk through</b>.</p>
+
+<div class="cmd fig"><pre><code>FLOW_VIZ/
+  AGENTS.md    the only file an agent in another folder reads
+  SPEC.md      the standard: caps, schemas, vocabulary
+  CLAUDE.md    for agents changing the toolkit
+  VERSION      0.6.0, stamped into every footer
+  bin/         flowviz (cheat sheet) · new · build · audit · serve · captures
+  template/    flow.css flow.js (core, reports) · draw.css draw.js icons.svg (drawings)
+               report.src.html · drawing.src.html (the scaffolds)
+  examples/    checkout/ : the approved drawing, rebuilt by the toolkit
+  PLAN.html    this file</code></pre></div>
+
+</div>
+</details>
+
+<!-- ─────────── ROW 2 ─────────── -->
+<details class="row" data-row="r2">
+<summary><span class="ord">2</span><span class="cl">A drawing is written as a spec and drawn by the runtime</span><span class="rt">2 min</span></summary>
+<div class="in">
+
+<p>The agent writes a JSON spec — boxes placed on a grid, connections, up to three flows of one-sentence
+steps — and plain HTML for depth. It never writes coordinates, colours or animation. That is what makes
+every drawing behave the same, and what lets the audit count a drawing's caps without a browser.</p>
+
+<table>
+<thead><tr><th>Gesture</th><th>Shows</th><th>Budget</th></tr></thead>
+<tbody>
+<tr><td><b>Look</b></td><td>boxes, zones, the selected flow in motion, step numbers</td><td>≤12 boxes, ≤60 words</td></tr>
+<tr><td><b>Hover</b></td><td>a peek: one sentence, up to three facts</td><td>≤25 words</td></tr>
+<tr><td><b>Click</b></td><td>the drawer: depth, the steps a box takes part in, a note for the agent</td><td>unlimited</td></tr>
+<tr><td><b>Play</b></td><td>a labelled packet walks the flow, one caption per step</td><td>≤9 steps, ≤20 words each</td></tr>
+</tbody>
+</table>
+
+<table>
+<thead><tr><th>Mark</th><th>Means</th></tr></thead>
+<tbody>
+<tr><td>dashes</td><td>a synchronous call, moving the way the request goes</td></tr>
+<tr><td>dots, slower</td><td>an asynchronous message nobody waits on</td></tr>
+<tr><td>two lanes</td><td>traffic both ways, one direction per lane</td></tr>
+<tr><td>grey and still</td><td>exists, but not in the selected flow</td></tr>
+<tr><td>red, packet stops at ✕</td><td>the call fails</td></tr>
+<tr><td>⤢ on a box</td><td>opens a segment: the inside of that box</td></tr>
+</tbody>
+</table>
+
+<div class="box key"><p><b>Recipes, not rules.</b> <code>AGENTS.md</code> gives an agent seven: a whole
+system, the inside of one box, one request in order, what fails and what then, two options side by side,
+a system inside a report, and a system too big for twelve boxes.</p></div>
+
+<details class="more"><summary>why a grid and not auto-layout</summary>
+<div class="in"><p>A grid is deterministic: the same spec draws the same picture every time, the audit can
+reason about it statically (two boxes in one cell, a straight line through a box), and an agent can place
+boxes by reading the story left to right. Auto-layout would save the agent a decision and cost the
+reader a stable picture. You chose the grid for now; it can change later without touching a spec's
+meaning.</p></div></details>
+
+</div>
+</details>
+
+<!-- ─────────── ROW 3 ─────────── -->
+<details class="row" data-row="r3">
+<summary><span class="ord">3</span><span class="cl">This checklist is live: run it on this Mac and paste</span><span class="rt">5 min</span></summary>
+<div class="in">
+
+<p>Every command runs from any folder in Terminal (zsh or bash). Serve first, so your pastes reach disk;
+then tell me "look at the plan" and I will read them back.</p>
+
+<div class="pb" data-pb="try">
+  <div class="hd">
+    <span class="t">Prove the toolkit on this machine</span>
+    <span class="prog">0 / 6 done</span>
+  </div>
+  <ol class="steps">
+
+    <li class="step" data-step="sv" data-risk="ro">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Serve this folder so your ticks and pastes reach the sidecar.</span></summary>
+        <div class="in">
+          <div class="box warn"><p>This keeps running. Use a second Terminal tab for the other steps, and
+          reopen this page from the address it prints.</p></div>
+          <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz serve ~/Projects/FLOW_VIZ --open PLAN.html</code></pre></div>
+          <p class="expect"><b>Pass:</b> a <code>127.0.0.1:8787</code> address, and the pill turns green &nbsp;·&nbsp;
+            <i>Fail:</i> <code>Address already in use</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["sv"]</span></div>
+            <textarea data-cap="sv" data-pass="\b127\.0\.0\.1:8787\b" data-fail="\bAddress already in use\b"
+              placeholder="paste the first lines it prints"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="sv" placeholder="0"></span>
+              <span data-cnt="sv">empty</span><span data-at="sv"></span>
+              <span class="rn" data-run="sv"></span>
+              <button class="rr" data-rr="sv" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="sv" placeholder="note for the agent (optional)">
+          </div>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="sv">—</span></span>
+    </li>
+
+    <li class="step" data-step="cs" data-risk="ro">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Print the cheat sheet to prove the toolkit runs from its absolute path.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>FLOW_VIZ 0.6.0</code> and the two workflows &nbsp;·&nbsp;
+            <i>Fail:</i> <code>No such file or directory</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["cs"]</span></div>
+            <textarea data-cap="cs" data-pass="\bFLOW_VIZ 0\.6\.0\b" data-fail="\bNo such file or directory\b"
+              placeholder="paste the first few lines"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="cs" placeholder="0"></span>
+              <span data-cnt="cs">empty</span><span data-at="cs"></span>
+              <span class="rn" data-run="cs"></span>
+              <button class="rr" data-rr="cs" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="cs" placeholder="note for the agent (optional)">
+          </div>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="cs">—</span></span>
+    </li>
+
+    <li class="step" data-step="ap" data-risk="ro">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Audit this plan against its own standard, layout caps included.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz audit --browser ~/Projects/FLOW_VIZ/PLAN.html | tail -n 12</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>result: clean</code> &nbsp;·&nbsp;
+            <i>Fail:</i> <code>result: 1 over</code> or any failing check — the plan broke its own rules</p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["ap"]</span></div>
+            <textarea data-cap="ap" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
+              placeholder="paste the tail of the audit"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="ap" placeholder="0"></span>
+              <span data-cnt="ap">empty</span><span data-at="ap"></span>
+              <span class="rn" data-run="ap"></span>
+              <button class="rr" data-rr="ap" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="ap" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>The standard is only real if its own plan passes it. <code>--browser</code> runs
+          headless Chrome on <code>?audit=1</code>, so the layout caps — screens at rest, crossings, labels
+          that had to shrink — are measured, not asserted.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="ap">—</span></span>
+    </li>
+
+    <li class="step" data-step="ac" data-risk="ro">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Audit the checkout drawing, which exercises every drawing cap.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz audit --browser ~/Projects/FLOW_VIZ/examples/checkout/checkout.html | tail -n 12</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>result: clean</code> &nbsp;·&nbsp; <i>Fail:</i> anything over</p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["ac"]</span></div>
+            <textarea data-cap="ac" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
+              placeholder="paste the tail of the audit"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="ac" placeholder="0"></span>
+              <span data-cnt="ac">empty</span><span data-at="ac"></span>
+              <span class="rn" data-run="ac"></span>
+              <button class="rr" data-rr="ac" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="ac" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>The first audit of the approved mockup failed on a real cap: a fact of 26
+          characters against a cap of 24. The fix went into the drawing, not the cap — which is the whole
+          point of measuring.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="ac">—</span></span>
+    </li>
+
+    <li class="step" data-step="sc" data-risk="w" data-after="ac">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Scaffold a throwaway report and confirm the audit fails it on unfilled slots alone.</span></summary>
+        <div class="in">
+          <label class="gate"><input type="checkbox" class="ack">
+            I accept this creates a throwaway folder under the system temp directory.</label>
+          <div class="cmd"><button class="copy">copy</button><pre><code>D=$(mktemp -d) && python3 ~/Projects/FLOW_VIZ/bin/flowviz new report "The toolkit scaffolds a report" --dir "$D/fvt" >/dev/null && python3 ~/Projects/FLOW_VIZ/bin/flowviz build "$D/fvt/FVT.src.html" >/dev/null && python3 ~/Projects/FLOW_VIZ/bin/flowviz audit "$D/fvt/FVT.html" | grep -E "OVER|FAIL"</code></pre></div>
+          <p class="expect"><b>Pass:</b> exactly one line, <code>FAIL  unfilled slots</code> &nbsp;·&nbsp;
+            <i>Fail:</i> any <code>OVER</code>, or a second <code>FAIL</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["sc"]</span></div>
+            <textarea data-cap="sc" data-pass="\bFAIL\s+unfilled slots\b" data-fail="\bOVER\b|\bFAIL\s+(?!unfilled)"
+              placeholder="paste what grep printed"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="sc" placeholder="0"></span>
+              <span data-cnt="sc">empty</span><span data-at="sc"></span>
+              <span class="rn" data-run="sc"></span>
+              <button class="rr" data-rr="sc" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="sc" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>A checker that passes an empty scaffold measures length, not writing. The
+          scaffold's placeholder words sit inside every cap on purpose, so a report that was built but
+          never written fails on exactly one thing.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge w">write</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="sc">—</span></span>
+    </li>
+
+    <li class="step" data-step="rb" data-risk="ro" data-after="sv">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Read back your own pastes exactly the way I will.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz captures ~/Projects/FLOW_VIZ/PLAN.html | tail -n 20</code></pre></div>
+          <p class="expect"><b>Pass:</b> your earlier steps, each with a verdict &nbsp;·&nbsp;
+            <i>Fail:</i> no sidecar — the page was not served when you pasted</p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["rb"]</span></div>
+            <textarea data-cap="rb" data-pass="\bcaptured\b" data-fail="\bno sidecar\b"
+              placeholder="paste the summary lines"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="rb" placeholder="0"></span>
+              <span data-cnt="rb">empty</span><span data-at="rb"></span>
+              <span class="rn" data-run="rb"></span>
+              <button class="rr" data-rr="rb" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="rb" placeholder="note for the agent (optional)">
+          </div>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="rb">—</span></span>
+    </li>
+
+  </ol>
+</div>
+
+</div>
+</details>
+
+<!-- ─────────── ROW 4 ─────────── -->
+<details class="row" data-row="r4">
+<summary><span class="ord">4</span><span class="cl">Everything you type lands in a sidecar that I read back</span><span class="rt">2 min</span></summary>
+<div class="in">
+
+<p>Nothing you type is stored in the HTML. Ticks, pastes, exit codes, notes on steps and notes on drawing
+boxes all go to <code>&lt;doc&gt;.flow.json</code> beside the page, keyed by ids that never change. I can
+rewrite the page freely; your input re-attaches on load.</p>
+
+<table>
+<thead><tr><th>Tier</th><th>When</th><th>Pill shows</th></tr></thead>
+<tbody>
+<tr><td><code>localStorage</code></td><td>always, 700 ms after you stop typing</td><td>—</td></tr>
+<tr><td>Sidecar on disk</td><td>served by <code>flowviz serve</code></td><td>green, <code>saved 14:05 PDT</code></td></tr>
+<tr><td>Manual export</td><td>opened from Finder</td><td>amber <code>local only</code>, plus a state button</td></tr>
+</tbody>
+</table>
+
+<div class="box key"><p><b><code>error</code> is not <code>fail</code>.</b> <code>fail</code>: the command ran
+and the target said no — evidence about the system. <code>error</code>: the interpreter rejected the
+command, so the target was never asked — evidence about my playbook. Verdicts are re-derived from the
+current rules every time the page loads and every time I read them back.</p></div>
+
+</div>
+</details>
+
+<!-- ─────────── ROW 5 ─────────── -->
+<details class="row" data-row="r5">
+<summary><span class="ord">5</span><span class="cl">The audit turns the standard into exit codes, layout included</span><span class="rt">2 min</span></summary>
+<div class="in">
+
+<table>
+<thead><tr><th>Measured</th><th>How</th></tr></thead>
+<tbody>
+<tr><td>18 report caps</td><td>from the markup: card slots, rows, steps, words at rest</td></tr>
+<tr><td>19 caps per drawing canvas</td><td>from the spec, for the root and every segment</td></tr>
+<tr><td>5 layout caps</td><td>headless Chrome on <code>?audit=1</code>: screens at rest, crossings, boxes hit, labels shrunk, zone labels crossed</td></tr>
+<tr><td>11 author checks</td><td>unfilled slots, four paste checks, fragile regexes, and the spec's ids, references, vocabulary, grid and routing</td></tr>
+</tbody>
+</table>
+
+<p>The unfilled check reads the templates, so a scaffold that was built but never written fails on that
+and nothing else. The fragile-regex check runs every <code>data-pass</code> and <code>data-fail</code>
+alternative against real PowerShell, bash and Python error text, and names the word it matched inside.</p>
+
+<details class="more"><summary>what the audit still cannot tell you</summary>
+<div class="in"><ul>
+<li><b>Whether a command parses.</b> That needs an interpreter per language, and the toolkit installs nothing. Parse-checking is the agent's obligation.</li>
+<li><b>Whether a pass condition can be falsified</b> by what the command really prints.</li>
+<li><b>Whether a drawing tells the truth.</b> It measures shape and budget, not accuracy. Your notes on boxes are how that comes back.</li>
+</ul></div></details>
+
+</div>
+</details>
+
+<!-- ─────────── ROW 6 ─────────── -->
+<details class="row" data-row="r6">
+<summary><span class="ord">6</span><span class="cl">Two changes outside this folder's files wait for your approval</span><span class="rt">2 min</span></summary>
+<div class="in">
+
+<p>Both are gated writes. Nothing runs until you tick the acknowledgement, and I have run neither.</p>
+
+<div class="pb" data-pb="approvals">
+  <div class="hd">
+    <span class="t">Make FLOW_VIZ reachable and versioned</span>
+    <span class="prog">0 / 2 done</span>
+  </div>
+  <ol class="steps">
+
+    <li class="step" data-step="gi" data-risk="w">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Make FLOW_VIZ its own git repository and tag this version.</span></summary>
+        <div class="in">
+          <label class="gate"><input type="checkbox" class="ack">
+            I accept this creates a git repository inside ~/Projects/FLOW_VIZ and commits every file in it.</label>
+          <div class="cmd"><button class="copy">copy</button><pre><code>cd ~/Projects/FLOW_VIZ && git init -q && git add -A && git commit -qm "FLOW_VIZ 0.6.0: reports and drawings" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" && git tag v0.6.0 && git log --oneline --decorate -1</code></pre></div>
+          <p class="expect"><b>Pass:</b> one line ending in <code>(HEAD -&gt; main, tag: v0.6.0)</code> &nbsp;·&nbsp;
+            <i>Fail:</i> <code>fatal:</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["gi"]</span></div>
+            <textarea data-cap="gi" data-pass="\btag: v0\.6\.0\b" data-fail="\bfatal\b"
+              placeholder="paste the log line"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="gi" placeholder="0"></span>
+              <span data-cnt="gi">empty</span><span data-at="gi"></span>
+              <span class="rn" data-run="gi"></span>
+              <button class="rr" data-rr="gi" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="gi" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>Every footer names the version and git sha that built it, and offers a rollback
+          command. Today FLOW_VIZ sits inside the <code>~/Projects</code> repository, so the footer says
+          <code>untracked</code> and offers no rollback. A repository of its own makes the stamp mean
+          something. The parent repository then sees this folder as a nested one and will not track its files.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge w">write</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="gi">—</span></span>
+    </li>
+
+    <li class="step" data-step="pt" data-risk="w">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Add a short FLOW_VIZ pointer to your global CLAUDE.md so every agent finds it.</span></summary>
+        <div class="in">
+          <label class="gate"><input type="checkbox" class="ack">
+            I accept this appends six lines to ~/.claude/CLAUDE.md, read by every session in every folder.</label>
+          <div class="cmd"><button class="copy">copy</button><pre><code>printf '%s\n' '' '# FLOW_VIZ - handing finished work back as HTML' '- Reports, runbooks and system explanations for the human: read ~/Projects/FLOW_VIZ/AGENTS.md (only that file) and run ~/Projects/FLOW_VIZ/bin/flowviz for the cheat sheet.' '- Scaffold with `flowviz new report|drawing`, fill every slot, `flowviz build`, then `flowviz audit --browser` until clean. Never raise a cap: split, or make a segment.' '- Commands the human runs are checklist steps: one sentence each, tagged read-only or write, paste-safe, verdict literals anchored.' '- Hand over with `flowviz serve <dir> --open`; read back with `flowviz captures <file>.html`. Ids are join keys: never rename one.' '- For system diagrams, prefer a FLOW_VIZ drawing over Mermaid. Examples: ~/Projects/FLOW_VIZ/PLAN.html, ~/Projects/FLOW_VIZ/examples/checkout/checkout.html' >> ~/.claude/CLAUDE.md && tail -n 6 ~/.claude/CLAUDE.md</code></pre></div>
+          <p class="expect"><b>Pass:</b> the six lines, ending in the two example paths &nbsp;·&nbsp;
+            <i>Fail:</i> <code>No such file or directory</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["pt"]</span></div>
+            <textarea data-cap="pt" data-pass="\bexamples/checkout/checkout\.html\b" data-fail="\bNo such file or directory\b"
+              placeholder="paste what tail printed"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="pt" placeholder="0"></span>
+              <span data-cnt="pt">empty</span><span data-at="pt"></span>
+              <span class="rn" data-run="pt"></span>
+              <button class="rr" data-rr="pt" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="pt" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>An agent working in another folder cannot use a standard it cannot find. The
+          pointer is deliberately small: where to read, the commands, four rules, two examples. Deleting
+          those six lines is the complete undo. The last line decides one conflict with your existing visual
+          preferences — FLOW_VIZ drawings over Mermaid for system diagrams — so change it if you disagree.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge w">write</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="pt">—</span></span>
+    </li>
+
+  </ol>
+</div>
+
+<details class="more"><summary>what is done, and what is not built yet</summary>
+<div class="in">
+<label class="chk"><input type="checkbox" data-ck="d1" checked><span>Standard: <code>SPEC.md</code> for both kinds, state schema 3, the motion grammar</span></label>
+<label class="chk"><input type="checkbox" data-ck="d2" checked><span>Core runtime rebuilt from 0.5.1, with <code>window.FLOWVIZ</code> for drawings</span></label>
+<label class="chk"><input type="checkbox" data-ck="d3" checked><span>Drawing component: grid, lanes, motion, peek, drawer, walkthrough, sequence, segments, notes</span></label>
+<label class="chk"><input type="checkbox" data-ck="d4" checked><span>Commands: new, build, audit (with <code>--browser</code>), serve, captures</span></label>
+<label class="chk"><input type="checkbox" data-ck="d5" checked><span><code>AGENTS.md</code> with seven drawing recipes; this plan and the checkout example audit clean</span></label>
+<label class="chk"><input type="checkbox" data-ck="n1"><span>A pattern library: cache-aside, outbox, fan-out and others as ready segments</span></label>
+<label class="chk"><input type="checkbox" data-ck="n2"><span>State diagrams (lifecycles); sequence views cover timing today</span></label>
+<label class="chk"><input type="checkbox" data-ck="n3"><span>A before-and-after counter-example: a verbose page beside the drawing that replaced it</span></label>
+</div></details>
+
+</div>
+</details>
+
+<!-- flowviz:foot -->
+<!-- flowviz:js -->
+</body>
+</html>

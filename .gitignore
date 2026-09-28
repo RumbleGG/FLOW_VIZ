@@ -1,0 +1,7 @@
+# per-deliverable history and backups live beside each deliverable
+.flowviz/
+# the human's own state is not toolkit source
+*.flow.json
+*.tmp
+__pycache__/
+.DS_Store

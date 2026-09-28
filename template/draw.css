@@ -1,0 +1,446 @@
+/* ===========================================================================
+   FLOW_VIZ — draw.css
+   The drawing component, and the neutrals of a drawing page.
+     Components read the core names from flow.css: canvas --paper, ink --fg,
+     secondary --dim, tertiary --dim2, rules --line/--line2, fills --panel/--panel2/--sunk.
+     Kind tints and flow accents live here. The selected flow's accent is --flow,
+     set on each figure — never --acc, which is the page accent.
+     On a report page a drawing takes the journal/traditional neutrals as they are;
+     on a drawing page ([data-kind="drawing"]) the canvas/night palette replaces them.
+   =========================================================================== */
+
+/* ── component tokens · light ─────────────────────────────────────────────── */
+:root{
+  --client:#2F6FEB;  --client-bg:#EAF2FF;  --client-bd:#A7C3F4;
+  --edge:#7048E8;    --edge-bg:#F2EDFF;    --edge-bd:#C5B4F4;
+  --service:#16945A; --service-bg:#E7F6EE; --service-bd:#9FD4B8;
+  --data:#D97A0B;    --data-bg:#FFF3E0;    --data-bd:#F0C27E;
+  --stream:#D6336C;  --stream-bg:#FFEBF2;  --stream-bd:#F1A9C4;
+  --ext:#5B6B82;     --ext-bg:#EFF2F6;     --ext-bd:#BAC4D2;
+  --threat:#C92A2A;  --threat-bg:#FFEDED;  --threat-bd:#EC9A9A;
+  --f1:#2F6FEB; --f2:#0C9A8A; --f3:#E0751B;
+  --on-tint:#FFFFFF;
+  --d-sh:0 1px 2px rgba(23,32,51,.06),0 6px 18px rgba(23,32,51,.06);
+  --d-node-sh:drop-shadow(0 1px 1px rgba(23,32,51,.07)) drop-shadow(0 4px 8px rgba(23,32,51,.05));
+  --d-drawer-sh:-14px 0 40px rgba(10,15,29,.14);
+  --d-scrim:rgba(23,32,51,.18);
+  --d-ease:cubic-bezier(.22,1,.36,1);
+}
+
+/* ── component tokens · dark ──────────────────────────────────────────────── */
+[data-theme="dark"]{
+  --client:#72A9FF;  --client-bg:#12213F;  --client-bd:#2D5AA8;
+  --edge:#AC96FF;    --edge-bg:#1E1842;    --edge-bd:#5641B0;
+  --service:#52D597; --service-bg:#0D2A20; --service-bd:#22704D;
+  --data:#FFB54D;    --data-bg:#2E210C;    --data-bd:#86560F;
+  --stream:#FF7DB0;  --stream-bg:#331225;  --stream-bd:#932C59;
+  --ext:#9DAAC3;     --ext-bg:#18202F;     --ext-bd:#3B4966;
+  --threat:#FF6B6B;  --threat-bg:#35151A;  --threat-bd:#A83D45;
+  --f1:#6EA6FF; --f2:#36D6C1; --f3:#FFA652;
+  --on-tint:#0A0F1D;
+  --d-sh:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.35);
+  --d-node-sh:drop-shadow(0 2px 6px rgba(0,0,0,.35));
+  --d-drawer-sh:-14px 0 40px rgba(0,0,0,.45);
+  --d-scrim:rgba(0,0,0,.45);
+}
+
+/* ── a drawing page · canvas (light) ──────────────────────────────────────── */
+[data-kind="drawing"]{
+  --bg:#F5F7FB; --paper:#FFFFFF; --panel:#FFFFFF; --panel2:#F1F4F9; --sunk:#F6F8FB;
+  --line:#E2E7EF; --line2:#C9D2DF; --rule:#C9D2DF;
+  --fg:#172033; --dim:#4A5568; --dim2:#7B8698;
+  --acc:#2F6FEB; --ok:#16945A; --warn:#B7791F; --bad:#E03131; --mag:#7048E8;
+  --accbg:#EAF2FF; --okbg:#E7F6EE; --warnbg:#FFF5E0; --badbg:#FDECEC; --magbg:#F2EDFF;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --f-ui:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --f-size:15px; --f-lh:1.55;
+  --r:14px; --r2:9px;
+  --sh:0 1px 2px rgba(23,32,51,.06),0 6px 18px rgba(23,32,51,.06);
+  --grid:0;
+}
+
+/* ── a drawing page · night (dark) ────────────────────────────────────────── */
+[data-kind="drawing"][data-theme="dark"]{
+  --bg:#0A0F1D; --paper:#0F1628; --panel:#111A2D; --panel2:#172238; --sunk:#0C1324;
+  --line:#223052; --line2:#33456B; --rule:#33456B;
+  --fg:#E8EDF7; --dim:#AEB9CE; --dim2:#7D8BA6;
+  --acc:#6EA6FF; --ok:#52D597; --warn:#FFB54D; --bad:#FF6262; --mag:#AC96FF;
+  --accbg:#12213F; --okbg:#0D2A20; --warnbg:#2E210C; --badbg:#33141A; --magbg:#1E1842;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --f-size:15px; --f-lh:1.55;
+  --r:14px; --r2:9px;
+  --sh:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.35);
+  --grid:0;
+}
+
+/* ── drawing page frame ───────────────────────────────────────────────────── */
+[data-kind="drawing"] body{max-width:none;padding:18px 24px 56px}
+[data-kind="drawing"] body>main,.fv-page{max-width:1180px;margin:0 auto}
+[data-kind="drawing"] .foot{max-width:1180px;margin-left:auto;margin-right:auto}
+
+/* ── the figure ───────────────────────────────────────────────────────────── */
+.fv-drawing{--flow:var(--f1);position:relative;margin:0;min-width:0}
+.fv-drawing>.fv-depth,.fv-drawing>script{display:none!important}
+.fv-drawing [hidden],.fv-drawer [hidden]{display:none!important}
+:where(.fv-drawing) button{font:inherit;color:inherit}
+.fv-drawing :focus-visible,.fv-drawer :focus-visible{outline:2px solid var(--flow,var(--acc));outline-offset:2px}
+
+/* page mode: the claim first, nothing above it but where you are */
+.fv-head{margin:0 0 4px}
+.fv-hd-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:34px;padding-right:250px}
+.fv-crumbs{display:flex;align-items:center;gap:8px;font:600 12.5px var(--f-ui);color:var(--dim2);flex-wrap:wrap}
+.fv-crumbs .sep{opacity:.6}
+.fv-crumbs button{background:none;border:none;padding:2px 4px;border-radius:6px;cursor:pointer;
+  color:var(--f1);font:600 12.5px var(--f-ui);display:inline-flex;align-items:center;gap:4px}
+.fv-crumbs button:hover{background:var(--panel2)}
+.fv-crumbs button svg{width:12px;height:12px}
+.fv-chip{display:inline-flex;align-items:center;gap:6px;font:700 10.5px var(--f-ui);
+  letter-spacing:.9px;text-transform:uppercase;padding:4px 10px;border-radius:999px;
+  color:var(--f1);background:color-mix(in srgb,var(--f1) 12%,var(--panel));
+  border:1px solid color-mix(in srgb,var(--f1) 30%,transparent);white-space:nowrap}
+.fv-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.fv-chip.seg{color:var(--stream);background:color-mix(in srgb,var(--stream) 12%,var(--panel));
+  border-color:color-mix(in srgb,var(--stream) 30%,transparent)}
+.fv-tools{margin-left:auto;display:flex;gap:6px;align-items:center}
+.fv-tbtn{display:inline-flex;align-items:center;gap:7px;background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;
+  font:600 12px var(--f-ui);color:var(--dim);transition:border-color .15s,color .15s}
+.fv-tbtn:hover{border-color:var(--line2);color:var(--fg)}
+.fv-tbtn svg{width:14px;height:14px}
+.fv-drawing h1.fv-title{font:700 30px/1.16 var(--f-ui);letter-spacing:-.4px;margin:14px 0 8px;
+  max-width:34ch;text-wrap:balance;color:var(--fg)}
+.fv-lede{margin:0;max-width:68ch;color:var(--dim);font:15.5px/1.55 var(--f-body);text-wrap:pretty}
+
+/* figure mode: a caption, not a page header */
+.fv-drawing figcaption.fv-fc{display:grid;gap:3px;margin:0 0 8px}
+.fv-fc .fv-fc-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.fv-fc .fv-chip{font-size:9.5px;padding:3px 8px}
+.fv-fc-title{font:650 15px/1.35 var(--f-ui);color:var(--fg);text-wrap:balance}
+.fv-fc-lede{margin:0;font:13px/1.5 var(--f-ui);color:var(--dim);max-width:72ch}
+.fv-fc .fv-crumbs{font-size:12px}
+
+/* ── strip: flows left, views right ───────────────────────────────────────── */
+.fv-strip{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 10px}
+.fv-fc+.fv-strip{margin-top:6px}
+.fv-flows{display:flex;gap:6px;flex-wrap:wrap}
+.fv-flow{display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;padding:6px 12px 6px 10px;
+  font:600 13px var(--f-ui);color:var(--dim);transition:all .16s var(--d-ease)}
+.fv-flow:hover{color:var(--fg);border-color:var(--line2)}
+.fv-flow .fd{width:9px;height:9px;border-radius:50%;background:var(--fc);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--fc) 20%,transparent)}
+.fv-flow .n{font:600 11px var(--f-mono);color:var(--dim2)}
+.fv-flow[aria-checked="true"]{color:var(--fg);border-color:var(--fc);
+  background:color-mix(in srgb,var(--fc) 9%,var(--panel))}
+.fv-flow:active{transform:scale(.97)}
+.fv-views{margin-left:auto;display:inline-flex;background:var(--panel2);border:1px solid var(--line);
+  border-radius:10px;padding:3px;gap:2px}
+.fv-views button{background:none;border:none;border-radius:7px;padding:5px 12px;cursor:pointer;
+  font:600 12.5px var(--f-ui);color:var(--dim2)}
+.fv-views button[aria-selected="true"]{background:var(--panel);color:var(--fg);box-shadow:var(--d-sh)}
+
+/* ── stage: the canvas card ───────────────────────────────────────────────── */
+.fv-stage{position:relative;background:var(--paper);border:1px solid var(--line);
+  border-radius:calc(var(--r) + 4px);box-shadow:var(--d-sh);overflow:hidden}
+.fv-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.fv-grid{background-image:radial-gradient(color-mix(in srgb,var(--line) 88%,var(--paper)) 1px,transparent 1.2px);
+  background-size:18px 18px;background-position:9px 9px}
+.fv-map,.fv-seq{display:block;width:100%;height:auto;min-width:760px;user-select:none;-webkit-user-select:none}
+.fv-wrap{position:relative;transition:transform .32s var(--d-ease),opacity .32s var(--d-ease)}
+.fv-wrap.zoom-out{opacity:0;transform:scale(1.35)}
+.fv-wrap.zoom-in-start{opacity:0;transform:scale(.8);transition:none}
+.fv-wrap.zoom-back{opacity:0;transform:scale(.82)}
+.fv-wrap.zoom-from-big{opacity:0;transform:scale(1.2);transition:none}
+
+.fv-layers{position:absolute;top:10px;right:10px;z-index:5;display:flex;gap:5px;
+  background:color-mix(in srgb,var(--paper) 86%,transparent);backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:999px;padding:3px}
+.fv-layers button{display:inline-flex;align-items:center;gap:6px;background:none;border:none;
+  border-radius:999px;padding:4px 10px;cursor:pointer;font:600 11.5px var(--f-ui);color:var(--dim2)}
+.fv-layers button:hover{color:var(--fg)}
+.fv-layers button[aria-pressed="true"]{color:var(--fg);background:var(--panel2)}
+.fv-layers .sw{width:22px;height:12px;border-radius:999px;background:var(--line2);position:relative;
+  transition:background .18s}
+.fv-layers .sw::after{content:"";position:absolute;top:2px;left:2px;width:8px;height:8px;border-radius:50%;
+  background:var(--paper);transition:transform .18s var(--d-ease)}
+.fv-layers button[aria-pressed="true"] .sw{background:var(--f1)}
+.fv-layers button[aria-pressed="true"] .sw::after{transform:translateX(10px)}
+
+/* the rail: play, numbered steps, one caption */
+.fv-rail{display:flex;align-items:center;gap:14px;padding:11px 14px;border-top:1px solid var(--line);
+  background:color-mix(in srgb,var(--panel2) 60%,var(--paper));flex-wrap:wrap}
+.fv-play{display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:none;border-radius:999px;
+  padding:7px 14px 7px 11px;font:700 12.5px var(--f-ui);color:var(--on-tint);background:var(--flow);
+  transition:transform .12s,filter .15s;white-space:nowrap}
+.fv-play:hover{filter:brightness(1.06)}
+.fv-play:active{transform:scale(.97)}
+.fv-play svg{width:14px;height:14px}
+.fv-dots{display:flex;gap:5px;flex-wrap:wrap}
+.fv-dot{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line2);background:var(--paper);
+  font:700 11px/1 var(--f-ui);color:var(--dim2);cursor:pointer;display:grid;place-items:center;
+  transition:all .18s var(--d-ease);padding:0}
+.fv-dot:hover{border-color:var(--flow);color:var(--flow)}
+.fv-dot.seen{border-color:color-mix(in srgb,var(--flow) 55%,transparent);color:var(--flow)}
+.fv-dot.now{background:var(--flow);border-color:var(--flow);color:var(--on-tint);transform:scale(1.12)}
+.fv-dot.fail.now{background:var(--bad);border-color:var(--bad)}
+.fv-cap{flex:1 1 280px;margin:0;font:500 13.5px/1.45 var(--f-ui);color:var(--dim);min-height:20px}
+.fv-cap b{color:var(--fg);font-weight:700}
+.fv-more{background:none;border:none;padding:0 0 0 4px;color:var(--flow);cursor:pointer;font:600 12.5px var(--f-ui)}
+.fv-navs{display:flex;gap:4px}
+.fv-navs button{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--paper);
+  cursor:pointer;color:var(--dim);display:grid;place-items:center;padding:0}
+.fv-navs button:hover{color:var(--fg);border-color:var(--line2)}
+.fv-navs svg{width:14px;height:14px}
+
+/* ── the peek: hover, one sentence, three facts at most ───────────────────── */
+.fv-peek{position:absolute;z-index:20;width:268px;pointer-events:none;background:var(--panel);
+  border:1px solid var(--line2);border-radius:12px;box-shadow:var(--d-sh);padding:11px 13px 10px;
+  opacity:0;transform:translateY(4px) scale(.98);transform-origin:50% 100%;
+  transition:opacity .14s var(--d-ease),transform .18s var(--d-ease)}
+.fv-peek.on{opacity:1;transform:none}
+.fv-peek.below{transform-origin:50% 0}
+.fv-peek .pk{display:flex;align-items:center;gap:6px;font:700 10px var(--f-ui);letter-spacing:.9px;
+  text-transform:uppercase;color:var(--k,var(--dim2))}
+.fv-peek .pk::before{content:"";width:6px;height:6px;border-radius:2px;background:currentColor}
+.fv-peek h4{margin:4px 0 3px;font:700 14.5px/1.25 var(--f-ui);color:var(--fg)}
+.fv-peek p{margin:0;font:13px/1.45 var(--f-body);color:var(--dim)}
+.fv-peek .facts{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.fv-peek .facts span{font:600 11px var(--f-mono);color:var(--fg);background:var(--panel2);
+  border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+.fv-peek .hint{margin-top:9px;padding-top:7px;border-top:1px dashed var(--line);font:600 11px var(--f-ui);
+  color:var(--dim2);display:flex;gap:10px}
+
+/* ── the key: only when asked for ─────────────────────────────────────────── */
+.fv-key{position:absolute;left:12px;bottom:64px;z-index:6;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;box-shadow:var(--d-sh);padding:10px 12px;font:500 12px var(--f-ui);color:var(--dim);
+  display:grid;grid-template-columns:44px 1fr;gap:6px 10px;align-items:center;width:250px}
+.fv-key svg{width:44px;height:14px;overflow:visible}
+
+/* ── SVG: zones, boxes, connections ───────────────────────────────────────── */
+.fv-drawing .zone rect{fill:color-mix(in srgb,var(--z) 5%,transparent);stroke:color-mix(in srgb,var(--z) 42%,transparent);
+  stroke-width:1.3;stroke-dasharray:5 5}
+.fv-drawing .zone text{fill:var(--z);font:700 11px var(--f-ui);letter-spacing:.4px}
+.fv-drawing .z-neutral{--z:var(--dim2)} .fv-drawing .z-sync{--z:var(--f1)} .fv-drawing .z-async{--z:var(--stream)}
+.fv-drawing .z-ext{--z:var(--ext)} .fv-drawing .z-data{--z:var(--data)} .fv-drawing .z-svc{--z:var(--service)}
+
+.k-client{--k:var(--client);--k-bg:var(--client-bg);--k-bd:var(--client-bd)}
+.k-edge{--k:var(--edge);--k-bg:var(--edge-bg);--k-bd:var(--edge-bd)}
+.k-service{--k:var(--service);--k-bg:var(--service-bg);--k-bd:var(--service-bd)}
+.k-data{--k:var(--data);--k-bg:var(--data-bg);--k-bd:var(--data-bd)}
+.k-stream{--k:var(--stream);--k-bg:var(--stream-bg);--k-bd:var(--stream-bd)}
+.k-external{--k:var(--ext);--k-bg:var(--ext-bg);--k-bd:var(--ext-bd)}
+/* an adversary: never ours, so never drawn like ours — red, with a broken edge */
+.k-threat{--k:var(--threat);--k-bg:var(--threat-bg);--k-bd:var(--threat-bd)}
+.fv-drawing .node.k-threat .shape{stroke-dasharray:6 3}
+
+.fv-drawing .node{cursor:pointer;transition:opacity .2s var(--d-ease)}
+.fv-drawing .node .shape{fill:var(--k-bg);stroke:var(--k-bd);stroke-width:1.3;filter:var(--d-node-sh);
+  transition:stroke .15s,stroke-width .15s}
+.fv-drawing .node .tile{fill:var(--k)}
+.fv-drawing .node .ico{color:var(--on-tint)}
+.fv-drawing .node .lbl{fill:var(--fg);font:650 13px var(--f-ui);letter-spacing:-.1px}
+.fv-drawing .node .tech{fill:var(--dim2);font:500 10.5px var(--f-ui);opacity:0;transition:opacity .2s}
+.fv-drawing .node .lblg{transition:transform .22s var(--d-ease)}
+.fv-drawing svg.show-labels .node .tech{opacity:1}
+.fv-drawing svg.show-labels .node.has-tech .lblg{transform:translateY(-6px)}
+.fv-drawing .node:hover .shape,.fv-drawing .node.sel .shape,.fv-drawing .node:focus-visible .shape{stroke:var(--k);stroke-width:2}
+.fv-drawing .node:focus{outline:none}
+.fv-drawing .node.sel .shape{stroke-width:2.4}
+.fv-drawing .node.land .shape{stroke:var(--flow);stroke-width:2.6}
+.fv-drawing .node.ghost .shape{fill:none;stroke:var(--line2);stroke-dasharray:4 4;filter:none}
+.fv-drawing .node.ghost .tile{fill:var(--panel2)}
+.fv-drawing .node.ghost .ico{color:var(--dim2)}
+.fv-drawing .node.ghost .lbl{fill:var(--dim)}
+.fv-drawing .node .seg{cursor:zoom-in}
+.fv-drawing .node .seg circle{fill:var(--paper);stroke:var(--k);stroke-width:1.4}
+.fv-drawing .node .seg path{stroke:var(--k);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.fv-drawing .node .seg:hover circle{fill:var(--k)}
+.fv-drawing .node .seg:hover path{stroke:var(--on-tint)}
+
+.fv-drawing .edge .line{fill:none;stroke:var(--line2);stroke-width:1.6;stroke-linecap:round;
+  transition:stroke .2s,stroke-width .2s,opacity .2s}
+.fv-drawing .edge.m-sync .line{stroke-dasharray:7 6}
+.fv-drawing .edge.m-async .line{stroke-dasharray:.1 7;stroke-width:2.6}
+.fv-drawing .edge .head{fill:var(--line2);transition:fill .2s}
+.fv-drawing .edgeset .hit{fill:none;stroke:transparent;stroke-width:16;cursor:pointer;pointer-events:stroke}
+.fv-drawing .edge{transition:opacity .2s var(--d-ease)}
+.fv-drawing .edge.live .line{stroke:var(--flow);stroke-width:2}
+.fv-drawing .edge.live.m-async .line{stroke-width:3}
+.fv-drawing .edge.live .head{fill:var(--flow)}
+.fv-drawing .edge.live.m-sync .line{animation:fv-march-s .9s linear infinite}
+.fv-drawing .edge.live.m-async .line{animation:fv-march-a 1.3s linear infinite}
+.fv-drawing .edge.live.rev .line{animation-direction:reverse}
+.fv-drawing .edge.failing .line{stroke:var(--bad)}
+.fv-drawing .edge.failing .head{fill:var(--bad)}
+@keyframes fv-march-s{to{stroke-dashoffset:-13}}
+@keyframes fv-march-a{to{stroke-dashoffset:-7.1}}
+.fv-drawing .edgeset.hov .edge .line,.fv-drawing .edgeset.sel .edge .line{stroke-width:2.8}
+
+.fv-drawing .chiplbl{opacity:0;transition:opacity .18s;pointer-events:none}
+.fv-drawing .chiplbl rect{fill:var(--paper);stroke:var(--line2);stroke-width:1}
+.fv-drawing .chiplbl text{fill:var(--dim);font:600 10.5px var(--f-mono)}
+.fv-drawing svg.show-labels .chiplbl,.fv-drawing svg.show-times .chiplbl{opacity:1}
+.fv-drawing .edgeset.hov .chiplbl,.fv-drawing .edgeset.sel .chiplbl,.fv-drawing svg.focus .edgeset.near .chiplbl{opacity:1}
+.fv-drawing svg.focus .edgeset:not(.near) .chiplbl,.fv-drawing svg.stepping .edgeset:not(.hot) .chiplbl{opacity:0}
+
+.fv-drawing .stepno{cursor:pointer}
+.fv-drawing .stepno circle{fill:var(--flow);stroke:var(--paper);stroke-width:2.5}
+.fv-drawing .stepno text{fill:var(--on-tint);font:800 10.5px var(--f-ui);letter-spacing:0;text-anchor:middle;
+  dominant-baseline:central;pointer-events:none}
+.fv-drawing .stepno.fail circle{fill:var(--bad)}
+.fv-drawing .stepno.now circle{animation:fv-beat 1.2s var(--d-ease) infinite}
+@keyframes fv-beat{0%,100%{stroke-width:2.5}50%{stroke-width:5.5}}
+
+/* focus + context: a hover or a step dims everything it does not touch */
+.fv-drawing svg.focus .node:not(.near),.fv-drawing svg.focus .edge:not(.near),.fv-drawing svg.focus .stepno:not(.near){opacity:.2}
+.fv-drawing svg.stepping .node:not(.hot),.fv-drawing svg.stepping .edge:not(.hot),.fv-drawing svg.stepping .stepno:not(.hot){opacity:.18}
+.fv-drawing svg.stepping .edge.hot .line{stroke:var(--flow);stroke-width:2.8}
+.fv-drawing svg.stepping .edge.hot.failing .line{stroke:var(--bad)}
+.fv-drawing svg.stepping .zone{opacity:.55}
+
+/* the packet: what moves is what matters */
+.fv-drawing .pkt .halo{fill:var(--flow);opacity:.22}
+.fv-drawing .pkt .core{fill:var(--flow);stroke:var(--paper);stroke-width:2}
+.fv-drawing .pkt.fail .halo,.fv-drawing .pkt.fail .core{fill:var(--bad)}
+.fv-drawing .ptag rect{fill:var(--fg)}
+.fv-drawing .ptag text{fill:var(--paper);font:700 10.5px var(--f-mono);text-anchor:middle;dominant-baseline:central}
+.fv-drawing .burst{fill:none;stroke:var(--bad);stroke-width:2;animation:fv-burst .5s var(--d-ease) forwards}
+@keyframes fv-burst{from{opacity:.9;transform:scale(1)}to{opacity:0;transform:scale(3.2)}}
+.fv-drawing .xmark{animation:fv-xin .28s var(--d-ease) both}
+.fv-drawing .xmark path{stroke:var(--bad);stroke-width:2.6;stroke-linecap:round}
+.fv-drawing .xmark circle{fill:var(--paper);stroke:var(--bad);stroke-width:1.6}
+@keyframes fv-xin{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+
+/* ── sequence view ────────────────────────────────────────────────────────── */
+.fv-seq .life{stroke:var(--line2);stroke-width:1.2;stroke-dasharray:3 5}
+.fv-seq .band{fill:transparent}
+.fv-seq .band.now{fill:color-mix(in srgb,var(--flow) 9%,transparent)}
+.fv-seq .msg .line{fill:none;stroke:var(--dim);stroke-width:1.6}
+.fv-seq .msg.response .line{stroke-dasharray:6 5}
+.fv-seq .msg.event .line{stroke-dasharray:.1 6;stroke-width:2.6;stroke-linecap:round}
+.fv-seq .msg .head{fill:var(--dim)}
+.fv-seq .msg.fail .line{stroke:var(--bad)} .fv-seq .msg.fail .head{fill:var(--bad)}
+.fv-seq .msg text{fill:var(--dim);font:600 11px var(--f-mono);text-anchor:middle}
+.fv-seq .msg.now .line{stroke:var(--flow);stroke-width:2.4}
+.fv-seq .msg.now .head{fill:var(--flow)}
+.fv-seq .msg.now text{fill:var(--fg)}
+.fv-seq .msg.now.fail .line{stroke:var(--bad)}
+
+/* ── spec view ────────────────────────────────────────────────────────────── */
+.fv-specwrap{padding:16px 18px 18px;display:grid;gap:10px}
+.fv-specwrap .fv-note{margin:0;font:500 13px/1.5 var(--f-ui);color:var(--dim)}
+.fv-code{position:relative;background:var(--sunk);border:1px solid var(--line);border-radius:12px}
+.fv-code pre{margin:0;padding:14px 16px;overflow:auto;max-height:520px;font:12.5px/1.6 var(--f-mono);
+  color:var(--fg);tab-size:2;white-space:pre}
+.fv-code .fv-btn{position:absolute;top:8px;right:8px}
+.j-k{color:var(--edge)} .j-s{color:var(--service)} .j-n{color:var(--data)} .j-p{color:var(--dim2)}
+.fv-btn{display:inline-flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--line);
+  border-radius:7px;padding:3px 9px;cursor:pointer;font:600 11px var(--f-ui);color:var(--dim);white-space:nowrap}
+.fv-btn:hover{color:var(--fg);border-color:var(--line2)}
+.fv-btn:disabled{opacity:.4;cursor:default}
+.fv-btn svg{width:12px;height:12px}
+
+/* ── the drawer: layer 3, unlimited, one click away ───────────────────────── */
+.fv-scrim{position:fixed;inset:0;background:var(--d-scrim);opacity:0;pointer-events:none;
+  transition:opacity .22s;z-index:66}
+.fv-drawer{position:fixed;top:0;right:0;bottom:0;z-index:70;width:min(440px,94vw);background:var(--panel);
+  color:var(--fg);border-left:1px solid var(--line);box-shadow:var(--d-drawer-sh);display:flex;flex-direction:column;
+  transform:translateX(104%);transition:transform .3s var(--d-ease),visibility 0s linear .3s;visibility:hidden;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  font:14px/1.55 var(--f-body)}
+.fv-drawer.on{transform:none;visibility:visible;transition:transform .3s var(--d-ease),visibility 0s}
+:where(.fv-drawer) button{font:inherit;color:inherit}
+.fv-drawer .dr-hd{display:flex;gap:12px;align-items:center;padding:16px 18px 14px;border-bottom:1px solid var(--line)}
+.fv-drawer .dr-ico{width:40px;height:40px;border-radius:11px;background:var(--k,var(--f1));color:var(--on-tint);
+  display:grid;place-items:center;flex:none}
+.fv-drawer .dr-ico svg{width:22px;height:22px}
+.fv-drawer .dr-ico b{font:800 17px var(--f-ui)}
+.fv-drawer .dr-kind{margin:0;font:700 10px var(--f-ui);letter-spacing:1px;text-transform:uppercase;color:var(--k,var(--dim2))}
+.fv-drawer h2{margin:1px 0 0;font:700 18px/1.2 var(--f-ui);color:var(--fg)}
+.fv-drawer .dr-x{margin-left:auto;width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--panel);
+  cursor:pointer;display:grid;place-items:center;color:var(--dim);flex:none;padding:0}
+.fv-drawer .dr-x:hover{color:var(--fg);border-color:var(--line2)}
+.fv-drawer .dr-x svg{width:16px;height:16px}
+.fv-drawer .dr-body{overflow:auto;padding:16px 18px 28px;display:grid;gap:16px;align-content:start;font-size:14px}
+.fv-drawer .dr-body p{margin:0}
+.fv-drawer .dr-body section{display:grid;gap:12px}
+.fv-drawer .dr-body .lead{font-size:14.5px;color:var(--fg)}
+.fv-drawer .dr-body h3{margin:0 0 6px;font:700 10.5px var(--f-ui);letter-spacing:1px;text-transform:uppercase;color:var(--dim2)}
+.fv-drawer .dr-body ul,.fv-drawer .dr-body ol{margin:0;padding-left:19px;display:grid;gap:5px}
+.fv-drawer .dr-body table{margin:0;font-size:13px}
+.fv-drawer .facts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px}
+.fv-drawer .facts-grid div{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:7px 10px;
+  font:600 12.5px var(--f-mono);color:var(--fg)}
+.fv-drawer .steplist{list-style:none;padding:0;margin:0;gap:2px}
+.fv-drawer .steplist li{margin:0}
+.fv-drawer .steplist button{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:none;
+  border:1px solid transparent;border-radius:9px;padding:6px 8px;cursor:pointer;font:500 13px/1.4 var(--f-ui);color:var(--dim)}
+.fv-drawer .steplist button:hover{background:var(--panel2);border-color:var(--line);color:var(--fg)}
+.fv-drawer .steplist .num{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;
+  background:var(--fc,var(--f1));color:var(--on-tint);font:800 10.5px var(--f-ui)}
+.fv-drawer .steplist .num.fail{background:var(--bad)}
+.fv-drawer .alsoin{font:500 12.5px var(--f-ui);color:var(--dim2)}
+.fv-drawer .alsoin button{background:none;border:none;color:var(--f1);cursor:pointer;font:600 12.5px var(--f-ui);padding:0 3px}
+.fv-drawer .alsoin button:hover{text-decoration:underline}
+.fv-drawer .route{font:600 13px/1.6 var(--f-ui);color:var(--fg)}
+.fv-drawer .route .arr{color:var(--dim2);padding:0 3px}
+.fv-drawer .stepnav{display:flex;justify-content:space-between;gap:8px}
+.fv-drawer .segbtn{display:flex;align-items:center;gap:10px;width:100%;cursor:pointer;text-align:left;
+  background:color-mix(in srgb,var(--stream) 8%,var(--panel));border:1px dashed color-mix(in srgb,var(--stream) 45%,transparent);
+  border-radius:12px;padding:10px 12px;font:600 13.5px var(--f-ui);color:var(--fg)}
+.fv-drawer .segbtn small{display:block;font:500 12px var(--f-ui);color:var(--dim)}
+.fv-drawer .segbtn:hover{border-style:solid}
+.fv-drawer .segbtn svg{width:18px;height:18px;color:var(--stream);flex:none}
+.fv-drawer .notebox textarea{width:100%;min-height:74px;resize:vertical;background:var(--sunk);color:var(--fg);
+  border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:13px/1.5 var(--f-body)}
+.fv-drawer .notebox textarea:focus{outline:none;border-color:var(--f1)}
+.fv-drawer .notebox textarea::placeholder{color:var(--dim2);opacity:.75}
+.fv-drawer .notebox .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;
+  font:500 11.5px var(--f-mono);color:var(--dim2)}
+
+.fv-toast{position:fixed;left:50%;bottom:22px;z-index:80;transform:translate(-50%,20px);opacity:0;
+  background:var(--fg);color:var(--paper);border-radius:999px;padding:7px 14px;font:600 12.5px var(--f-ui);
+  transition:all .22s var(--d-ease);pointer-events:none}
+.fv-toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* the motion switch, when there is no pill to carry it */
+.fv-motion svg{width:14px;height:14px;vertical-align:-2px;margin-right:4px}
+.pill .fv-motion{display:inline-flex;align-items:center}
+.pill .fv-motion[aria-pressed="false"]{color:var(--dim2)}
+
+/* ── motion off: the system still reads, only the drift stops ─────────────── */
+.still .fv-drawing .edge.live .line,.still .fv-drawing .stepno.now circle{animation:none!important}
+@media (prefers-reduced-motion:reduce){
+  .fv-drawing .edge.live .line,.fv-drawing .stepno.now circle{animation:none!important}
+  .fv-drawer,.fv-wrap,.fv-peek,.fv-flow,.fv-dot{transition:none!important}
+}
+
+/* ── narrow: the canvas scrolls inside itself, the drawer becomes a sheet ─── */
+.fv-print{display:none}
+@media (max-width:760px){
+  [data-kind="drawing"] body{padding:16px 16px 48px}
+  .fv-hd-top{padding-right:0}
+  .fv-drawing h1.fv-title{font-size:23px}
+  .fv-views{margin-left:0}
+  .fv-layers{position:static;margin:10px 10px 0;width:max-content;max-width:calc(100% - 20px);overflow-x:auto}
+  .fv-drawer{top:auto;left:0;width:auto;max-height:82vh;border-left:none;border-top:1px solid var(--line);
+    border-radius:18px 18px 0 0;transform:translateY(104%)}
+  .fv-drawer.on{transform:none}
+  .fv-scrim.on{opacity:1;pointer-events:auto}
+  .fv-key{bottom:auto;top:52px}
+}
+
+/* ── print: a still picture and the steps it walks ────────────────────────── */
+@media print{
+  .fv-tools,.fv-views,.fv-layers,.fv-play,.fv-navs,.fv-dots,.fv-drawer,.fv-scrim,.fv-peek,.fv-key,.fv-toast,.fv-strip .fv-flow[aria-checked="false"]{display:none!important}
+  .fv-hd-top{padding-right:0}
+  .fv-stage{box-shadow:none;break-inside:avoid}
+  /* the title, the lede and the canvas are one figure: never let a page break separate them */
+  figure.fv-drawing{break-inside:avoid}
+  .fv-drawing>figcaption,.fv-drawing .fv-hd,.fv-drawing .fv-strip{break-after:avoid}
+  .fv-drawing .edge .line,.fv-drawing .stepno circle{animation:none!important}
+  .fv-drawing .pkt,.fv-drawing .ptag{display:none}
+  .fv-map,.fv-seq{min-width:0}
+  .fv-print{display:block;margin:12px 4px 0;padding-left:22px;font:10.5pt/1.5 var(--f-body);color:var(--fg)}
+  .fv-print li{margin:3px 0}
+}

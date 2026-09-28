@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="flowviz-doc" content="{{DOC}}">
+<meta name="flowviz-kind" content="drawing">
+<title>{{TITLE}}</title>
+<!-- flowviz:head -->
+</head>
+<body>
+<main>
+<!-- ══════════════ THE DRAWING ══════════════
+     You write two things. The spec: structure, and every word shown before a click
+     (≤12 boxes on the grid, ≤3 flows of ≤9 one-sentence steps). The depth: one
+     <section data-for="…"> of plain HTML per box, "edge:<id>" or "step:<id>" worth
+     explaining. The runtime lays out, routes, animates and wires everything else.
+     Ids are join keys for the human's notes: never rename one after handover. -->
+<figure class="fv-drawing" data-mode="page">
+<script type="application/json">
+{
+  "id": "{{DOC}}",
+  "name": "System name",
+  "title": "{{TITLE}}",
+  "lede": "Two sentences at most: what the drawing shows and the one thing to notice in it.",
+  "grid": { "cols": 4, "rows": 1 },
+  "zones": [
+    { "id": "zone1", "label": "Zone name", "cols": [1, 3], "rows": [0, 0], "tone": "neutral" }
+  ],
+  "nodes": [
+    { "id": "box1", "label": "Box 1", "kind": "client", "icon": "user", "at": [0, 0], "tech": "technology",
+      "peek": "One sentence: what this box does, and the number that matters most.", "facts": ["a fact with a number"] },
+    { "id": "box2", "label": "Box 2", "kind": "service", "icon": "service", "at": [1, 0], "tech": "technology",
+      "peek": "One sentence: what this box does, and the number that matters most.", "facts": ["a fact with a number"] },
+    { "id": "box3", "label": "Box 3", "kind": "service", "icon": "service", "at": [2, 0], "tech": "technology",
+      "peek": "One sentence: what this box does, and the number that matters most.", "facts": ["a fact with a number"] },
+    { "id": "box4", "label": "Box 4", "kind": "data", "icon": "db", "at": [3, 0], "tech": "technology",
+      "peek": "One sentence: what this box does, and the number that matters most.", "facts": ["a fact with a number"] }
+  ],
+  "edges": [
+    { "id": "box1-box2", "from": "box1", "to": "box2", "mode": "sync", "label": "protocol", "ms": "latency",
+      "peek": "One sentence: what travels on this connection and why." },
+    { "id": "box2-box3", "from": "box2", "to": "box3", "mode": "sync", "label": "protocol", "ms": "latency",
+      "peek": "One sentence: what travels on this connection and why." },
+    { "id": "box3-box4", "from": "box3", "to": "box4", "mode": "sync", "label": "protocol", "ms": "latency",
+      "peek": "One sentence: what travels on this connection and why." }
+  ],
+  "flows": [
+    { "id": "flow1", "label": "Flow 1", "summary": "One sentence: how many steps there are, and the one to watch.",
+      "steps": [
+        { "id": "f1s1", "path": ["box1", "box2"], "msg": "message", "say": "One sentence: what this step establishes or changes." },
+        { "id": "f1s2", "path": ["box2", "box3"], "msg": "message", "say": "One sentence: what this step establishes or changes." },
+        { "id": "f1s3", "path": ["box3", "box4"], "msg": "message", "say": "One sentence: what this step establishes or changes." }
+      ] }
+  ]
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="box1">
+  <p>Layer 3 for this box: tables, logs and <code>file:line</code> citations, as long as it needs.</p>
+</section>
+</div>
+</figure>
+<!-- flowviz:foot -->
+</main>
+<!-- flowviz:js -->
+</body>
+</html>

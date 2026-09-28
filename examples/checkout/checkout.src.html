@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="flowviz-doc" content="checkout">
+<meta name="flowviz-kind" content="drawing">
+<title>Checkout confirms in 300 ms</title>
+<!-- flowviz:head -->
+</head>
+<body>
+<main>
+<!-- A reference drawing: a whole system with three flows and one segment.
+     Everything below is what an agent writes; the runtime does the rest. -->
+<figure class="fv-drawing" data-mode="page">
+<script type="application/json">
+{
+  "id": "checkout",
+  "name": "Checkout",
+  "title": "Checkout confirms in 300 ms because payment settles off the hot path",
+  "lede": "Three services and one database transaction sit on the request path. The card charge and the receipt run from the event bus after the customer already has an order id.",
+  "grid": {"cols": 5, "rows": 4},
+  "zones": [
+    {"id": "client", "label": "Client", "cols": [0, 0], "rows": [1, 1], "tone": "neutral"},
+    {"id": "hot", "label": "Hot path · p99 300 ms", "cols": [1, 3], "rows": [0, 1], "tone": "sync"},
+    {"id": "async", "label": "Settles async · seconds", "cols": [2, 3], "rows": [2, 3], "tone": "async", "tag": "tr"},
+    {"id": "ext", "label": "External", "cols": [4, 4], "rows": [2, 2], "tone": "ext"}
+  ],
+  "nodes": [
+    {"id": "web", "label": "Web & mobile", "kind": "client", "icon": "devices", "at": [0, 1], "tech": "React · Swift · Kotlin", "peek": "The storefront and apps. Every checkout call carries a fresh idempotency key, so a double tap never buys twice.", "facts": ["1.2k orders/min peak", "JWT · 15 min"]},
+    {"id": "gw", "label": "API gateway", "kind": "edge", "icon": "gateway", "at": [1, 1], "tech": "Envoy", "peek": "Terminates TLS, verifies the JWT against cached signing keys and rate-limits each customer before anything reaches a service.", "facts": ["p99 4 ms", "100 req/s per user"]},
+    {"id": "order", "label": "Order service", "kind": "service", "icon": "service", "at": [2, 1], "tech": "Go · 6 pods", "peek": "Owns the order lifecycle. It answers 202 as soon as the order and its event are committed together.", "facts": ["p99 200 ms", "6 pods"], "segment": "order-outbox"},
+    {"id": "inv", "label": "Inventory", "kind": "service", "icon": "box", "at": [2, 0], "tech": "gRPC", "peek": "Holds a 10-minute soft reservation per line item, so two customers cannot both buy the last unit.", "facts": ["p99 45 ms", "50 ms timeout"]},
+    {"id": "cache", "label": "Order cache", "kind": "data", "icon": "cache", "at": [3, 0], "tech": "Redis", "peek": "Cache-aside copy of recent orders. Status reads are served here and never touch the primary database.", "facts": ["hit rate 94%", "TTL 30 s"]},
+    {"id": "db", "label": "Orders DB", "kind": "data", "icon": "db", "at": [3, 1], "tech": "Postgres 16", "peek": "The system of record. The order row and its outbox row are written in the same transaction.", "facts": ["p99 18 ms", "1 primary · 2 replicas"]},
+    {"id": "bus", "label": "Event bus", "kind": "stream", "icon": "queue", "at": [2, 2], "tech": "Kafka", "peek": "Carries OrderPlaced, PaymentCaptured and PaymentFailed. Consumers retry on their own; nothing on the hot path waits for it.", "facts": ["3 topics", "7-day retention"]},
+    {"id": "pay", "label": "Payment worker", "kind": "service", "icon": "card", "at": [3, 2], "tech": "Go · consumer", "peek": "Consumes OrderPlaced and charges the card, using the order id as the idempotency key.", "facts": ["3 retries, backoff", "3 s timeout"]},
+    {"id": "psp", "label": "Card processor", "kind": "external", "icon": "bank", "at": [4, 2], "tech": "third-party PSP", "peek": "Authorizes and captures the charge. It is outside our control, so it is kept off the request path.", "facts": ["p99 1.4 s", "99.95% SLA"]},
+    {"id": "notify", "label": "Notifications", "kind": "service", "icon": "bell", "at": [2, 3], "tech": "email · push", "peek": "Sends the receipt or the payment-failed prompt. It only ever reads events.", "facts": ["p50 6 s after order"]}
+  ],
+  "edges": [
+    {"id": "web-gw", "from": "web", "to": "gw", "mode": "sync", "label": "HTTPS", "ms": "p99 80 ms RTT", "peek": "Public TLS 1.3 from the device to our edge. A retry reuses the same idempotency key."},
+    {"id": "gw-order", "from": "gw", "to": "order", "mode": "sync", "label": "HTTP/2", "ms": "p99 4 ms", "peek": "Internal call carrying the verified customer id in a signed header."},
+    {"id": "order-inv", "from": "order", "to": "inv", "mode": "sync", "label": "gRPC", "ms": "p99 45 ms", "peek": "Reserve or release stock. A 50 ms timeout keeps a slow inventory from slowing checkout."},
+    {"id": "order-db", "from": "order", "to": "db", "mode": "sync", "label": "SQL", "ms": "p99 18 ms", "peek": "One transaction writes the order row and the outbox row, or neither."},
+    {"id": "order-cache", "from": "order", "to": "cache", "mode": "sync", "label": "RESP", "ms": "p99 2 ms", "peek": "Status reads check here first; every state change rewrites the entry."},
+    {"id": "order-bus", "from": "order", "to": "bus", "mode": "async", "both": true, "label": "events", "ms": "relay lag ~100 ms", "peek": "The outbox relay publishes OrderPlaced; the order service consumes payment results to confirm or cancel."},
+    {"id": "bus-pay", "from": "bus", "to": "pay", "mode": "async", "both": true, "label": "events", "ms": "lag < 1 s", "peek": "The worker consumes OrderPlaced and publishes PaymentCaptured or PaymentFailed."},
+    {"id": "pay-psp", "from": "pay", "to": "psp", "mode": "sync", "label": "HTTPS", "ms": "p99 1.4 s", "peek": "Charge request with an idempotency key, so a retry can never double-charge."},
+    {"id": "bus-notify", "from": "bus", "to": "notify", "mode": "async", "label": "events", "ms": "lag < 1 s", "peek": "Receipts and failure notices, driven only by events."}
+  ],
+  "flows": [
+    {
+      "id": "place",
+      "label": "Place order",
+      "summary": "8 steps. The customer has an order id after step 4; steps 5 to 8 settle in the background.",
+      "steps": [
+        {"id": "p1", "path": ["web", "gw", "order"], "msg": "POST /orders", "say": "The app posts the cart; the gateway checks the token and rate limit, then routes it."},
+        {"id": "p2", "path": ["order", "inv"], "msg": "Reserve", "say": "The order service reserves each line item in inventory, with a 50 ms timeout."},
+        {"id": "p3", "path": ["order", "db"], "msg": "COMMIT", "say": "The order row and its OrderPlaced outbox row commit in one transaction."},
+        {"id": "p4", "path": ["order", "gw", "web"], "msg": "202 Accepted", "say": "The customer gets 202 Accepted and an order id; the hot path ends here."},
+        {"id": "p5", "path": ["order", "bus"], "msg": "OrderPlaced", "say": "The outbox relay publishes OrderPlaced to the event bus."},
+        {"id": "p6", "path": ["bus", "pay"], "msg": "OrderPlaced", "say": "The payment worker consumes the event, long after the customer has moved on."},
+        {"id": "p7", "path": ["pay", "psp"], "msg": "Charge", "say": "It charges the card, using the order id as the idempotency key."},
+        {"id": "p8", "path": ["pay", "bus", "notify"], "msg": "PaymentCaptured", "say": "PaymentCaptured fans out: the order is confirmed and the receipt is sent."}
+      ]
+    },
+    {
+      "id": "status",
+      "label": "Check status",
+      "summary": "4 steps. 94% of reads end at the cache and never touch the database.",
+      "steps": [
+        {"id": "s1", "path": ["web", "gw", "order"], "msg": "GET /orders/:id", "say": "The app asks for the order status through the gateway."},
+        {"id": "s2", "path": ["order", "cache"], "msg": "GET", "say": "The order service reads the cache first; a hit returns in about 2 ms."},
+        {"id": "s3", "path": ["order", "db"], "msg": "SELECT", "say": "On a miss it reads a replica, then writes the result back with a 30 s TTL."},
+        {"id": "s4", "path": ["order", "gw", "web"], "msg": "200 OK", "say": "The status goes back to the app: pending, confirmed or cancelled."}
+      ]
+    },
+    {
+      "id": "declined",
+      "label": "Card declined",
+      "summary": "5 steps. A failing card never blocks checkout; it cancels the order and tells the customer.",
+      "steps": [
+        {"id": "d1", "path": ["bus", "pay"], "msg": "OrderPlaced", "say": "The payment worker picks up OrderPlaced as usual."},
+        {"id": "d2", "path": ["pay", "psp"], "msg": "Charge", "fail": true, "say": "The processor declines the card, or times out after 3 s on every retry."},
+        {"id": "d3", "path": ["pay", "bus"], "msg": "PaymentFailed", "say": "The worker publishes PaymentFailed instead of retrying forever."},
+        {"id": "d4", "path": ["bus", "order", "inv"], "msg": "Release", "say": "The order service cancels the order and releases the reserved stock."},
+        {"id": "d5", "path": ["bus", "notify"], "msg": "PaymentFailed", "say": "The customer is asked to update their card; the order id stays valid."}
+      ]
+    }
+  ],
+  "segments": {
+    "order-outbox": {
+      "kind": "segment",
+      "name": "Order service",
+      "parent": "order",
+      "title": "The order row and its event commit together, or neither does",
+      "lede": "Inside the order service, the handler never talks to Kafka. It writes an outbox row in the same transaction, and a relay publishes it afterwards.",
+      "grid": {"cols": 5, "rows": 2},
+      "zones": [
+        {"id": "svc", "label": "Order service · pod", "cols": [1, 3], "rows": [0, 0], "tone": "svc"},
+        {"id": "tx", "label": "Orders DB · one transaction", "cols": [2, 3], "rows": [1, 1], "tone": "data", "tag": "bl"}
+      ],
+      "nodes": [
+        {"id": "gw", "label": "API gateway", "kind": "edge", "icon": "gateway", "at": [0, 0], "ghost": "gw", "peek": "Part of the whole checkout drawing. Click to go back to it."},
+        {"id": "api", "label": "POST /orders", "kind": "service", "icon": "api", "at": [1, 0], "tech": "HTTP handler", "peek": "Parses the cart and the Idempotency-Key header. A repeated key returns the first response instead of a second order.", "facts": ["p99 200 ms in service"]},
+        {"id": "val", "label": "Validate cart", "kind": "service", "icon": "check", "at": [2, 0], "tech": "domain logic", "peek": "Re-prices the cart from the catalog and reserves stock. Prices sent by the client are never trusted.", "facts": ["calls Inventory", "50 ms timeout"]},
+        {"id": "relay", "label": "Outbox relay", "kind": "service", "icon": "relay", "at": [3, 0], "tech": "polls every 100 ms", "peek": "Reads unsent outbox rows, publishes them, then marks them sent. Delivery is at-least-once by design.", "facts": ["batch 100", "lag p99 150 ms"]},
+        {"id": "orders", "label": "orders", "kind": "data", "icon": "table", "at": [2, 1], "tech": "table", "peek": "One row per order. Status starts as PENDING and only events move it.", "facts": ["idempotency_key UNIQUE"]},
+        {"id": "outbox", "label": "outbox", "kind": "data", "icon": "table", "at": [3, 1], "tech": "table", "peek": "One row per event to publish, written in the same transaction as the order.", "facts": ["sent_at NULL = unsent"]},
+        {"id": "bus", "label": "Event bus", "kind": "stream", "icon": "queue", "at": [4, 0], "ghost": "bus", "peek": "Part of the whole checkout drawing. Click to go back to it."}
+      ],
+      "edges": [
+        {"id": "gw-api", "from": "gw", "to": "api", "mode": "sync", "label": "HTTP/2", "ms": "p99 4 ms", "peek": "The only way in. The verified customer id arrives in a signed header."},
+        {"id": "api-val", "from": "api", "to": "val", "mode": "sync", "label": "call", "ms": "p99 60 ms", "peek": "In-process call; validation and the inventory reservation happen here."},
+        {"id": "val-orders", "from": "val", "to": "orders", "mode": "sync", "label": "INSERT", "ms": "inside tx", "peek": "Inserts the order as PENDING. The unique idempotency key rejects a duplicate."},
+        {"id": "val-outbox", "from": "val", "to": "outbox", "mode": "sync", "label": "INSERT", "ms": "inside tx", "peek": "Inserts the OrderPlaced event in the same transaction as the order row."},
+        {"id": "outbox-relay", "from": "outbox", "to": "relay", "mode": "sync", "label": "poll", "ms": "every 100 ms", "peek": "SELECT … FOR UPDATE SKIP LOCKED, so several relays never publish the same row."},
+        {"id": "relay-bus", "from": "relay", "to": "bus", "mode": "async", "label": "publish", "ms": "acks=all", "peek": "Publishes with acks=all, then sets sent_at. A crash in between means one duplicate, never a loss."}
+      ],
+      "flows": [
+        {
+          "id": "write",
+          "label": "Write an order",
+          "summary": "6 steps. If the transaction rolls back, there is no event to publish.",
+          "steps": [
+            {"id": "w1", "path": ["gw", "api"], "msg": "POST /orders", "say": "The request arrives with the customer id and an idempotency key."},
+            {"id": "w2", "path": ["api", "val"], "msg": "cart", "say": "The cart is re-priced from the catalog and stock is reserved."},
+            {"id": "w3", "path": ["val", "orders"], "msg": "INSERT order", "say": "The order row is inserted as PENDING inside an open transaction."},
+            {"id": "w4", "path": ["val", "outbox"], "msg": "INSERT event", "say": "The OrderPlaced row joins the same transaction, then both commit."},
+            {"id": "w5", "path": ["api", "gw"], "msg": "202 Accepted", "say": "Only after the commit does the handler answer 202 Accepted."},
+            {"id": "w6", "path": ["outbox", "relay", "bus"], "msg": "OrderPlaced", "say": "The relay picks up the unsent row, publishes it and marks it sent."}
+          ]
+        }
+      ]
+    }
+  }
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="order">
+  <h3>Latency budget, p99</h3>
+  <table>
+    <thead><tr><th>Stage</th><th>p99</th><th>Holds because</th></tr></thead>
+    <tbody>
+      <tr><td>Device → edge</td><td>80 ms</td><td>TLS resumed, HTTP/2 connection reused</td></tr>
+      <tr><td>Gateway</td><td>4 ms</td><td>JWT keys cached; no call to the auth server</td></tr>
+      <tr><td>Validate + price</td><td>60 ms</td><td>catalog prices cached in-process</td></tr>
+      <tr><td>Inventory reserve</td><td>45 ms</td><td>50 ms timeout; on expiry the order is refused, not delayed</td></tr>
+      <tr><td>Transaction</td><td>18 ms</td><td>two inserts and one commit on the primary</td></tr>
+      <tr><td>Serialize + return</td><td>15 ms</td><td>response is an id and a status, nothing more</td></tr>
+      <tr><td><b>Total</b></td><td><b>222 ms</b></td><td>78 ms of headroom under the 300 ms claim</td></tr>
+    </tbody>
+  </table>
+  <div>
+    <h3>What it deliberately does not do</h3>
+    <ul>
+      <li>Call the card processor. It is the one dependency with a p99 over a second.</li>
+      <li>Publish to Kafka directly. A broker hiccup would otherwise fail a checkout that already committed.</li>
+    </ul>
+  </div>
+</section>
+<section data-for="db">
+  <h3>The two tables that matter</h3>
+  <div class="cmd fig"><pre><code>CREATE TABLE orders (
+  id               uuid PRIMARY KEY,
+  customer_id      uuid NOT NULL,
+  status           text NOT NULL DEFAULT 'PENDING',
+  idempotency_key  text NOT NULL UNIQUE,
+  total_cents      bigint NOT NULL,
+  created_at       timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE outbox (
+  id          bigserial PRIMARY KEY,
+  topic       text NOT NULL,
+  payload     jsonb NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  sent_at     timestamptz
+);
+CREATE INDEX outbox_unsent ON outbox (id) WHERE sent_at IS NULL;</code></pre></div>
+  <p>Replicas serve status reads on a cache miss. Replication lag p99 is 40 ms, well inside the 30 s cache TTL.</p>
+</section>
+<section data-for="bus">
+  <h3>Topics</h3>
+  <table>
+    <thead><tr><th>Topic</th><th>Producer</th><th>Consumers</th></tr></thead>
+    <tbody>
+      <tr><td><code>order.placed</code></td><td>outbox relay</td><td>payment worker</td></tr>
+      <tr><td><code>payment.captured</code></td><td>payment worker</td><td>order service, notifications</td></tr>
+      <tr><td><code>payment.failed</code></td><td>payment worker</td><td>order service, notifications</td></tr>
+    </tbody>
+  </table>
+  <p>All three are keyed by order id, so every event for one order lands on one partition, in order.</p>
+</section>
+<section data-for="pay">
+  <h3>Retry policy</h3>
+  <ul>
+    <li>3 attempts, backoff 1 s then 4 s, each with a 3 s timeout.</li>
+    <li>The idempotency key is the order id, so attempt 3 can never create a second charge.</li>
+    <li>A hard decline is not retried. Only timeouts and 5xx are.</li>
+  </ul>
+  <div class="cmd fig"><pre><code>charge, err := psp.Charge(ctx, psp.ChargeRequest{
+    Amount:         order.TotalCents,
+    Currency:       "USD",
+    PaymentMethod:  order.PaymentMethodID,
+    IdempotencyKey: order.ID.String(),
+})</code></pre></div>
+</section>
+<section data-for="psp">
+  <h3>How each answer lands</h3>
+  <table>
+    <thead><tr><th>Processor says</th><th>We do</th></tr></thead>
+    <tbody>
+      <tr><td>captured</td><td>publish <code>payment.captured</code></td></tr>
+      <tr><td>declined</td><td>publish <code>payment.failed</code> at once; no retry</td></tr>
+      <tr><td>timeout or 5xx</td><td>retry with the same key; after 3 attempts, publish <code>payment.failed</code></td></tr>
+    </tbody>
+  </table>
+</section>
+<section data-for="cache">
+  <h3>Cache-aside, in five lines</h3>
+  <div class="cmd fig"><pre><code>func Status(id string) (Order, error) {
+    if o, ok := cache.Get("order:" + id); ok { return o, nil }
+    o, err := replica.GetOrder(id)
+    if err == nil { cache.Set("order:"+id, o, 30*time.Second) }
+    return o, err
+}</code></pre></div>
+  <p>Every status change also deletes the key, so the 30 s TTL is a backstop, not the freshness guarantee.</p>
+</section>
+<section data-for="gw">
+  <h3>Rate limit</h3>
+  <p>Token bucket per customer id: 100 requests per second, burst 20. <code>POST /orders</code> has its own bucket of 5 per minute, which stops a stuck retry loop from creating a storm of orders.</p>
+</section>
+<section data-for="edge:order-bus">
+  <h3>Why two lanes</h3>
+  <p>This connection carries traffic both ways. The order service <b>publishes</b> through the outbox relay and <b>consumes</b> payment results to confirm or cancel. Each direction is drawn as its own lane, so the motion never has to lie about direction.</p>
+</section>
+<section data-for="step:p3">
+  <div class="cmd fig"><pre><code>BEGIN;
+INSERT INTO orders (id, customer_id, idempotency_key, total_cents)
+  VALUES ($1, $2, $3, $4);
+INSERT INTO outbox (topic, payload)
+  VALUES ('order.placed', $5);
+COMMIT;</code></pre></div>
+  <p>If either insert fails, both roll back, so an event can never describe an order that does not exist.</p>
+</section>
+<section data-for="step:p4">
+  <h3>Why 202, not 201</h3>
+  <p>The order exists but is not paid. <code>202 Accepted</code> tells the client the work continues; the app shows "Order placed" and polls the status, which is the <b>Check status</b> flow.</p>
+</section>
+<section data-for="step:d2">
+  <h3>Worst case, in time</h3>
+  <p>Three attempts at a 3 s timeout, plus 1 s and 4 s of backoff, is 14 s before <code>payment.failed</code>. The customer left the checkout screen about 13.7 s earlier.</p>
+</section>
+<section data-for="order-outbox/relay">
+  <div class="cmd fig"><pre><code>SELECT id, topic, payload
+  FROM outbox
+ WHERE sent_at IS NULL
+ ORDER BY id
+ LIMIT 100
+   FOR UPDATE SKIP LOCKED;</code></pre></div>
+  <p><code>SKIP LOCKED</code> lets several relay replicas run without publishing the same row twice. A crash after publishing but before <code>sent_at</code> is set produces one duplicate, which consumers already ignore by order id.</p>
+</section>
+<section data-for="order-outbox/api">
+  <h3>Idempotency</h3>
+  <p>The <code>Idempotency-Key</code> header is stored in <code>orders.idempotency_key</code>. A second request with the same key hits the unique index, and the handler returns the first order's 202 instead of creating another.</p>
+</section>
+<section data-for="order-outbox/outbox">
+  <h3>Row lifecycle</h3>
+  <ol>
+    <li>Inserted with <code>sent_at = NULL</code>, inside the order's transaction.</li>
+    <li>Locked and published by the relay.</li>
+    <li><code>sent_at</code> set; rows older than 7 days are deleted nightly.</li>
+  </ol>
+</section>
+</div>
+</figure>
+<!-- flowviz:foot -->
+</main>
+<!-- flowviz:js -->
+</body>
+</html>

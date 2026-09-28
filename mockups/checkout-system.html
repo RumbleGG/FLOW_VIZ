@@ -1,0 +1,1966 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Checkout Flow Drawing</title>
+<script>
+/* theme before first paint — auto follows the OS, a saved choice wins */
+(function(){try{var u=JSON.parse(localStorage.getItem('flowviz:ui:checkout-system')||'{}');
+if(u.theme==='light'||u.theme==='dark')document.documentElement.setAttribute('data-theme',u.theme);
+if(u.motion===false)document.documentElement.classList.add('still');}catch(e){}})();
+</script>
+<style>
+/* ============================================================================
+   FLOW_VIZ drawing — mockup of the shared stylesheet.
+   Tokens only. Components never name a colour; kinds and flows map onto tokens.
+   ============================================================================ */
+:root{
+  color-scheme:light;
+  --bg:#F5F7FB; --canvas:#FFFFFF; --grid-dot:#DFE5EE;
+  --panel:#FFFFFF; --panel-2:#F1F4F9; --sunk:#F6F8FB;
+  --line:#E2E7EF; --line-2:#C9D2DF;
+  --ink:#172033; --ink-2:#4A5568; --ink-3:#7B8698;
+  --on-tile:#FFFFFF; --on-ink:#FFFFFF;
+
+  --client:#2F6FEB;  --client-bg:#EAF2FF;  --client-bd:#A7C3F4;
+  --edge:#7048E8;    --edge-bg:#F2EDFF;    --edge-bd:#C5B4F4;
+  --service:#16945A; --service-bg:#E7F6EE; --service-bd:#9FD4B8;
+  --data:#D97A0B;    --data-bg:#FFF3E0;    --data-bd:#F0C27E;
+  --stream:#D6336C;  --stream-bg:#FFEBF2;  --stream-bd:#F1A9C4;
+  --ext:#5B6B82;     --ext-bg:#EFF2F6;     --ext-bd:#BAC4D2;
+
+  --f1:#2F6FEB; --f2:#0C9A8A; --f3:#E0751B; --bad:#E03131; --ok:#16945A;
+
+  --shadow:0 1px 2px rgba(23,32,51,.06),0 6px 18px rgba(23,32,51,.06);
+  --node-shadow:drop-shadow(0 1px 1px rgba(23,32,51,.07)) drop-shadow(0 4px 8px rgba(23,32,51,.05));
+  --scrim:rgba(23,32,51,.18);
+
+  --f-ui:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --f-text:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --f-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r:14px; --r-sm:9px; --r-xs:6px;
+  --ease-out:cubic-bezier(.22,1,.36,1);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0A0F1D; --canvas:#0F1628; --grid-dot:#1D2842;
+    --panel:#111A2D; --panel-2:#172238; --sunk:#0C1324;
+    --line:#223052; --line-2:#33456B;
+    --ink:#E8EDF7; --ink-2:#AEB9CE; --ink-3:#7D8BA6;
+    --on-tile:#0A0F1D; --on-ink:#0A0F1D;
+    --client:#72A9FF;  --client-bg:#12213F;  --client-bd:#2D5AA8;
+    --edge:#AC96FF;    --edge-bg:#1E1842;    --edge-bd:#5641B0;
+    --service:#52D597; --service-bg:#0D2A20;  --service-bd:#22704D;
+    --data:#FFB54D;    --data-bg:#2E210C;    --data-bd:#86560F;
+    --stream:#FF7DB0;  --stream-bg:#331225;  --stream-bd:#932C59;
+    --ext:#9DAAC3;     --ext-bg:#18202F;     --ext-bd:#3B4966;
+    --f1:#6EA6FF; --f2:#36D6C1; --f3:#FFA652; --bad:#FF6262; --ok:#52D597;
+    --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.35);
+    --node-shadow:drop-shadow(0 2px 6px rgba(0,0,0,.35));
+    --scrim:rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0A0F1D; --canvas:#0F1628; --grid-dot:#1D2842;
+  --panel:#111A2D; --panel-2:#172238; --sunk:#0C1324;
+  --line:#223052; --line-2:#33456B;
+  --ink:#E8EDF7; --ink-2:#AEB9CE; --ink-3:#7D8BA6;
+  --on-tile:#0A0F1D; --on-ink:#0A0F1D;
+  --client:#72A9FF;  --client-bg:#12213F;  --client-bd:#2D5AA8;
+  --edge:#AC96FF;    --edge-bg:#1E1842;    --edge-bd:#5641B0;
+  --service:#52D597; --service-bg:#0D2A20;  --service-bd:#22704D;
+  --data:#FFB54D;    --data-bg:#2E210C;    --data-bd:#86560F;
+  --stream:#FF7DB0;  --stream-bg:#331225;  --stream-bd:#932C59;
+  --ext:#9DAAC3;     --ext-bg:#18202F;     --ext-bd:#3B4966;
+  --f1:#6EA6FF; --f2:#36D6C1; --f3:#FFA652; --bad:#FF6262; --ok:#52D597;
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.35);
+  --node-shadow:drop-shadow(0 2px 6px rgba(0,0,0,.35));
+  --scrim:rgba(0,0,0,.45);
+}
+
+/* ── base ─────────────────────────────────────────────────────────────────── */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-text);
+  -webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--f1);outline-offset:2px}
+[hidden]{display:none!important}
+code{font:.86em/1.45 var(--f-mono);background:var(--sunk);border:1px solid var(--line);
+  border-radius:5px;padding:.5px 5px}
+.page{max-width:1180px;margin:0 auto;padding-inline:24px;padding-block:18px 56px}
+
+/* ── header: claim first, nothing above it but provenance ─────────────────── */
+.hd-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:34px}
+.crumbs{display:flex;align-items:center;gap:8px;font:600 12.5px var(--f-ui);color:var(--ink-3);
+  flex-wrap:wrap}
+.crumbs .sep{opacity:.6}
+.crumbs button{background:none;border:none;padding:2px 4px;border-radius:6px;cursor:pointer;
+  color:var(--f1);font-weight:600}
+.crumbs button:hover{background:var(--panel-2)}
+.chip{display:inline-flex;align-items:center;gap:6px;font:700 10.5px var(--f-ui);
+  letter-spacing:.9px;text-transform:uppercase;padding:4px 10px;border-radius:999px;
+  color:var(--k,var(--f1));background:color-mix(in srgb,var(--k,var(--f1)) 12%,var(--panel));
+  border:1px solid color-mix(in srgb,var(--k,var(--f1)) 30%,transparent)}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.chip.seg{--k:var(--stream)}
+.tools{margin-left:auto;display:flex;gap:6px;align-items:center}
+.tbtn{display:inline-flex;align-items:center;gap:7px;background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;
+  font:600 12px var(--f-ui);color:var(--ink-2);transition:border-color .15s,color .15s}
+.tbtn:hover{border-color:var(--line-2);color:var(--ink)}
+.tbtn svg{width:14px;height:14px}
+.tbtn[aria-pressed="true"]{color:var(--ink);border-color:var(--line-2);background:var(--panel-2)}
+
+h1{font:700 30px/1.16 var(--f-ui);letter-spacing:-.4px;margin:14px 0 8px;max-width:34ch;
+  text-wrap:balance}
+.lede{margin:0;max-width:68ch;color:var(--ink-2);font-size:15.5px;text-wrap:pretty}
+
+/* ── strip: flows left, views right ───────────────────────────────────────── */
+.strip{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:20px 0 10px}
+.flows{display:flex;gap:6px;flex-wrap:wrap}
+.flow{display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;padding:6px 12px 6px 10px;
+  font:600 13px var(--f-ui);color:var(--ink-2);transition:all .16s var(--ease-out)}
+.flow:hover{color:var(--ink);border-color:var(--line-2)}
+.flow .fd{width:9px;height:9px;border-radius:50%;background:var(--fc);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--fc) 20%,transparent)}
+.flow .n{font:600 11px var(--f-mono);color:var(--ink-3)}
+.flow[aria-checked="true"]{color:var(--ink);border-color:var(--fc);
+  background:color-mix(in srgb,var(--fc) 9%,var(--panel))}
+.flow:active{transform:scale(.97)}
+.views{margin-left:auto;display:inline-flex;background:var(--panel-2);border:1px solid var(--line);
+  border-radius:10px;padding:3px;gap:2px}
+.views button{background:none;border:none;border-radius:7px;padding:5px 12px;cursor:pointer;
+  font:600 12.5px var(--f-ui);color:var(--ink-3)}
+.views button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+
+/* ── stage: the canvas card ───────────────────────────────────────────────── */
+.stage{position:relative;background:var(--canvas);border:1px solid var(--line);
+  border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+.stage .scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.stage .dotgrid{background-image:radial-gradient(var(--grid-dot) 1px,transparent 1.2px);
+  background-size:18px 18px;background-position:9px 9px}
+#map,#seq{display:block;width:100%;height:auto;min-width:760px;user-select:none;
+  -webkit-user-select:none}
+.canvas-wrap{position:relative;transition:transform .32s var(--ease-out),opacity .32s var(--ease-out)}
+.canvas-wrap.zoom-out{opacity:0;transform:scale(1.35)}
+.canvas-wrap.zoom-in-start{opacity:0;transform:scale(.8);transition:none}
+
+.layers{position:absolute;top:10px;right:10px;z-index:5;display:flex;gap:5px;
+  background:color-mix(in srgb,var(--canvas) 86%,transparent);backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:999px;padding:3px}
+.layers button{display:inline-flex;align-items:center;gap:6px;background:none;border:none;
+  border-radius:999px;padding:4px 10px;cursor:pointer;font:600 11.5px var(--f-ui);color:var(--ink-3)}
+.layers button:hover{color:var(--ink)}
+.layers button[aria-pressed="true"]{color:var(--ink);background:var(--panel-2)}
+.layers button .sw{width:22px;height:12px;border-radius:999px;background:var(--line-2);position:relative;
+  transition:background .18s}
+.layers button .sw::after{content:"";position:absolute;top:2px;left:2px;width:8px;height:8px;border-radius:50%;
+  background:var(--canvas);transition:transform .18s var(--ease-out)}
+.layers button[aria-pressed="true"] .sw{background:var(--f1)}
+.layers button[aria-pressed="true"] .sw::after{transform:translateX(10px)}
+
+/* the rail: play, numbered steps, one caption */
+.rail{display:flex;align-items:center;gap:14px;padding:11px 14px;border-top:1px solid var(--line);
+  background:color-mix(in srgb,var(--panel-2) 60%,var(--canvas));flex-wrap:wrap}
+.play{display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:none;border-radius:999px;
+  padding:7px 14px 7px 11px;font:700 12.5px var(--f-ui);color:var(--on-ink);background:var(--acc,var(--f1));
+  transition:transform .12s,filter .15s;white-space:nowrap}
+.play:hover{filter:brightness(1.06)}
+.play:active{transform:scale(.97)}
+.play svg{width:14px;height:14px}
+.dots{display:flex;gap:5px;flex-wrap:wrap}
+.dot{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line-2);background:var(--canvas);
+  font:700 11px/1 var(--f-ui);color:var(--ink-3);cursor:pointer;display:grid;place-items:center;
+  transition:all .18s var(--ease-out);padding:0}
+.dot:hover{border-color:var(--acc);color:var(--acc)}
+.dot.seen{border-color:color-mix(in srgb,var(--acc) 55%,transparent);color:var(--acc)}
+.dot.now{background:var(--acc);border-color:var(--acc);color:var(--on-ink);transform:scale(1.12)}
+.dot.fail.now{background:var(--bad);border-color:var(--bad)}
+.cap{flex:1 1 280px;margin:0;font:500 13.5px/1.45 var(--f-ui);color:var(--ink-2);min-height:20px}
+.cap b{color:var(--ink);font-weight:700}
+.cap .more{background:none;border:none;padding:0 0 0 4px;color:var(--acc,var(--f1));cursor:pointer;
+  font:600 12.5px var(--f-ui)}
+.navs{display:flex;gap:4px}
+.navs button{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--canvas);
+  cursor:pointer;color:var(--ink-2);display:grid;place-items:center;padding:0}
+.navs button:hover{color:var(--ink);border-color:var(--line-2)}
+.navs svg{width:14px;height:14px}
+
+/* ── the peek: hover, one sentence, three facts at most ───────────────────── */
+.peek{position:absolute;z-index:20;width:268px;pointer-events:none;background:var(--panel);
+  border:1px solid var(--line-2);border-radius:12px;box-shadow:var(--shadow);padding:11px 13px 10px;
+  opacity:0;transform:translateY(4px) scale(.98);transform-origin:50% 100%;
+  transition:opacity .14s var(--ease-out),transform .18s var(--ease-out)}
+.peek.on{opacity:1;transform:none}
+.peek.below{transform-origin:50% 0}
+.peek .pk{display:flex;align-items:center;gap:6px;font:700 10px var(--f-ui);letter-spacing:.9px;
+  text-transform:uppercase;color:var(--k,var(--ink-3))}
+.peek .pk::before{content:"";width:6px;height:6px;border-radius:2px;background:currentColor}
+.peek h4{margin:4px 0 3px;font:700 14.5px/1.25 var(--f-ui)}
+.peek p{margin:0;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.peek .facts{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.peek .facts span{font:600 11px var(--f-mono);color:var(--ink);background:var(--panel-2);
+  border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+.peek .hint{margin-top:9px;padding-top:7px;border-top:1px dashed var(--line);font:600 11px var(--f-ui);
+  color:var(--ink-3);display:flex;gap:10px}
+.peek .hint kbd{font:600 10px var(--f-mono);border:1px solid var(--line-2);border-bottom-width:2px;
+  border-radius:4px;padding:0 4px;color:var(--ink-2)}
+
+/* ── the key: only when asked for ─────────────────────────────────────────── */
+.key{position:absolute;left:12px;bottom:64px;z-index:6;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;box-shadow:var(--shadow);padding:10px 12px;font:500 12px var(--f-ui);color:var(--ink-2);
+  display:grid;grid-template-columns:44px 1fr;gap:6px 10px;align-items:center;width:250px}
+.key svg{width:44px;height:14px;overflow:visible}
+
+/* ── SVG: zones, nodes, edges ─────────────────────────────────────────────── */
+.zone rect{fill:color-mix(in srgb,var(--z) 5%,transparent);stroke:color-mix(in srgb,var(--z) 42%,transparent);
+  stroke-width:1.3;stroke-dasharray:5 5}
+.zone text{fill:var(--z);font:700 11px var(--f-ui);letter-spacing:.4px}
+.z-neutral{--z:var(--ink-3)} .z-sync{--z:var(--f1)} .z-async{--z:var(--stream)}
+.z-ext{--z:var(--ext)} .z-data{--z:var(--data)} .z-svc{--z:var(--service)}
+
+.k-client{--k:var(--client);--k-bg:var(--client-bg);--k-bd:var(--client-bd)}
+.k-edge{--k:var(--edge);--k-bg:var(--edge-bg);--k-bd:var(--edge-bd)}
+.k-service{--k:var(--service);--k-bg:var(--service-bg);--k-bd:var(--service-bd)}
+.k-data{--k:var(--data);--k-bg:var(--data-bg);--k-bd:var(--data-bd)}
+.k-stream{--k:var(--stream);--k-bg:var(--stream-bg);--k-bd:var(--stream-bd)}
+.k-external{--k:var(--ext);--k-bg:var(--ext-bg);--k-bd:var(--ext-bd)}
+
+.node{cursor:pointer;transition:opacity .2s var(--ease-out)}
+.node .card{fill:var(--k-bg);stroke:var(--k-bd);stroke-width:1.3;filter:var(--node-shadow);
+  transition:stroke .15s,stroke-width .15s}
+.node .tile{fill:var(--k)}
+.node .ico{color:var(--on-tile)}
+.node .lbl{fill:var(--ink);font:650 13px var(--f-ui);letter-spacing:-.1px}
+.node .tech{fill:var(--ink-3);font:500 10.5px var(--f-ui);opacity:0;transition:opacity .2s}
+.node .lblg{transition:transform .22s var(--ease-out)}
+svg.show-labels .node .tech{opacity:1}
+svg.show-labels .node.has-tech .lblg{transform:translateY(-6px)}
+.node:hover .card,.node.sel .card,.node:focus-visible .card{stroke:var(--k);stroke-width:2}
+.node:focus{outline:none}
+.node.sel .card{stroke-width:2.4}
+.node.ghost .card{fill:none;stroke:var(--line-2);stroke-dasharray:4 4;filter:none}
+.node.ghost .tile{fill:var(--panel-2)}
+.node.ghost .ico{color:var(--ink-3)}
+.node.ghost .lbl{fill:var(--ink-2)}
+.node .seg{cursor:zoom-in}
+.node .seg circle{fill:var(--canvas);stroke:var(--k);stroke-width:1.4;transition:transform .15s}
+.node .seg path{stroke:var(--k);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.node .seg:hover circle{fill:var(--k)}
+.node .seg:hover path{stroke:var(--on-tile)}
+.node .stack{fill:var(--k-bg);stroke:var(--k-bd);stroke-width:1.1;opacity:.75}
+
+.edge .line{fill:none;stroke:var(--line-2);stroke-width:1.6;stroke-linecap:round;
+  transition:stroke .2s,stroke-width .2s,opacity .2s}
+.edge.m-sync .line{stroke-dasharray:7 6}
+.edge.m-async .line{stroke-dasharray:.1 7;stroke-width:2.6}
+.edge .head{fill:var(--line-2);transition:fill .2s}
+.edgeset .hit{fill:none;stroke:transparent;stroke-width:16;cursor:pointer;pointer-events:stroke}
+.edge{transition:opacity .2s var(--ease-out)}
+.edge.in .line{stroke:var(--acc);stroke-width:2}
+.edge.in.m-async .line{stroke-width:3}
+.edge.in .head{fill:var(--acc)}
+.edge.in.m-sync .line{animation:march-s .9s linear infinite}
+.edge.in.m-async .line{animation:march-a 1.3s linear infinite}
+.edge.in.rev .line{animation-direction:reverse}
+.edge.failing .line{stroke:var(--bad)}
+.edge.failing .head{fill:var(--bad)}
+@keyframes march-s{to{stroke-dashoffset:-13}}
+@keyframes march-a{to{stroke-dashoffset:-7.1}}
+.edgeset.hov .edge .line,.edgeset.sel .edge .line{stroke-width:2.8}
+
+.chiplbl{opacity:0;transition:opacity .18s;pointer-events:none}
+.chiplbl rect{fill:var(--canvas);stroke:var(--line-2);stroke-width:1}
+.chiplbl text{fill:var(--ink-2);font:600 10.5px var(--f-mono)}
+svg.show-labels .chiplbl,svg.show-times .chiplbl{opacity:1}
+.edgeset.hov .chiplbl,.edgeset.sel .chiplbl,svg.focus .edgeset.near .chiplbl{opacity:1}
+svg.focus .edgeset:not(.near) .chiplbl,svg.stepping .edgeset:not(.hot) .chiplbl{opacity:0}
+
+.badge{cursor:pointer}
+.badge circle{fill:var(--acc);stroke:var(--canvas);stroke-width:2.5}
+.badge text{fill:var(--on-ink);font:800 10.5px var(--f-ui);text-anchor:middle;dominant-baseline:central;
+  pointer-events:none}
+.badge.fail circle{fill:var(--bad)}
+.badge.now circle{animation:beat 1.2s var(--ease-out) infinite}
+@keyframes beat{0%,100%{stroke-width:2.5}50%{stroke-width:5.5}}
+
+/* focus + context: hover or a step dims everything it does not touch */
+svg.focus .node:not(.near),svg.focus .edge:not(.near),svg.focus .badge:not(.near){opacity:.2}
+svg.stepping .node:not(.hot),svg.stepping .edge:not(.hot),svg.stepping .badge:not(.hot){opacity:.18}
+svg.stepping .edge.hot .line{stroke:var(--acc);stroke-width:2.8}
+svg.stepping .edge.hot.failing .line{stroke:var(--bad)}
+svg.stepping .zone{opacity:.55}
+
+/* the packet: what moves is what matters */
+.pkt .halo{fill:var(--acc);opacity:.22}
+.pkt .core{fill:var(--acc);stroke:var(--canvas);stroke-width:2}
+.pkt.fail .halo,.pkt.fail .core{fill:var(--bad)}
+.ptag rect{fill:var(--ink)}
+.ptag text{fill:var(--on-ink);font:700 10.5px var(--f-mono);text-anchor:middle;dominant-baseline:central}
+.burst{fill:none;stroke:var(--bad);stroke-width:2}
+.xmark path{stroke:var(--bad);stroke-width:2.6;stroke-linecap:round}
+.xmark circle{fill:var(--canvas);stroke:var(--bad);stroke-width:1.6}
+
+/* ── sequence view ────────────────────────────────────────────────────────── */
+.seq .life{stroke:var(--line-2);stroke-width:1.2;stroke-dasharray:3 5}
+.seq .row{fill:transparent}
+.seq .row.now{fill:color-mix(in srgb,var(--acc) 9%,transparent)}
+.seq .msg .line{fill:none;stroke:var(--ink-2);stroke-width:1.6}
+.seq .msg.response .line{stroke-dasharray:6 5}
+.seq .msg.event .line{stroke-dasharray:.1 6;stroke-width:2.6;stroke-linecap:round}
+.seq .msg .head{fill:var(--ink-2)}
+.seq .msg.fail .line{stroke:var(--bad)} .seq .msg.fail .head{fill:var(--bad)}
+.seq .msg text{fill:var(--ink-2);font:600 11px var(--f-mono);text-anchor:middle}
+.seq .msg.now .line{stroke:var(--acc);stroke-width:2.4}
+.seq .msg.now .head{fill:var(--acc)}
+.seq .msg.now text{fill:var(--ink)}
+.seq .msg.now.fail .line{stroke:var(--bad)}
+.seq .say{fill:var(--ink-3);font:500 11.5px var(--f-ui)}
+.seq .row.now + .say,.seq .say.now{fill:var(--ink)}
+
+/* ── spec view ────────────────────────────────────────────────────────────── */
+.specwrap{padding:16px 18px 18px;display:grid;gap:10px}
+.specwrap .note{margin:0;font:500 13px var(--f-ui);color:var(--ink-2)}
+.code{position:relative;background:var(--sunk);border:1px solid var(--line);border-radius:12px}
+.code pre{margin:0;padding:14px 16px;overflow:auto;max-height:520px;font:12.5px/1.6 var(--f-mono);
+  color:var(--ink);tab-size:2}
+.code .copy{position:absolute;top:8px;right:8px}
+.j-k{color:var(--edge)} .j-s{color:var(--service)} .j-n{color:var(--data)} .j-p{color:var(--ink-3)}
+.copy{display:inline-flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--line);
+  border-radius:7px;padding:3px 9px;cursor:pointer;font:600 11px var(--f-ui);color:var(--ink-2)}
+.copy:hover{color:var(--ink);border-color:var(--line-2)}
+.copy svg{width:12px;height:12px}
+
+/* ── the drawer: layer 3, unlimited, one click away ───────────────────────── */
+.scrim{position:fixed;inset:0;background:var(--scrim);opacity:0;pointer-events:none;
+  transition:opacity .22s;z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;z-index:50;width:min(440px,94vw);background:var(--panel);
+  border-left:1px solid var(--line);box-shadow:-14px 0 40px rgba(10,15,29,.14);display:flex;flex-direction:column;
+  transform:translateX(104%);transition:transform .3s var(--ease-out);
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.drawer.on{transform:none}
+.dr-hd{display:flex;gap:12px;align-items:center;padding:16px 18px 14px;border-bottom:1px solid var(--line)}
+.dr-ico{width:40px;height:40px;border-radius:11px;background:var(--k,var(--f1));color:var(--on-tile);
+  display:grid;place-items:center;flex:none}
+.dr-ico svg{width:22px;height:22px}
+.dr-kind{margin:0;font:700 10px var(--f-ui);letter-spacing:1px;text-transform:uppercase;color:var(--k,var(--ink-3))}
+.dr-hd h2{margin:1px 0 0;font:700 18px/1.2 var(--f-ui)}
+.dr-x{margin-left:auto;width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--panel);
+  cursor:pointer;display:grid;place-items:center;color:var(--ink-2);flex:none;padding:0}
+.dr-x:hover{color:var(--ink);border-color:var(--line-2)}
+.dr-body{overflow:auto;padding:16px 18px 28px;display:grid;gap:16px;align-content:start;font-size:14px}
+.dr-body p{margin:0}
+.dr-body .lead{font-size:14.5px;color:var(--ink)}
+.dr-body h3{margin:0 0 6px;font:700 10.5px var(--f-ui);letter-spacing:1px;text-transform:uppercase;color:var(--ink-3)}
+.dr-body ul,.dr-body ol{margin:0;padding-left:19px;display:grid;gap:5px}
+.dr-body table{border-collapse:collapse;width:100%;font-size:13px}
+.dr-body th,.dr-body td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.dr-body th{font:700 10.5px var(--f-ui);letter-spacing:.6px;text-transform:uppercase;color:var(--ink-3)}
+.dr-body .code pre{max-height:none;font-size:12px}
+.facts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px}
+.facts-grid div{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:7px 10px;
+  font:600 12.5px var(--f-mono);color:var(--ink)}
+.steplist{list-style:none;padding:0!important;margin:0}
+.steplist button{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:none;
+  border:1px solid transparent;border-radius:9px;padding:6px 8px;cursor:pointer;font:500 13px/1.4 var(--f-ui);
+  color:var(--ink-2)}
+.steplist button:hover{background:var(--panel-2);border-color:var(--line);color:var(--ink)}
+.steplist .num{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;
+  background:var(--fc,var(--f1));color:var(--on-ink);font:800 10.5px var(--f-ui)}
+.steplist .num.fail{background:var(--bad)}
+.segbtn{display:flex;align-items:center;gap:10px;width:100%;cursor:pointer;text-align:left;
+  background:color-mix(in srgb,var(--stream) 8%,var(--panel));border:1px dashed color-mix(in srgb,var(--stream) 45%,transparent);
+  border-radius:12px;padding:10px 12px;font:600 13.5px var(--f-ui);color:var(--ink)}
+.segbtn small{display:block;font:500 12px var(--f-ui);color:var(--ink-2)}
+.segbtn:hover{border-style:solid}
+.segbtn svg{width:18px;height:18px;color:var(--stream);flex:none}
+.notebox textarea{width:100%;min-height:74px;resize:vertical;background:var(--sunk);color:var(--ink);
+  border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:13px/1.5 var(--f-text)}
+.notebox textarea:focus{outline:none;border-color:var(--f1)}
+.notebox .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;
+  font:500 11.5px var(--f-mono);color:var(--ink-3)}
+.idline{font:500 11.5px var(--f-mono);color:var(--ink-3)}
+.box{border-radius:10px;padding:10px 12px;background:var(--panel-2);border:1px solid var(--line)}
+.box.key-{border-color:color-mix(in srgb,var(--f1) 35%,transparent);background:color-mix(in srgb,var(--f1) 7%,var(--panel))}
+.box.warn{border-color:color-mix(in srgb,var(--f3) 40%,transparent);background:color-mix(in srgb,var(--f3) 8%,var(--panel))}
+.box.bad{border-color:color-mix(in srgb,var(--bad) 40%,transparent);background:color-mix(in srgb,var(--bad) 7%,var(--panel))}
+.grammar{display:grid;grid-template-columns:52px 1fr;gap:8px 12px;align-items:center;font-size:13px}
+.grammar svg{width:52px;height:16px;overflow:visible}
+
+/* ── footer stamp ─────────────────────────────────────────────────────────── */
+.foot{margin-top:22px;display:flex;flex-wrap:wrap;gap:6px 14px;font:500 11.5px var(--f-mono);color:var(--ink-3)}
+.foot b{color:var(--f1);font-weight:700}
+.toast{position:fixed;left:50%;bottom:22px;z-index:70;transform:translate(-50%,20px);opacity:0;
+  background:var(--ink);color:var(--on-ink);border-radius:999px;padding:7px 14px;font:600 12.5px var(--f-ui);
+  transition:all .22s var(--ease-out);pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ── motion off: the system still reads, only the drift stops ─────────────── */
+.still .edge.in .line,.still .badge.now circle{animation:none!important}
+@media (prefers-reduced-motion:reduce){
+  .edge.in .line,.badge.now circle{animation:none!important}
+  .drawer,.canvas-wrap,.peek,.flow,.dot{transition:none!important}
+}
+
+/* ── narrow: canvas scrolls inside itself, drawer becomes a sheet ─────────── */
+@media (max-width:760px){
+  .page{padding-inline:16px}
+  h1{font-size:23px}
+  .views{margin-left:0}
+  .layers{position:static;margin:10px 10px 0;width:max-content;max-width:calc(100% - 20px);overflow-x:auto}
+  .drawer{top:auto;left:0;width:auto;max-height:82vh;border-left:none;border-top:1px solid var(--line);
+    border-radius:18px 18px 0 0;transform:translateY(104%)}
+  .drawer.on{transform:none}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .key{bottom:auto;top:52px}
+}
+@media print{
+  .tools,.strip .views,.layers,.rail .play,.navs,.drawer,.scrim,.peek,.key,.toast{display:none!important}
+  body{background:#fff}
+  .stage{box-shadow:none;break-inside:avoid}
+  .edge .line,.badge circle{animation:none!important}
+  .print-steps{display:block!important}
+}
+.print-steps{display:none;margin:16px 4px 0;font:14px/1.5 var(--f-text)}
+
+/* ── added with the runtime ───────────────────────────────────────────────── */
+.canvas-wrap.zoom-back{opacity:0;transform:scale(.82)}
+.canvas-wrap.zoom-from-big{opacity:0;transform:scale(1.2);transition:none}
+.node.land .card{stroke:var(--acc);stroke-width:2.6}
+.burst{animation:burst .5s var(--ease-out) forwards}
+@keyframes burst{from{opacity:.9;transform:scale(1)}to{opacity:0;transform:scale(3.2)}}
+.xmark{animation:xin .28s var(--ease-out) both}
+@keyframes xin{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+.dr-ico b{font:800 17px var(--f-ui)}
+.crumbs button svg{width:12px;height:12px;vertical-align:-1px}
+.route{font:600 13px/1.6 var(--f-ui);color:var(--ink)}
+.route .arr{color:var(--ink-3);padding:0 3px}
+.stepnav{display:flex;justify-content:space-between;gap:8px}
+.stepnav .copy:disabled{opacity:.4;cursor:default}
+.alsoin{font:500 12.5px var(--f-ui);color:var(--ink-3)}
+.alsoin button{background:none;border:none;color:var(--f1);cursor:pointer;font:600 12.5px var(--f-ui);padding:0 3px}
+.alsoin button:hover{text-decoration:underline}
+.dr-body section{display:grid;gap:12px}
+</style>
+</head>
+<body>
+<!-- icon sprite: stroke icons on a 24 grid; the runtime references them by name -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+<defs>
+<symbol id="i-devices" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="13" height="9.5" rx="1.5"/><path d="M2.5 14 1 17.5h15.5L15 14"/><rect x="17.5" y="8.5" width="5" height="11" rx="1.4"/><path d="M19.8 17.2h.4"/></g></symbol>
+<symbol id="i-gateway" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l7.5 3v5.4c0 4.6-3.2 8.3-7.5 10-4.3-1.7-7.5-5.4-7.5-10V5.8z"/><path d="M8.6 12.1l2.4 2.4 4.6-4.8"/></g></symbol>
+<symbol id="i-service" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l8 4.4v9.6l-8 4.4-8-4.4V7.2z"/><path d="M4 7.2l8 4.4 8-4.4M12 11.6v9.6"/></g></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9M7.8 5.3l8.4 4.6"/></g></symbol>
+<symbol id="i-db" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.8" rx="7.5" ry="2.8"/><path d="M4.5 5.8v12.4c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8V5.8"/><path d="M4.5 12c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8"/></g></symbol>
+<symbol id="i-cache" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 2.5 5 13.5h6.2l-1.2 8 8.2-11h-6.2z"/></g></symbol>
+<symbol id="i-queue" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="10" rx="2.2"/><path d="M7.3 7v10M12 7v10M16.7 7v10"/></g></symbol>
+<symbol id="i-card" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.2"/><path d="M2.5 9.8h19M6 15h4"/></g></symbol>
+<symbol id="i-bank" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.2 12 4l9 5.2"/><path d="M5 10v7.5M9.7 10v7.5M14.3 10v7.5M19 10v7.5M3 20h18"/></g></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 1.8h-15z"/><path d="M10 20.6a2.1 2.1 0 0 0 4 0"/></g></symbol>
+<symbol id="i-api" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5M13.4 5.5l-2.8 13"/></g></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4.5" width="14" height="16.5" rx="2"/><path d="M9 4.5V3.2h6v1.3M8.8 13l2.3 2.3 4.2-4.5"/></g></symbol>
+<symbol id="i-table" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M3 9.5h18M3 14.5h18M9.5 9.5v10"/></g></symbol>
+<symbol id="i-relay" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 0 1-13 5.1M4.5 12a7.5 7.5 0 0 1 13-5.1"/><path d="M17.8 3.2v3.9h-3.9M6.2 20.8v-3.9h3.9"/></g></symbol>
+<symbol id="i-zoom" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"/></g></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.8v14.4a.8.8 0 0 0 1.2.7l11.4-7.2a.8.8 0 0 0 0-1.4L8.2 4.1A.8.8 0 0 0 7 4.8z" fill="currentColor"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1" fill="currentColor"/></symbol>
+<symbol id="i-replay" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></g></symbol>
+<symbol id="i-left" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-right" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></g></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+<symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></symbol>
+<symbol id="i-motion" viewBox="0 0 24 24"><path d="M3 12h3l2.5-5 4 10 3-7 1.5 2H21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></g></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></g></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</defs>
+</svg>
+
+<div class="page">
+  <header class="hd">
+    <div class="hd-top">
+      <nav class="crumbs" id="crumbs" aria-label="Where you are in the drawing"></nav>
+      <div class="tools">
+        <button class="tbtn" id="btnMotion" aria-pressed="true" title="Pause or resume the motion"><svg><use href="#i-motion"/></svg><span>Motion</span></button>
+        <button class="tbtn" id="btnTheme" title="Theme: auto, light, dark"><svg><use href="#i-auto"/></svg><span>Auto</span></button>
+        <button class="tbtn" id="btnAbout" title="What this mockup proposes"><svg><use href="#i-info"/></svg><span>About this mockup</span></button>
+      </div>
+    </div>
+    <h1 id="title"></h1>
+    <p class="lede" id="lede"></p>
+  </header>
+
+  <div class="strip">
+    <div class="flows" id="flows" role="radiogroup" aria-label="Flows"></div>
+    <div class="views" role="tablist" aria-label="View">
+      <button role="tab" id="tab-map" aria-selected="true" aria-controls="view-map">Map</button>
+      <button role="tab" id="tab-seq" aria-selected="false" aria-controls="view-seq">Sequence</button>
+      <button role="tab" id="tab-spec" aria-selected="false" aria-controls="view-spec">Spec</button>
+    </div>
+  </div>
+
+  <section class="stage" aria-label="System drawing">
+    <div class="layers" id="layers">
+      <button id="tgLabels" aria-pressed="false" title="Protocols on every connection, technology under every box"><span class="sw"></span>Labels</button>
+      <button id="tgTimes" aria-pressed="false" title="Latency on every connection"><span class="sw"></span>Timings</button>
+      <button id="tgKey" aria-pressed="false" title="What the lines and badges mean"><span class="sw"></span>Key</button>
+    </div>
+    <div class="view dotgrid" id="view-map" role="tabpanel" aria-labelledby="tab-map">
+      <div class="scroll"><div class="canvas-wrap" id="wrap"><svg id="map" role="img"></svg></div></div>
+    </div>
+    <div class="view dotgrid" id="view-seq" role="tabpanel" aria-labelledby="tab-seq" hidden>
+      <div class="scroll"><svg id="seq" class="seq" role="img"></svg></div>
+    </div>
+    <div class="view" id="view-spec" role="tabpanel" aria-labelledby="tab-spec" hidden>
+      <div class="specwrap">
+        <p class="note">This is everything the agent wrote for the drawing: boxes on a grid, connections, flows and one sentence per step. The toolkit drew, laid out and animated the rest. Depth for the drawer lives in plain HTML sections beside it.</p>
+        <div class="code"><button class="copy" id="copySpec"><svg><use href="#i-copy"/></svg>copy</button><pre id="specPre"></pre></div>
+      </div>
+    </div>
+    <div class="peek" id="peek" hidden></div>
+    <div class="key" id="key" hidden>
+      <svg viewBox="0 0 44 14"><g class="edge m-sync in"><path class="line" d="M2 7H42"/></g></svg><span>Synchronous call; the dashes travel with the request</span>
+      <svg viewBox="0 0 44 14"><g class="edge m-async in"><path class="line" d="M2 7H42"/></g></svg><span>Asynchronous event; nobody waits on it</span>
+      <svg viewBox="0 0 44 14"><g class="edge m-sync"><path class="line" d="M2 7H42"/></g></svg><span>Exists, but not part of this flow</span>
+      <svg viewBox="0 0 44 14"><g class="edge m-sync in failing"><path class="line" d="M2 7H42"/></g></svg><span>The call fails here</span>
+      <svg viewBox="0 0 44 14"><g class="badge"><circle cx="22" cy="7" r="7"/><text x="22" y="7">3</text></g></svg><span>Step number; press it to play that step</span>
+      <svg viewBox="0 0 44 14"><g class="node k-service"><g class="seg"><circle cx="22" cy="7" r="6.5"/><path d="M19.8 4.8h4.4v4.4M24.2 4.8l-4.4 4.4"/></g></g></svg><span>Opens a segment: the inside of that box</span>
+    </div>
+    <div class="rail">
+      <button class="play" id="play"><svg><use href="#i-play"/></svg><span>Walk through</span></button>
+      <div class="dots" id="dots"></div>
+      <p class="cap" id="cap" aria-live="polite"></p>
+      <div class="navs">
+        <button id="prev" aria-label="Previous step"><svg><use href="#i-left"/></svg></button>
+        <button id="next" aria-label="Next step"><svg><use href="#i-right"/></svg></button>
+      </div>
+    </div>
+  </section>
+  <ol class="print-steps" id="printSteps"></ol>
+  <footer class="foot" id="foot"></footer>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="false" aria-labelledby="drTitle" aria-hidden="true">
+  <div class="dr-hd">
+    <div class="dr-ico" id="drIco"></div>
+    <div><p class="dr-kind" id="drKind"></p><h2 id="drTitle"></h2></div>
+    <button class="dr-x" id="drX" aria-label="Close"><svg width="16" height="16"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="dr-body" id="drBody"></div>
+</aside>
+<div class="toast" id="toast" role="status"></div>
+
+<!-- ═══════════ WHAT THE AGENT WRITES, PART 1: the spec ═══════════
+     Structure and every word that shows before a click. Ids are join keys:
+     notes the human leaves are stored under them, so never rename one. -->
+<script type="application/json" id="fv-spec">
+{
+  "flowviz": "0.1.0-mockup",
+  "doc": "checkout-system",
+  "kind": "system",
+  "name": "Checkout",
+  "title": "Checkout confirms in 300 ms because payment settles off the hot path",
+  "lede": "Three services and one database transaction sit on the request path. The card charge and the receipt run from the event bus after the customer already has an order id.",
+  "grid": { "cols": 5, "rows": 4 },
+  "zones": [
+    { "id": "client", "label": "Client", "cols": [0, 0], "rows": [1, 1], "tone": "neutral" },
+    { "id": "hot", "label": "Hot path · p99 300 ms", "cols": [1, 3], "rows": [0, 1], "tone": "sync" },
+    { "id": "async", "label": "Settles async · seconds", "cols": [2, 3], "rows": [2, 3], "tone": "async", "tag": "tr" },
+    { "id": "ext", "label": "External", "cols": [4, 4], "rows": [2, 2], "tone": "ext" }
+  ],
+  "nodes": [
+    { "id": "web", "label": "Web & mobile", "kind": "client", "icon": "devices", "at": [0, 1], "tech": "React · Swift · Kotlin",
+      "peek": "The storefront and apps. Every checkout call carries a fresh idempotency key, so a double tap never buys twice.",
+      "facts": ["1.2k orders/min peak", "JWT · 15 min"] },
+    { "id": "gw", "label": "API gateway", "kind": "edge", "icon": "gateway", "at": [1, 1], "tech": "Envoy",
+      "peek": "Terminates TLS, verifies the JWT against cached signing keys and rate-limits each customer before anything reaches a service.",
+      "facts": ["p99 4 ms", "100 req/s per user"] },
+    { "id": "order", "label": "Order service", "kind": "service", "icon": "service", "at": [2, 1], "tech": "Go · 6 pods",
+      "peek": "Owns the order lifecycle. It answers 202 as soon as the order and its event are committed together.",
+      "facts": ["p99 200 ms", "6 pods"], "segment": "order-outbox" },
+    { "id": "inv", "label": "Inventory", "kind": "service", "icon": "box", "at": [2, 0], "tech": "gRPC",
+      "peek": "Holds a 10-minute soft reservation per line item, so two customers cannot both buy the last unit.",
+      "facts": ["p99 45 ms", "50 ms timeout"] },
+    { "id": "cache", "label": "Order cache", "kind": "data", "icon": "cache", "at": [3, 0], "tech": "Redis",
+      "peek": "Cache-aside copy of recent orders. Status reads are served here and never touch the primary database.",
+      "facts": ["hit rate 94%", "TTL 30 s"] },
+    { "id": "db", "label": "Orders DB", "kind": "data", "icon": "db", "at": [3, 1], "tech": "Postgres 16",
+      "peek": "The system of record. The order row and its outbox row are written in the same transaction.",
+      "facts": ["p99 18 ms", "1 primary · 2 replicas"] },
+    { "id": "bus", "label": "Event bus", "kind": "stream", "icon": "queue", "at": [2, 2], "tech": "Kafka",
+      "peek": "Carries OrderPlaced, PaymentCaptured and PaymentFailed. Consumers retry on their own; nothing on the hot path waits for it.",
+      "facts": ["3 topics", "7-day retention"] },
+    { "id": "pay", "label": "Payment worker", "kind": "service", "icon": "card", "at": [3, 2], "tech": "Go · consumer",
+      "peek": "Consumes OrderPlaced and charges the card, using the order id as the idempotency key.",
+      "facts": ["3 retries, backoff", "3 s timeout"] },
+    { "id": "psp", "label": "Card processor", "kind": "external", "icon": "bank", "at": [4, 2], "tech": "third-party PSP",
+      "peek": "Authorizes and captures the charge. It is outside our control, so it is kept off the request path.",
+      "facts": ["p99 1.4 s", "99.95% SLA"] },
+    { "id": "notify", "label": "Notifications", "kind": "service", "icon": "bell", "at": [2, 3], "tech": "email · push",
+      "peek": "Sends the receipt or the payment-failed prompt. It only ever reads events.",
+      "facts": ["p50 6 s after order"] }
+  ],
+  "edges": [
+    { "id": "web-gw", "from": "web", "to": "gw", "mode": "sync", "label": "HTTPS", "ms": "p99 80 ms RTT",
+      "peek": "Public TLS 1.3 from the device to our edge. A retry reuses the same idempotency key." },
+    { "id": "gw-order", "from": "gw", "to": "order", "mode": "sync", "label": "HTTP/2", "ms": "p99 4 ms",
+      "peek": "Internal call carrying the verified customer id in a signed header." },
+    { "id": "order-inv", "from": "order", "to": "inv", "mode": "sync", "label": "gRPC", "ms": "p99 45 ms",
+      "peek": "Reserve or release stock. A 50 ms timeout keeps a slow inventory from slowing checkout." },
+    { "id": "order-db", "from": "order", "to": "db", "mode": "sync", "label": "SQL", "ms": "p99 18 ms",
+      "peek": "One transaction writes the order row and the outbox row, or neither." },
+    { "id": "order-cache", "from": "order", "to": "cache", "mode": "sync", "label": "RESP", "ms": "p99 2 ms",
+      "peek": "Status reads check here first; every state change rewrites the entry." },
+    { "id": "order-bus", "from": "order", "to": "bus", "mode": "async", "both": true, "label": "events", "ms": "relay lag ~100 ms",
+      "peek": "The outbox relay publishes OrderPlaced; the order service consumes payment results to confirm or cancel." },
+    { "id": "bus-pay", "from": "bus", "to": "pay", "mode": "async", "both": true, "label": "events", "ms": "lag < 1 s",
+      "peek": "The worker consumes OrderPlaced and publishes PaymentCaptured or PaymentFailed." },
+    { "id": "pay-psp", "from": "pay", "to": "psp", "mode": "sync", "label": "HTTPS", "ms": "p99 1.4 s",
+      "peek": "Charge request with an idempotency key, so a retry can never double-charge." },
+    { "id": "bus-notify", "from": "bus", "to": "notify", "mode": "async", "label": "events", "ms": "lag < 1 s",
+      "peek": "Receipts and failure notices, driven only by events." }
+  ],
+  "flows": [
+    { "id": "place", "label": "Place order",
+      "summary": "8 steps. The customer has an order id after step 4; steps 5 to 8 settle in the background.",
+      "steps": [
+        { "id": "p1", "path": ["web", "gw", "order"], "msg": "POST /orders", "say": "The app posts the cart; the gateway checks the token and rate limit, then routes it." },
+        { "id": "p2", "path": ["order", "inv"], "msg": "Reserve", "say": "The order service reserves each line item in inventory, with a 50 ms timeout." },
+        { "id": "p3", "path": ["order", "db"], "msg": "COMMIT", "say": "The order row and its OrderPlaced outbox row commit in one transaction." },
+        { "id": "p4", "path": ["order", "gw", "web"], "msg": "202 Accepted", "say": "The customer gets 202 Accepted and an order id; the hot path ends here." },
+        { "id": "p5", "path": ["order", "bus"], "msg": "OrderPlaced", "say": "The outbox relay publishes OrderPlaced to the event bus." },
+        { "id": "p6", "path": ["bus", "pay"], "msg": "OrderPlaced", "say": "The payment worker consumes the event, long after the customer has moved on." },
+        { "id": "p7", "path": ["pay", "psp"], "msg": "Charge", "say": "It charges the card, using the order id as the idempotency key." },
+        { "id": "p8", "path": ["pay", "bus", "notify"], "msg": "PaymentCaptured", "say": "PaymentCaptured fans out: the order is confirmed and the receipt is sent." }
+      ] },
+    { "id": "status", "label": "Check status",
+      "summary": "4 steps. 94% of reads end at the cache and never touch the database.",
+      "steps": [
+        { "id": "s1", "path": ["web", "gw", "order"], "msg": "GET /orders/:id", "say": "The app asks for the order status through the gateway." },
+        { "id": "s2", "path": ["order", "cache"], "msg": "GET", "say": "The order service reads the cache first; a hit returns in about 2 ms." },
+        { "id": "s3", "path": ["order", "db"], "msg": "SELECT", "say": "On a miss it reads a replica, then writes the result back with a 30 s TTL." },
+        { "id": "s4", "path": ["order", "gw", "web"], "msg": "200 OK", "say": "The status goes back to the app: pending, confirmed or cancelled." }
+      ] },
+    { "id": "declined", "label": "Card declined",
+      "summary": "5 steps. A failing card never blocks checkout; it cancels the order and tells the customer.",
+      "steps": [
+        { "id": "d1", "path": ["bus", "pay"], "msg": "OrderPlaced", "say": "The payment worker picks up OrderPlaced as usual." },
+        { "id": "d2", "path": ["pay", "psp"], "msg": "Charge", "fail": true, "say": "The processor declines the card, or times out after 3 s on every retry." },
+        { "id": "d3", "path": ["pay", "bus"], "msg": "PaymentFailed", "say": "The worker publishes PaymentFailed instead of retrying forever." },
+        { "id": "d4", "path": ["bus", "order", "inv"], "msg": "Release", "say": "The order service cancels the order and releases the reserved stock." },
+        { "id": "d5", "path": ["bus", "notify"], "msg": "PaymentFailed", "say": "The customer is asked to update their card; the order id stays valid." }
+      ] }
+  ],
+  "segments": {
+    "order-outbox": {
+      "kind": "segment",
+      "name": "Order service",
+      "parent": "order",
+      "title": "The order row and its event commit together, or neither does",
+      "lede": "Inside the order service, the handler never talks to Kafka. It writes an outbox row in the same transaction, and a relay publishes it afterwards.",
+      "grid": { "cols": 5, "rows": 2 },
+      "zones": [
+        { "id": "svc", "label": "Order service · pod", "cols": [1, 3], "rows": [0, 0], "tone": "svc" },
+        { "id": "tx", "label": "Orders DB · one transaction", "cols": [2, 3], "rows": [1, 1], "tone": "data", "tag": "bl" }
+      ],
+      "nodes": [
+        { "id": "gw", "label": "API gateway", "kind": "edge", "icon": "gateway", "at": [0, 0], "ghost": "gw",
+          "peek": "Part of the whole checkout drawing. Click to go back to it." },
+        { "id": "api", "label": "POST /orders", "kind": "service", "icon": "api", "at": [1, 0], "tech": "HTTP handler",
+          "peek": "Parses the cart and the Idempotency-Key header. A repeated key returns the first response instead of a second order.",
+          "facts": ["p99 200 ms in service"] },
+        { "id": "val", "label": "Validate cart", "kind": "service", "icon": "check", "at": [2, 0], "tech": "domain logic",
+          "peek": "Re-prices the cart from the catalog and reserves stock. Prices sent by the client are never trusted.",
+          "facts": ["calls Inventory", "50 ms timeout"] },
+        { "id": "relay", "label": "Outbox relay", "kind": "service", "icon": "relay", "at": [3, 0], "tech": "polls every 100 ms",
+          "peek": "Reads unsent outbox rows, publishes them, then marks them sent. Delivery is at-least-once by design.",
+          "facts": ["batch 100", "lag p99 150 ms"] },
+        { "id": "orders", "label": "orders", "kind": "data", "icon": "table", "at": [2, 1], "tech": "table",
+          "peek": "One row per order. Status starts as PENDING and only events move it.",
+          "facts": ["idempotency_key UNIQUE"] },
+        { "id": "outbox", "label": "outbox", "kind": "data", "icon": "table", "at": [3, 1], "tech": "table",
+          "peek": "One row per event to publish, written in the same transaction as the order.",
+          "facts": ["sent_at NULL until relayed"] },
+        { "id": "bus", "label": "Event bus", "kind": "stream", "icon": "queue", "at": [4, 0], "ghost": "bus",
+          "peek": "Part of the whole checkout drawing. Click to go back to it." }
+      ],
+      "edges": [
+        { "id": "gw-api", "from": "gw", "to": "api", "mode": "sync", "label": "HTTP/2", "ms": "p99 4 ms",
+          "peek": "The only way in. The verified customer id arrives in a signed header." },
+        { "id": "api-val", "from": "api", "to": "val", "mode": "sync", "label": "call", "ms": "p99 60 ms",
+          "peek": "In-process call; validation and the inventory reservation happen here." },
+        { "id": "val-orders", "from": "val", "to": "orders", "mode": "sync", "label": "INSERT", "ms": "inside tx",
+          "peek": "Inserts the order as PENDING. The unique idempotency key rejects a duplicate." },
+        { "id": "val-outbox", "from": "val", "to": "outbox", "mode": "sync", "label": "INSERT", "ms": "inside tx",
+          "peek": "Inserts the OrderPlaced event in the same transaction as the order row." },
+        { "id": "outbox-relay", "from": "outbox", "to": "relay", "mode": "sync", "label": "poll", "ms": "every 100 ms",
+          "peek": "SELECT … FOR UPDATE SKIP LOCKED, so several relays never publish the same row." },
+        { "id": "relay-bus", "from": "relay", "to": "bus", "mode": "async", "label": "publish", "ms": "acks=all",
+          "peek": "Publishes with acks=all, then sets sent_at. A crash in between means one duplicate, never a loss." }
+      ],
+      "flows": [
+        { "id": "write", "label": "Write an order",
+          "summary": "6 steps. If the transaction rolls back, there is no event to publish.",
+          "steps": [
+            { "id": "w1", "path": ["gw", "api"], "msg": "POST /orders", "say": "The request arrives with the customer id and an idempotency key." },
+            { "id": "w2", "path": ["api", "val"], "msg": "cart", "say": "The cart is re-priced from the catalog and stock is reserved." },
+            { "id": "w3", "path": ["val", "orders"], "msg": "INSERT order", "say": "The order row is inserted as PENDING inside an open transaction." },
+            { "id": "w4", "path": ["val", "outbox"], "msg": "INSERT event", "say": "The OrderPlaced row joins the same transaction, then both commit." },
+            { "id": "w5", "path": ["api", "gw"], "msg": "202 Accepted", "say": "Only after the commit does the handler answer 202 Accepted." },
+            { "id": "w6", "path": ["outbox", "relay", "bus"], "msg": "OrderPlaced", "say": "The relay picks up the unsent row, publishes it and marks it sent." }
+          ] }
+      ]
+    }
+  }
+}
+</script>
+
+<!-- ═══════════ WHAT THE AGENT WRITES, PART 2: depth ═══════════
+     Layer 3. Unlimited, never shown until a click. Keyed by node id,
+     "edge:<id>", "step:<id>", and "<segment>/<id>" inside a segment. -->
+<div id="fv-depth" hidden>
+<section data-for="order">
+  <h3>Latency budget, p99</h3>
+  <table>
+    <thead><tr><th>Stage</th><th>p99</th><th>Holds because</th></tr></thead>
+    <tbody>
+      <tr><td>Device → edge</td><td>80 ms</td><td>TLS resumed, HTTP/2 connection reused</td></tr>
+      <tr><td>Gateway</td><td>4 ms</td><td>JWT keys cached; no call to the auth server</td></tr>
+      <tr><td>Validate + price</td><td>60 ms</td><td>catalog prices cached in-process</td></tr>
+      <tr><td>Inventory reserve</td><td>45 ms</td><td>50 ms timeout; on expiry the order is refused, not delayed</td></tr>
+      <tr><td>Transaction</td><td>18 ms</td><td>two inserts and one commit on the primary</td></tr>
+      <tr><td>Serialize + return</td><td>15 ms</td><td>response is an id and a status, nothing more</td></tr>
+      <tr><td><b>Total</b></td><td><b>222 ms</b></td><td>78 ms of headroom under the 300 ms claim</td></tr>
+    </tbody>
+  </table>
+  <div>
+    <h3>What it deliberately does not do</h3>
+    <ul>
+      <li>Call the card processor. It is the one dependency with a p99 over a second.</li>
+      <li>Publish to Kafka directly. A broker hiccup would otherwise fail a checkout that already committed.</li>
+    </ul>
+  </div>
+</section>
+<section data-for="db">
+  <h3>The two tables that matter</h3>
+  <div class="code"><button class="copy" data-copy>copy</button><pre>CREATE TABLE orders (
+  id               uuid PRIMARY KEY,
+  customer_id      uuid NOT NULL,
+  status           text NOT NULL DEFAULT 'PENDING',
+  idempotency_key  text NOT NULL UNIQUE,
+  total_cents      bigint NOT NULL,
+  created_at       timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE outbox (
+  id          bigserial PRIMARY KEY,
+  topic       text NOT NULL,
+  payload     jsonb NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  sent_at     timestamptz
+);
+CREATE INDEX outbox_unsent ON outbox (id) WHERE sent_at IS NULL;</pre></div>
+  <p>Replicas serve status reads on a cache miss. Replication lag p99 is 40 ms, well inside the 30 s cache TTL.</p>
+</section>
+<section data-for="bus">
+  <h3>Topics</h3>
+  <table>
+    <thead><tr><th>Topic</th><th>Producer</th><th>Consumers</th></tr></thead>
+    <tbody>
+      <tr><td><code>order.placed</code></td><td>outbox relay</td><td>payment worker</td></tr>
+      <tr><td><code>payment.captured</code></td><td>payment worker</td><td>order service, notifications</td></tr>
+      <tr><td><code>payment.failed</code></td><td>payment worker</td><td>order service, notifications</td></tr>
+    </tbody>
+  </table>
+  <p>All three are keyed by order id, so every event for one order lands on one partition, in order.</p>
+</section>
+<section data-for="pay">
+  <h3>Retry policy</h3>
+  <ul>
+    <li>3 attempts, backoff 1 s then 4 s, each with a 3 s timeout.</li>
+    <li>The idempotency key is the order id, so attempt 3 can never create a second charge.</li>
+    <li>A hard decline is not retried. Only timeouts and 5xx are.</li>
+  </ul>
+  <div class="code"><button class="copy" data-copy>copy</button><pre>charge, err := psp.Charge(ctx, psp.ChargeRequest{
+    Amount:         order.TotalCents,
+    Currency:       "USD",
+    PaymentMethod:  order.PaymentMethodID,
+    IdempotencyKey: order.ID.String(),
+})</pre></div>
+</section>
+<section data-for="psp">
+  <h3>How each answer lands</h3>
+  <table>
+    <thead><tr><th>Processor says</th><th>We do</th></tr></thead>
+    <tbody>
+      <tr><td>captured</td><td>publish <code>payment.captured</code></td></tr>
+      <tr><td>declined</td><td>publish <code>payment.failed</code> at once; no retry</td></tr>
+      <tr><td>timeout or 5xx</td><td>retry with the same key; after 3 attempts, publish <code>payment.failed</code></td></tr>
+    </tbody>
+  </table>
+</section>
+<section data-for="cache">
+  <h3>Cache-aside, in five lines</h3>
+  <div class="code"><button class="copy" data-copy>copy</button><pre>func Status(id string) (Order, error) {
+    if o, ok := cache.Get("order:" + id); ok { return o, nil }
+    o, err := replica.GetOrder(id)
+    if err == nil { cache.Set("order:"+id, o, 30*time.Second) }
+    return o, err
+}</pre></div>
+  <p>Every status change also deletes the key, so the 30 s TTL is a backstop, not the freshness guarantee.</p>
+</section>
+<section data-for="gw">
+  <h3>Rate limit</h3>
+  <p>Token bucket per customer id: 100 requests per second, burst 20. <code>POST /orders</code> has its own bucket of 5 per minute, which stops a stuck retry loop from creating a storm of orders.</p>
+</section>
+<section data-for="edge:order-bus">
+  <h3>Why two lanes</h3>
+  <p>This connection carries traffic both ways. The order service <b>publishes</b> through the outbox relay and <b>consumes</b> payment results to confirm or cancel. Each direction is drawn as its own lane, so the motion never has to lie about direction.</p>
+</section>
+<section data-for="step:p3">
+  <div class="code"><button class="copy" data-copy>copy</button><pre>BEGIN;
+INSERT INTO orders (id, customer_id, idempotency_key, total_cents)
+  VALUES ($1, $2, $3, $4);
+INSERT INTO outbox (topic, payload)
+  VALUES ('order.placed', $5);
+COMMIT;</pre></div>
+  <p>If either insert fails, both roll back, so an event can never describe an order that does not exist.</p>
+</section>
+<section data-for="step:p4">
+  <h3>Why 202, not 201</h3>
+  <p>The order exists but is not paid. <code>202 Accepted</code> tells the client the work continues; the app shows "Order placed" and polls the status, which is the <b>Check status</b> flow.</p>
+</section>
+<section data-for="step:d2">
+  <h3>Worst case, in time</h3>
+  <p>Three attempts at a 3 s timeout, plus 1 s and 4 s of backoff, is 14 s before <code>payment.failed</code>. The customer left the checkout screen about 13.7 s earlier.</p>
+</section>
+<section data-for="order-outbox/relay">
+  <div class="code"><button class="copy" data-copy>copy</button><pre>SELECT id, topic, payload
+  FROM outbox
+ WHERE sent_at IS NULL
+ ORDER BY id
+ LIMIT 100
+   FOR UPDATE SKIP LOCKED;</pre></div>
+  <p><code>SKIP LOCKED</code> lets several relay replicas run without publishing the same row twice. A crash after publishing but before <code>sent_at</code> is set produces one duplicate, which consumers already ignore by order id.</p>
+</section>
+<section data-for="order-outbox/api">
+  <h3>Idempotency</h3>
+  <p>The <code>Idempotency-Key</code> header is stored in <code>orders.idempotency_key</code>. A second request with the same key hits the unique index, and the handler returns the first order's 202 instead of creating another.</p>
+</section>
+<section data-for="order-outbox/outbox">
+  <h3>Row lifecycle</h3>
+  <ol>
+    <li>Inserted with <code>sent_at = NULL</code>, inside the order's transaction.</li>
+    <li>Locked and published by the relay.</li>
+    <li><code>sent_at</code> set; rows older than 7 days are deleted nightly.</li>
+  </ol>
+</section>
+</div>
+
+<!-- the mockup's own notes: not part of a deliverable -->
+<template id="about">
+  <p class="lead">This is what an agent would hand back. The agent wrote only the <b>Spec</b> tab and a few HTML sections for depth. Layout, icons, motion and every interaction come from the shared runtime, so every drawing behaves the same way.</p>
+  <div>
+    <h3>Four gestures, four layers</h3>
+    <table>
+      <thead><tr><th>Gesture</th><th>Shows</th><th>Budget</th></tr></thead>
+      <tbody>
+        <tr><td><b>Look</b></td><td>Boxes, zones, the selected flow in motion, step numbers</td><td>≤12 boxes, ≤60 words</td></tr>
+        <tr><td><b>Hover</b></td><td>A peek: one sentence and up to three facts</td><td>≤25 words</td></tr>
+        <tr><td><b>Click</b></td><td>This drawer: tables, code, failure modes, a note for the agent</td><td>unlimited</td></tr>
+        <tr><td><b>Play</b></td><td>The flow, step by step, with a moving packet and a caption</td><td>≤9 steps, ≤20 words each</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <h3>Motion grammar</h3>
+    <div class="grammar">
+      <svg viewBox="0 0 52 16"><g class="edge m-sync in"><path class="line" d="M2 8H50"/></g></svg><span><b>Dashes</b> are a synchronous call. They travel the way the request goes.</span>
+      <svg viewBox="0 0 52 16"><g class="edge m-async in"><path class="line" d="M2 8H50"/></g></svg><span><b>Dots</b>, slower, are an asynchronous event. Nobody waits on it.</span>
+      <svg viewBox="0 0 52 16"><g class="edge m-async in"><path class="line" d="M2 4.5H50"/><path class="line" d="M50 11.5H2"/></g></svg><span><b>Two lanes</b> carry traffic both ways, one direction each.</span>
+      <svg viewBox="0 0 52 16"><g class="edge m-sync"><path class="line" d="M2 8H50"/></g></svg><span><b>Grey and still</b> exists, but is not part of the selected flow.</span>
+      <svg viewBox="0 0 52 16"><g class="edge m-sync in failing"><path class="line" d="M2 8H50"/></g></svg><span><b>Red</b> is a failing call. The packet stops at a ✕.</span>
+    </div>
+  </div>
+  <div>
+    <h3>Draft caps</h3>
+    <table>
+      <thead><tr><th>Slot</th><th>Cap</th></tr></thead>
+      <tbody>
+        <tr><td>Title</td><td>≤70 chars with a verb: a claim about the system, not its name</td></tr>
+        <tr><td>Lede</td><td>≤30 words</td></tr>
+        <tr><td>Boxes</td><td>≤12 per canvas. A 13th means a segment.</td></tr>
+        <tr><td>Zones</td><td>≤4</td></tr>
+        <tr><td>Flows</td><td>≤3 per canvas, ≤9 steps each</td></tr>
+        <tr><td>Step</td><td>one sentence, ≤20 words</td></tr>
+        <tr><td>Box label</td><td>≤16 characters</td></tr>
+        <tr><td>Peek</td><td>≤25 words and ≤3 facts</td></tr>
+        <tr><td>At load</td><td>no drawer open, no layer on, one flow moving</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <h3>Segments</h3>
+    <p>A drawing is a whole system or one segment of it. A box with the <b>⤢</b> badge opens its own drawing, and the boxes it talks to come along as dashed ghosts that lead back. When a system will not fit in 12 boxes, split it into segments instead of raising the cap.</p>
+  </div>
+  <div>
+    <h3>How an agent would make one</h3>
+    <div class="code"><button class="copy" data-copy>copy</button><pre>F=~/Projects/FLOW_VIZ/bin/flowviz
+$F new "Checkout confirms in 300 ms" --system --dir ~/work/shop
+$F build ~/work/shop/checkout.src.html
+$F audit ~/work/shop/checkout.html
+$F serve ~/work/shop --open
+$F notes ~/work/shop/checkout.html</pre></div>
+    <p>The audit counts every cap from the spec without a browser. Overlaps and crossings need layout, so those are measured with <code>?audit=1</code> in headless Chrome.</p>
+  </div>
+  <div class="box warn"><p><b>Not built yet:</b> the five commands above, sidecar sync for notes (they stay in this browser for now), and a print layout beyond the static step list.</p></div>
+</template>
+<script>
+/* ============================================================================
+   FLOW_VIZ drawing runtime (mockup).
+   Reads #fv-spec and #fv-depth, then draws and wires everything else: grid
+   layout, orthogonal routing, lanes, motion, peek, drawer, walkthrough,
+   sequence view, segments and notes. An agent never writes any of this, so a
+   fix here reaches every drawing on the next build.
+   ============================================================================ */
+(function () {
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+  var ROOT = JSON.parse(document.getElementById('fv-spec').textContent);
+  var DOC = ROOT.doc, BUILT = '2026-09-28';
+  var UIKEY = 'flowviz:ui:' + DOC, NOTEKEY = 'flowviz:notes:' + DOC;
+
+  /* one grid for every drawing: agents place boxes in cells, never in pixels */
+  var G = { cw: 240, ch: 132, nw: 172, nh: 56, px: 22, py: 18, r: 10, lane: 4.5 };
+  var KIND = { client: 'client', edge: 'edge', service: 'service', data: 'data', stream: 'stream', external: 'ext' };
+  var KIND_NAME = { client: 'Client', edge: 'Edge', service: 'Service', data: 'Data', stream: 'Event stream', external: 'External' };
+  var TONES = ['f1', 'f2', 'f3'];
+
+  var ui = load(UIKEY, { theme: 'auto', motion: true, labels: false, times: false, key: false, view: 'map' });
+  var notes = load(NOTEKEY, {});
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  var S = {
+    spec: ROOT, seg: null, flow: 0, step: -1, playing: false, run: 0,
+    nodes: {}, edges: {}, nref: {}, eref: {}, lanes: [], seqRows: [], layer: {},
+    view: 'map', drawer: null, timer: null, raf: null
+  };
+
+  /* ── small helpers ─────────────────────────────────────────────────────── */
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function el(tag, attrs, parent) {
+    var n = document.createElementNS(NS, tag);
+    for (var k in attrs) if (attrs[k] != null) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function f(n) { return Math.round(n * 10) / 10; }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function words(s) { return String(s || '').trim().split(/\s+/).filter(Boolean).length; }
+  function load(k, d) {
+    try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v ? Object.assign(d, v) : d; }
+    catch (e) { return d; }
+  }
+  function persist(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function still() { return !ui.motion || reduce.matches; }
+  function flow() { return S.spec.flows[S.flow]; }
+  function tone(i) { return TONES[i % TONES.length]; }
+  function kindVar(k) { return 'var(--' + (KIND[k] || 'service') + ')'; }
+  function ease(k) { return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; }
+  function scope(key) { return (S.seg ? S.seg + '/' : '') + key; }
+  var toastT;
+  function toast(msg) {
+    var t = $('#toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('on'); }, 1600);
+  }
+  function copyText(text, btn, label) {
+    function done(ok) {
+      toast(ok ? (label || 'Copied') : 'Copy was blocked — select the text instead');
+      if (btn && ok) { var o = btn.innerHTML; btn.textContent = 'copied'; setTimeout(function () { btn.innerHTML = o; }, 1200); }
+    }
+    try { navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); }); }
+    catch (e) { done(false); }
+  }
+
+  /* ── geometry ──────────────────────────────────────────────────────────── */
+  function box(n) {
+    var cx = G.px + n.at[0] * G.cw + G.cw / 2, cy = G.py + n.at[1] * G.ch + G.ch / 2;
+    return { cx: cx, cy: cy, x: cx - G.nw / 2, y: cy - G.nh / 2, w: G.nw, h: G.nh };
+  }
+  function sidePoint(b, side, off) {
+    if (side === 'r') return { x: b.x + b.w, y: b.cy + off };
+    if (side === 'l') return { x: b.x, y: b.cy + off };
+    if (side === 'b') return { x: b.cx + off, y: b.y + b.h };
+    return { x: b.cx + off, y: b.y };
+  }
+  /* a connection leaves the side that faces its target; bends happen in the gutter */
+  function plan(e) {
+    var a = S.nodes[e.from], b = S.nodes[e.to];
+    var dc = b.at[0] - a.at[0], dr = b.at[1] - a.at[1];
+    var kind = e.route || (dr === 0 ? 'h' : dc === 0 ? 'v' : Math.abs(dc) >= Math.abs(dr) ? 'hvh' : 'vhv');
+    var horiz = kind === 'h' || kind === 'hvh';
+    return {
+      e: e, a: a, b: b, kind: kind,
+      sa: horiz ? (dc > 0 ? 'r' : 'l') : (dr > 0 ? 'b' : 't'),
+      sb: horiz ? (dc > 0 ? 'l' : 'r') : (dr > 0 ? 't' : 'b')
+    };
+  }
+  function routeAll() {
+    var plans = S.spec.edges.map(plan), sides = {};
+    plans.forEach(function (p) {
+      (sides[p.e.from + ':' + p.sa] = sides[p.e.from + ':' + p.sa] || []).push({ p: p, end: 'a' });
+      (sides[p.e.to + ':' + p.sb] = sides[p.e.to + ':' + p.sb] || []).push({ p: p, end: 'b' });
+    });
+    /* straight connections own the centre of a side; bent ones fan out around them */
+    Object.keys(sides).forEach(function (k) {
+      var list = sides[k], side = k.split(':')[1], horiz = side === 'l' || side === 'r';
+      var self = S.nodes[k.split(':')[0]], selfKey = horiz ? self.at[1] : self.at[0];
+      function key(it) { var o = it.end === 'a' ? it.p.b : it.p.a; return horiz ? o.at[1] : o.at[0]; }
+      function isStraight(it) { return it.p.kind === 'h' || it.p.kind === 'v'; }
+      var straight = list.filter(isStraight), bent = list.filter(function (it) { return !isStraight(it); });
+      straight.forEach(function (it) { it.p['off' + it.end] = 0; });
+      if (straight.length) {
+        bent.filter(function (it) { return key(it) < selfKey; })
+          .sort(function (m, n) { return key(n) - key(m); })
+          .forEach(function (it, i) { it.p['off' + it.end] = -14 * (i + 1); });
+        bent.filter(function (it) { return key(it) >= selfKey; })
+          .sort(function (m, n) { return key(m) - key(n); })
+          .forEach(function (it, i) { it.p['off' + it.end] = 14 * (i + 1); });
+      } else {
+        bent.sort(function (m, n) { return key(m) - key(n); })
+          .forEach(function (it, i) { it.p['off' + it.end] = (i - (bent.length - 1) / 2) * 14; });
+      }
+    });
+    plans.forEach(function (p) {
+      var A = box(p.a), B = box(p.b);
+      var P0 = sidePoint(A, p.sa, p.offa || 0), P3 = sidePoint(B, p.sb, p.offb || 0), pts;
+      if (p.kind === 'h' || p.kind === 'v') pts = [P0, P3];
+      else if (p.kind === 'hvh') {
+        var mx = (P0.x + P3.x) / 2;
+        pts = [P0, { x: mx, y: P0.y }, { x: mx, y: P3.y }, P3];
+      } else {
+        var my = (P0.y + P3.y) / 2;
+        pts = [P0, { x: P0.x, y: my }, { x: P3.x, y: my }, P3];
+      }
+      p.pts = pts.filter(function (q, i) { return !i || Math.hypot(q.x - pts[i - 1].x, q.y - pts[i - 1].y) > 0.5; });
+    });
+    return plans;
+  }
+  /* shift an orthogonal polyline sideways — two lanes for a two-way connection */
+  function offsetPoly(pts, d) {
+    var segs = [];
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p = pts[i], q = pts[i + 1], dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy) || 1;
+      var nx = -dy / L * d, ny = dx / L * d;
+      segs.push([{ x: p.x + nx, y: p.y + ny }, { x: q.x + nx, y: q.y + ny }]);
+    }
+    var out = [segs[0][0]];
+    for (var j = 1; j < segs.length; j++) {
+      var s0 = segs[j - 1], s1 = segs[j], h0 = Math.abs(s0[0].y - s0[1].y) < 0.01;
+      out.push(h0 ? { x: s1[0].x, y: s0[0].y } : { x: s0[0].x, y: s1[0].y });
+    }
+    out.push(segs[segs.length - 1][1]);
+    return out;
+  }
+  function trimEnd(pts, d) {
+    var out = pts.slice(), q = out[out.length - 1], p = out[out.length - 2];
+    var L = Math.hypot(q.x - p.x, q.y - p.y) || 1, k = Math.max(0, (L - d) / L);
+    out[out.length - 1] = { x: p.x + (q.x - p.x) * k, y: p.y + (q.y - p.y) * k };
+    return out;
+  }
+  function roundPath(pts, r) {
+    var d = 'M' + f(pts[0].x) + ' ' + f(pts[0].y);
+    for (var i = 1; i < pts.length - 1; i++) {
+      var p = pts[i - 1], c = pts[i], n = pts[i + 1];
+      var l1 = Math.hypot(c.x - p.x, c.y - p.y) || 1, l2 = Math.hypot(n.x - c.x, n.y - c.y) || 1;
+      var rr = Math.min(r, l1 / 2, l2 / 2);
+      d += 'L' + f(c.x + (p.x - c.x) / l1 * rr) + ' ' + f(c.y + (p.y - c.y) / l1 * rr) +
+           'Q' + f(c.x) + ' ' + f(c.y) + ' ' + f(c.x + (n.x - c.x) / l2 * rr) + ' ' + f(c.y + (n.y - c.y) / l2 * rr);
+    }
+    var e = pts[pts.length - 1];
+    return d + 'L' + f(e.x) + ' ' + f(e.y);
+  }
+  /* a point part-way along a polyline, and the direction of travel there */
+  function pointAt(pts, t) {
+    var lens = [], total = 0;
+    for (var i = 0; i < pts.length - 1; i++) {
+      var l = Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+      lens.push(l); total += l;
+    }
+    var want = total * t;
+    for (var j = 0; j < lens.length; j++) {
+      if (want <= lens[j] || j === lens.length - 1) {
+        var k = lens[j] ? Math.min(1, want / lens[j]) : 0, a = pts[j], b = pts[j + 1];
+        return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, horiz: Math.abs(b.y - a.y) < 0.5, len: total };
+      }
+      want -= lens[j];
+    }
+    return { x: pts[0].x, y: pts[0].y, horiz: true, len: total };
+  }
+  function fit(t, max) {
+    var len = t.getComputedTextLength();
+    if (!len || len <= max + 1) return;
+    var fs = parseFloat(window.getComputedStyle(t).fontSize) || 13;
+    t.style.fontSize = Math.max(9.5, fs * max / len * 0.97) + 'px';
+    var s = t.textContent;
+    while (s.length > 3 && t.getComputedTextLength() > max) { s = s.slice(0, -1); t.textContent = s + '…'; }
+  }
+
+  /* ── the map ───────────────────────────────────────────────────────────── */
+  function renderMap() {
+    var sp = S.spec, svg = $('#map');
+    svg.innerHTML = '';
+    S.nodes = {}; S.edges = {}; S.nref = {}; S.eref = {}; S.lanes = [];
+    sp.nodes.forEach(function (n) { S.nodes[n.id] = n; });
+    sp.edges.forEach(function (e) { S.edges[e.id] = e; });
+    var W = G.px * 2 + sp.grid.cols * G.cw, H = G.py * 2 + sp.grid.rows * G.ch;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('aria-label', sp.title + '. ' + sp.nodes.length + ' boxes; ' +
+      sp.flows.map(function (fl) { return fl.label; }).join(', ') + '.');
+    svg.classList.remove('focus', 'stepping');
+    S.layer = {
+      zones: el('g', { class: 'zones' }, svg), edges: el('g', { class: 'edges' }, svg),
+      nodes: el('g', { class: 'nodes' }, svg), badges: el('g', { class: 'badges' }, svg),
+      fx: el('g', { class: 'fx' }, svg)
+    };
+    (sp.zones || []).forEach(drawZone);
+    routeAll().forEach(drawEdge);
+    sp.nodes.forEach(drawNode);
+  }
+  function drawZone(z) {
+    var x = G.px + z.cols[0] * G.cw + 8, y = G.py + z.rows[0] * G.ch + 6;
+    var w = (z.cols[1] - z.cols[0] + 1) * G.cw - 16, h = (z.rows[1] - z.rows[0] + 1) * G.ch - 12;
+    var g = el('g', { class: 'zone z-' + (z.tone || 'neutral') }, S.layer.zones);
+    el('rect', { x: x, y: y, width: w, height: h, rx: 16 }, g);
+    var tag = z.tag || 'tl', right = tag[1] === 'r', bottom = tag[0] === 'b';
+    var t = el('text', { x: right ? x + w - 14 : x + 14, y: bottom ? y + h - 11 : y + 20,
+      'text-anchor': right ? 'end' : 'start' }, g);
+    t.textContent = z.label;
+  }
+  function head(pts, g) {
+    var q = pts[pts.length - 1], p = pts[pts.length - 2];
+    var dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+    var tx = q.x - ux * 1.5, ty = q.y - uy * 1.5, bx = tx - ux * 8.5, by = ty - uy * 8.5;
+    el('path', { class: 'head', d: 'M' + f(tx) + ' ' + f(ty) + 'L' + f(bx - uy * 4.6) + ' ' + f(by + ux * 4.6) +
+      'L' + f(bx + uy * 4.6) + ' ' + f(by - ux * 4.6) + 'Z' }, g);
+  }
+  function drawEdge(p) {
+    var e = p.e, mode = e.mode || 'sync';
+    var set = el('g', { class: 'edgeset', 'data-edge': e.id }, S.layer.edges);
+    var lanes = e.both
+      ? [{ dir: 1, pts: offsetPoly(p.pts, G.lane) }, { dir: -1, pts: offsetPoly(p.pts.slice().reverse(), G.lane) }]
+      : [{ dir: 1, pts: p.pts }];
+    lanes.forEach(function (ln) {
+      var g = el('g', { class: 'edge m-' + mode, 'data-edge': e.id, 'data-dir': ln.dir }, set);
+      var path = el('path', { class: 'line', d: roundPath(trimEnd(ln.pts, 7), G.r) }, g);
+      head(ln.pts, g);
+      S.lanes.push({ edge: e, dir: ln.dir, g: g, path: path, pts: trimEnd(ln.pts, 7) });
+    });
+    var hit = el('path', { class: 'hit', d: roundPath(p.pts, G.r) }, set);
+    var cg = el('g', { class: 'chiplbl' }, set);
+    S.eref[e.id] = { set: set, hit: hit, chip: { g: cg, rect: el('rect', { rx: 6, height: 18 }, cg), text: el('text', {}, cg) },
+      pts: p.pts, both: !!e.both };
+    wireHover(hit, 'edge', e.id, set);
+  }
+  function zoomGlyph(cx, cy) {
+    return 'M' + f(cx - 2.2) + ' ' + f(cy - 2.2) + 'h4.4v4.4M' + f(cx + 2.2) + ' ' + f(cy - 2.2) + 'l-4.6 4.6';
+  }
+  function drawNode(n) {
+    var b = box(n);
+    var g = el('g', {
+      class: 'node k-' + (n.kind || 'service') + (n.ghost ? ' ghost' : '') + (n.tech ? ' has-tech' : ''),
+      'data-node': n.id, tabindex: 0, role: 'button',
+      'aria-label': n.label + (n.peek ? '. ' + n.peek : '')
+    }, S.layer.nodes);
+    el('rect', { class: 'card', x: b.x, y: b.y, width: b.w, height: b.h, rx: 14 }, g);
+    el('rect', { class: 'tile', x: b.x + 11, y: b.y + 11, width: 34, height: 34, rx: 10 }, g);
+    el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), x: b.x + 18, y: b.y + 18, width: 20, height: 20 }, g);
+    var lg = el('g', { class: 'lblg' }, g);
+    var t = el('text', { class: 'lbl', x: b.x + 55, y: b.cy + 4.5 }, lg);
+    t.textContent = n.label;
+    fit(t, b.w - 55 - 12);
+    if (n.tech) {
+      var tt = el('text', { class: 'tech', x: b.x + 55, y: b.cy + 14 }, g);
+      tt.textContent = n.tech;
+      fit(tt, b.w - 55 - 10);
+    }
+    if (n.segment) {
+      var sg = el('g', { class: 'seg', role: 'button', 'aria-label': 'Open the inside of ' + n.label }, g);
+      el('circle', { cx: b.x + b.w - 3, cy: b.y + 3, r: 9.5 }, sg);
+      el('path', { d: zoomGlyph(b.x + b.w - 3, b.y + 3) }, sg);
+      var tl = el('title', {}, sg); tl.textContent = 'Open the inside of ' + n.label;
+      sg.addEventListener('click', function (ev) { ev.stopPropagation(); hoverOff(); openSegment(n.segment, n.id); });
+    }
+    S.nref[n.id] = { g: g, b: b };
+    wireHover(g, 'node', n.id, g);
+  }
+
+  /* ── flows: which lanes a step walks, and in which direction ───────────── */
+  function laneFor(a, b) {
+    for (var i = 0; i < S.lanes.length; i++) {
+      var L = S.lanes[i], e = L.edge;
+      if (e.from === a && e.to === b && L.dir === 1) return { lane: L, back: false, edge: e };
+      if (e.from === b && e.to === a) {
+        if (e.both && L.dir === -1) return { lane: L, back: false, edge: e };
+        if (!e.both && L.dir === 1) return { lane: L, back: true, edge: e };
+      }
+    }
+    return { lane: null, back: false, edge: null };
+  }
+  function hops(st) {
+    var out = [];
+    for (var i = 0; i < st.path.length - 1; i++) {
+      var h = laneFor(st.path[i], st.path[i + 1]);
+      h.a = st.path[i]; h.b = st.path[i + 1]; h.i = i;
+      h.mode = st.fail && i === st.path.length - 2 ? 'fail'
+        : h.edge && h.edge.mode === 'async' ? 'event'
+        : h.back ? 'response' : 'request';
+      out.push(h);
+    }
+    return out;
+  }
+  function applyFlow() {
+    var fl = flow();
+    document.documentElement.style.setProperty('--acc', 'var(--' + tone(S.flow) + ')');
+    S.lanes.forEach(function (L) { L.inFlow = L.fwd = L.back = false; });
+    fl.steps.forEach(function (st) {
+      hops(st).forEach(function (h) {
+        if (!h.lane) return;
+        h.lane.inFlow = true;
+        if (h.back) h.lane.back = true; else h.lane.fwd = true;
+      });
+    });
+    restLanes();
+    renderBadges(); renderDots(); caption(-1); renderSeq(); printSteps();
+  }
+  /* at rest, a lane moves the way the flow mostly uses it */
+  function restLanes() {
+    S.lanes.forEach(function (L) {
+      L.g.classList.toggle('in', !!L.inFlow);
+      L.g.classList.toggle('rev', !!(L.inFlow && !L.fwd && L.back));
+      L.g.classList.remove('hot', 'failing');
+    });
+  }
+  function renderBadges() {
+    var gb = S.layer.badges; gb.innerHTML = '';
+    var perLane = [];
+    flow().steps.forEach(function (st, si) {
+      var h = hops(st)[0];
+      if (!h || !h.lane) return;
+      var slot = perLane.filter(function (x) { return x.lane === h.lane; })[0];
+      if (!slot) perLane.push(slot = { lane: h.lane, list: [] });
+      slot.list.push({ st: st, si: si, back: h.back });
+    });
+    perLane.forEach(function (slot) {
+      var n = slot.list.length;
+      slot.list.forEach(function (it, k) {
+        var t = n === 1 ? (slot.lane.edge.both ? 0.3 : 0.5) : 0.3 + k * (0.4 / (n - 1));
+        if (it.back) t = 1 - t;
+        var pt = pointAt(slot.lane.pts, t);
+        var g = el('g', { class: 'badge' + (it.st.fail ? ' fail' : ''), 'data-si': it.si, 'data-edge': slot.lane.edge.id,
+          tabindex: 0, role: 'button', 'aria-label': 'Step ' + (it.si + 1) + ': ' + it.st.say }, gb);
+        el('circle', { cx: f(pt.x), cy: f(pt.y), r: 9.5 }, g);
+        var tx = el('text', { x: f(pt.x), y: f(pt.y) + 0.5 }, g);
+        tx.textContent = it.si + 1;
+        g.addEventListener('click', function (ev) { ev.stopPropagation(); goStep(it.si); });
+        g.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); goStep(it.si); }
+        });
+        g.addEventListener('pointerenter', function () { if (S.step < 0 && !S.playing) preview(it.si); });
+        g.addEventListener('pointerleave', function () { if (S.step < 0 && !S.playing) clearStep(); });
+      });
+    });
+  }
+  /* the chip on a connection: its protocol, its timing, or both */
+  function updateChips() {
+    Object.keys(S.eref).forEach(function (id) {
+      var e = S.edges[id], ref = S.eref[id], parts = [];
+      if (ui.labels || !ui.times) parts.push(e.label);
+      if (ui.times && e.ms) parts.push(e.ms);
+      var c = ref.chip, text = parts.filter(Boolean).join(' · ');
+      c.text.textContent = text;
+      if (!text) { c.g.setAttribute('visibility', 'hidden'); return; }
+      c.g.removeAttribute('visibility');
+      var w = (c.text.getComputedTextLength() || text.length * 6.3) + 14;
+      var m = pointAt(ref.pts, 0.5), lift = ref.both ? G.lane + 13 : 14, cx, cy;
+      if (m.horiz) { cx = m.x; cy = m.y - lift; } else { cx = m.x + (ref.both ? G.lane : 0) + 10 + w / 2; cy = m.y; }
+      c.rect.setAttribute('x', f(cx - w / 2)); c.rect.setAttribute('y', f(cy - 9)); c.rect.setAttribute('width', f(w));
+      c.text.setAttribute('x', f(cx)); c.text.setAttribute('y', f(cy + 0.5));
+      c.text.setAttribute('text-anchor', 'middle'); c.text.setAttribute('dominant-baseline', 'central');
+    });
+  }
+
+  /* ── the sequence: the same flow, laid out in time ─────────────────────── */
+  function renderSeq() {
+    var svg = $('#seq'); svg.innerHTML = '';
+    S.seqRows = [];
+    var fl = flow(), parts = [], rows = [];
+    fl.steps.forEach(function (st, si) {
+      hops(st).forEach(function (h) {
+        [h.a, h.b].forEach(function (id) { if (parts.indexOf(id) < 0) parts.push(id); });
+        rows.push({ st: st, si: si, h: h });
+      });
+    });
+    var left = 24, top = 16, headH = 46, rowH = 44;
+    var W = Math.max(1000, left * 2 + parts.length * 158), cw = (W - left * 2) / parts.length;
+    var H = top + headH + 26 + rows.length * rowH + 18;
+    function X(id) { return left + cw * parts.indexOf(id) + cw / 2; }
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('aria-label', fl.label + ' as a sequence: ' + fl.steps.map(function (st, i) {
+      return (i + 1) + '. ' + st.say; }).join(' '));
+    var gRows = el('g', {}, svg), gLife = el('g', {}, svg), gMsg = el('g', {}, svg);
+    S.layer.seqfx = el('g', { class: 'fx' }, svg);
+    parts.forEach(function (id) {
+      var n = S.nodes[id], x = X(id), w = Math.min(cw - 18, 156);
+      el('line', { class: 'life', x1: x, y1: top + headH, x2: x, y2: H - 8 }, gLife);
+      var g = el('g', { class: 'node k-' + n.kind + (n.ghost ? ' ghost' : ''), 'data-node': id, tabindex: 0, role: 'button',
+        'aria-label': n.label }, gLife);
+      el('rect', { class: 'card', x: x - w / 2, y: top, width: w, height: headH - 6, rx: 11 }, g);
+      el('rect', { class: 'tile', x: x - w / 2 + 7, y: top + 7, width: 26, height: 26, rx: 8 }, g);
+      el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), x: x - w / 2 + 12, y: top + 12, width: 16, height: 16 }, g);
+      var t = el('text', { class: 'lbl', x: x - w / 2 + 41, y: top + 24.5 }, g);
+      t.textContent = n.label;
+      if (!$('#view-seq').hidden) fit(t, w - 50);
+      wireHover(g, 'node', id, g);
+    });
+    rows.forEach(function (r, k) {
+      var y = top + headH + 34 + k * rowH, x1 = X(r.h.a), x2 = X(r.h.b), dir = x2 > x1 ? 1 : -1;
+      var band = el('rect', { class: 'row', x: 6, y: f(y - rowH / 2 + 3), width: W - 12, height: rowH - 6, rx: 9 }, gRows);
+      var g = el('g', { class: 'msg ' + r.h.mode }, gMsg);
+      var xs = x1 + dir * 12, xe = r.h.mode === 'fail' ? x1 + (x2 - x1) * 0.62 : x2 - dir * 9;
+      var p = el('path', { class: 'line', d: 'M' + f(xs) + ' ' + y + 'H' + f(xe) }, g);
+      if (r.h.mode !== 'fail') el('path', { class: 'head', d: 'M' + f(x2 - dir * 1.5) + ' ' + y + 'l' + (-dir * 9) + ' -4.8v9.6z' }, g);
+      else {
+        var xg = el('g', { transform: 'translate(' + f(xe) + ' ' + y + ')' }, g), xm = el('g', { class: 'xmark' }, xg);
+        el('circle', { r: 8 }, xm); el('path', { d: 'M-3.2 -3.2L3.2 3.2M3.2 -3.2L-3.2 3.2' }, xm);
+      }
+      var tx = el('text', { x: f((x1 + x2) / 2), y: y - 8 }, g);
+      tx.textContent = r.st.msg || '';
+      if (r.h.i === 0) {
+        var bg = el('g', { class: 'badge' + (r.st.fail ? ' fail' : ''), 'data-si': r.si }, gMsg);
+        el('circle', { cx: x1, cy: y, r: 9.5 }, bg);
+        var bt = el('text', { x: x1, y: y + 0.5 }, bg); bt.textContent = r.si + 1;
+        bg.addEventListener('click', function () { goStep(r.si); });
+      }
+      S.seqRows.push({ si: r.si, band: band, g: g, path: p, mode: r.h.mode });
+    });
+  }
+
+  /* ── walking a flow: highlight, then send a packet down each hop ───────── */
+  function cancelRun() {
+    S.run++;
+    if (S.raf) cancelAnimationFrame(S.raf);
+    clearTimeout(S.timer);
+    [S.layer.fx, S.layer.seqfx].forEach(function (g) { if (g) g.innerHTML = ''; });
+  }
+  function clearStep() {
+    var svg = $('#map');
+    svg.classList.remove('stepping');
+    restLanes();
+    $$('.hot, .now', svg).forEach(function (x) { x.classList.remove('hot', 'now'); });
+    S.seqRows.forEach(function (r) { r.band.classList.remove('now'); r.g.classList.remove('now'); });
+    paintDots(-1);
+    caption(-1);
+  }
+  function mark(si) {
+    var svg = $('#map'), st = flow().steps[si];
+    svg.classList.remove('focus');
+    restLanes();
+    $$('.hot, .now', svg).forEach(function (x) { x.classList.remove('hot', 'now'); });
+    svg.classList.add('stepping');
+    hops(st).forEach(function (h) {
+      if (!h.lane) return;
+      h.lane.g.classList.add('hot');
+      h.lane.g.classList.toggle('rev', h.back);
+      if (h.mode === 'fail') h.lane.g.classList.add('failing');
+      S.eref[h.edge.id].set.classList.add('hot');
+      [h.a, h.b].forEach(function (id) { if (S.nref[id]) S.nref[id].g.classList.add('hot'); });
+    });
+    $$('.badge', svg).forEach(function (b) {
+      var on = +b.getAttribute('data-si') === si;
+      b.classList.toggle('hot', on); b.classList.toggle('now', on);
+    });
+    S.seqRows.forEach(function (r) {
+      var on = r.si === si; r.band.classList.toggle('now', on); r.g.classList.toggle('now', on);
+    });
+    paintDots(si);
+    caption(si);
+  }
+  function preview(si) { mark(si); }
+  function land(id) {
+    if (!id || !S.nref[id]) return;
+    var g = S.nref[id].g;
+    g.classList.add('land');
+    setTimeout(function () { g.classList.remove('land'); }, 380);
+  }
+  function fly(path, back, mode, msg, layer, cb, token, landId, stop) {
+    var len = path.getTotalLength();
+    var pk = el('g', { class: 'pkt' + (mode === 'fail' ? ' fail' : '') }, layer);
+    el('circle', { class: 'halo', r: 10 }, pk);
+    el('circle', { class: 'core', r: 5 }, pk);
+    var tag = null;
+    if (msg) {
+      tag = el('g', { class: 'ptag' }, layer);
+      var r = el('rect', { rx: 9, height: 18, y: -9 }, tag), t = el('text', {}, tag);
+      t.textContent = msg;
+      var w = (t.getComputedTextLength() || msg.length * 6.4) + 16;
+      r.setAttribute('x', f(-w / 2)); r.setAttribute('width', f(w));
+    }
+    var speed = mode === 'event' ? 150 : 240;
+    var dur = still() ? 0 : Math.max(450, len * stop / speed * 1000), t0 = performance.now();
+    function place(k) {
+      var e = ease(k) * stop, p = path.getPointAtLength(len * (back ? 1 - e : e));
+      pk.setAttribute('transform', 'translate(' + f(p.x) + ' ' + f(p.y) + ')');
+      if (tag) tag.setAttribute('transform', 'translate(' + f(p.x) + ' ' + f(p.y - 21) + ')');
+      return p;
+    }
+    function frame(now) {
+      if (token !== S.run) return;
+      var k = dur ? Math.min(1, (now - t0) / dur) : 1, p = place(k);
+      if (k < 1) { S.raf = requestAnimationFrame(frame); return; }
+      if (mode === 'fail') {
+        var at = el('g', { transform: 'translate(' + f(p.x) + ' ' + f(p.y) + ')' }, layer);
+        el('circle', { class: 'burst', r: 7 }, at);
+        var xm = el('g', { class: 'xmark' }, at);
+        el('circle', { r: 8.5 }, xm);
+        el('path', { d: 'M-3.4 -3.4L3.4 3.4M3.4 -3.4L-3.4 3.4' }, xm);
+        pk.remove();
+      } else {
+        land(landId);
+        setTimeout(function () { if (pk.parentNode) pk.remove(); }, 160);
+      }
+      if (tag) setTimeout(function () { if (tag.parentNode) tag.remove(); }, mode === 'fail' ? 1200 : 160);
+      cb();
+    }
+    place(0);
+    S.raf = requestAnimationFrame(frame);
+  }
+  function playStep(si, done) {
+    cancelRun();
+    var token = S.run, st = flow().steps[si], hs = hops(st), i = 0;
+    S.step = si;
+    mark(si);
+    var rows = S.seqRows.filter(function (r) { return r.si === si; });
+    (function next() {
+      if (token !== S.run) return;
+      if (i >= hs.length) { if (done) done(token); return; }
+      var h = hs[i], row = rows[i];
+      i++;
+      if (S.view === 'seq' && row) fly(row.path, false, h.mode, st.msg, S.layer.seqfx, next, token, null, 1);
+      else if (S.view === 'map' && h.lane) fly(h.lane.path, h.back, h.mode, st.msg, S.layer.fx, next, token, h.b, h.mode === 'fail' ? 0.62 : 1);
+      else next();
+    })();
+  }
+  function setPlay(ended) {
+    var icon = S.playing ? 'pause' : ended ? 'replay' : 'play';
+    var label = S.playing ? 'Pause' : ended ? 'Replay' : S.step >= 0 ? 'Continue' : 'Walk through';
+    $('#play').innerHTML = '<svg><use href="#i-' + icon + '"/></svg><span>' + label + '</span>';
+  }
+  function play() {
+    if (S.playing) { pause(); return; }
+    var n = flow().steps.length;
+    S.playing = true; setPlay();
+    (function go(si) {
+      if (!S.playing) return;
+      playStep(si, function (token) {
+        if (!S.playing || token !== S.run) return;
+        var dwell = Math.max(1100, words(flow().steps[si].say) * 150);
+        if (si + 1 < n) S.timer = setTimeout(function () { if (S.playing && token === S.run) go(si + 1); }, dwell);
+        else { S.playing = false; setPlay(true); }
+      });
+    })(S.step < 0 || S.step >= n - 1 ? 0 : S.step + 1);
+  }
+  function pause() { S.playing = false; clearTimeout(S.timer); setPlay(); }
+  function goStep(si) { pause(); playStep(si); setPlay(); }
+  function stepBy(d) {
+    var n = flow().steps.length;
+    goStep(S.step < 0 ? (d > 0 ? 0 : n - 1) : Math.min(n - 1, Math.max(0, S.step + d)));
+  }
+  function rest() { pause(); cancelRun(); S.step = -1; clearStep(); setPlay(); }
+
+  function renderDots() {
+    var d = $('#dots'); d.innerHTML = '';
+    flow().steps.forEach(function (st, si) {
+      var b = document.createElement('button');
+      b.className = 'dot' + (st.fail ? ' fail' : '');
+      b.textContent = si + 1;
+      b.setAttribute('aria-label', 'Step ' + (si + 1) + ': ' + st.say);
+      b.addEventListener('click', function () { goStep(si); });
+      b.addEventListener('mouseenter', function () { if (S.step < 0 && !S.playing) preview(si); });
+      b.addEventListener('mouseleave', function () { if (S.step < 0 && !S.playing) clearStep(); });
+      d.appendChild(b);
+    });
+    setPlay();
+  }
+  function paintDots(si) {
+    $$('#dots .dot').forEach(function (b, i) {
+      b.classList.toggle('now', i === si);
+      b.classList.toggle('seen', si >= 0 && i < si);
+    });
+  }
+  function caption(si) {
+    var cap = $('#cap'), fl = flow();
+    if (si < 0) { cap.textContent = fl.summary; return; }
+    var st = fl.steps[si];
+    cap.innerHTML = '<b>' + (si + 1) + '.</b> ' + esc(st.say) + ' <button class="more" id="capMore">Details</button>';
+    $('#capMore').addEventListener('click', function () { openDrawer('step', si); });
+  }
+
+  /* ── hover: dim what a box does not touch, and peek ────────────────────── */
+  var hovT, peekT, warmT, warm = false;
+  function wireHover(target, type, id, g) {
+    target.addEventListener('pointerenter', function (ev) { if (ev.pointerType !== 'touch') hoverOn(type, id, g); });
+    target.addEventListener('pointerleave', hoverOff);
+    target.addEventListener('click', function (ev) { ev.stopPropagation(); hoverOff(); activate(type, id); });
+    if (type === 'node') {
+      g.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); activate(type, id); }
+      });
+      g.addEventListener('focus', function () { if (g.matches(':focus-visible')) hoverOn(type, id, g); });
+      g.addEventListener('blur', hoverOff);
+    }
+  }
+  function activate(type, id) {
+    var n = type === 'node' && S.nodes[id];
+    if (n && n.ghost) { leaveSegment(n.ghost); return; }
+    openDrawer(type, id);
+  }
+  function hoverOn(type, id, g) {
+    clearTimeout(hovT);
+    var svg = g.ownerSVGElement;
+    hovT = setTimeout(function () {
+      if (!svg || svg.id !== 'map' || svg.classList.contains('stepping')) return;
+      $$('.near, .hov', svg).forEach(function (x) { x.classList.remove('near', 'hov'); });
+      svg.classList.add('focus');
+      var near = {}, ids = [];
+      if (type === 'node') {
+        near[id] = 1;
+        S.spec.edges.forEach(function (e) {
+          if (e.from === id || e.to === id) { ids.push(e.id); near[e.from] = near[e.to] = 1; }
+        });
+      } else {
+        var e = S.edges[id];
+        ids.push(id); near[e.from] = near[e.to] = 1;
+        S.eref[id].set.classList.add('hov');
+      }
+      Object.keys(near).forEach(function (n) { if (S.nref[n]) S.nref[n].g.classList.add('near'); });
+      ids.forEach(function (eid) {
+        S.eref[eid].set.classList.add('near');
+        $$('.edge[data-edge="' + eid + '"], .badge[data-edge="' + eid + '"]', svg)
+          .forEach(function (x) { x.classList.add('near'); });
+      });
+    }, 60);
+    showPeek(type, id, g);
+  }
+  function hoverOff() {
+    clearTimeout(hovT);
+    var svg = $('#map');
+    svg.classList.remove('focus');
+    $$('.near, .hov', svg).forEach(function (x) { x.classList.remove('near', 'hov'); });
+    hidePeek();
+  }
+  function factsHtml(list) {
+    return list && list.length ? '<div class="facts">' + list.slice(0, 3).map(function (x) {
+      return '<span>' + esc(x) + '</span>'; }).join('') + '</div>' : '';
+  }
+  function svgToScreen(svg, x, y) {
+    var m = svg.getScreenCTM();
+    return { x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f };
+  }
+  function showPeek(type, id, anchor) {
+    clearTimeout(peekT); clearTimeout(warmT);
+    peekT = setTimeout(function () {
+      var pk = $('#peek'), html, k, r;
+      if (type === 'node') {
+        var n = S.nodes[id]; if (!n) return;
+        k = n.ghost ? 'var(--ink-3)' : kindVar(n.kind);
+        html = '<div class="pk">' + esc(n.ghost ? 'In the whole system' : (KIND_NAME[n.kind] || 'Box')) +
+          (n.tech ? ' · ' + esc(n.tech) : '') + '</div><h4>' + esc(n.label) + '</h4><p>' + esc(n.peek || '') + '</p>' +
+          factsHtml(n.facts) + '<div class="hint">' + (n.ghost ? '<span>Click to go back to it</span>'
+            : '<span>Click for everything</span>' + (n.segment ? '<span>⤢ opens its inside</span>' : '')) + '</div>';
+        r = anchor.getBoundingClientRect();
+      } else {
+        var e = S.edges[id]; if (!e) return;
+        k = e.mode === 'async' ? 'var(--stream)' : 'var(--f1)';
+        html = '<div class="pk">' + (e.mode === 'async' ? 'Event' : 'Call') + (e.both ? ' · both ways' : '') +
+          (e.label ? ' · ' + esc(e.label) : '') + '</div><h4>' + esc(S.nodes[e.from].label) + (e.both ? ' ⇄ ' : ' → ') +
+          esc(S.nodes[e.to].label) + '</h4><p>' + esc(e.peek || '') + '</p>' + factsHtml(e.ms ? [e.ms] : []) +
+          '<div class="hint"><span>Click for everything</span></div>';
+        var m = pointAt(S.eref[id].pts, 0.5), s = svgToScreen($('#map'), m.x, m.y);
+        r = { left: s.x, top: s.y, bottom: s.y, width: 0, height: 0 };
+      }
+      pk.innerHTML = html;
+      pk.style.setProperty('--k', k);
+      pk.hidden = false;
+      pk.classList.remove('on', 'below');
+      var stage = $('.stage').getBoundingClientRect(), w = pk.offsetWidth, h = pk.offsetHeight;
+      var left = Math.min(Math.max(8, r.left + r.width / 2 - stage.left - w / 2), stage.width - w - 8);
+      var top = r.top - stage.top - h - 12;
+      if (top < 8) { top = r.bottom - stage.top + 12; pk.classList.add('below'); }
+      pk.style.left = left + 'px'; pk.style.top = top + 'px';
+      requestAnimationFrame(function () { pk.classList.add('on'); });
+      warm = true;
+    }, warm ? 0 : 150);
+  }
+  function hidePeek() {
+    clearTimeout(peekT);
+    var pk = $('#peek');
+    pk.classList.remove('on');
+    clearTimeout(warmT);
+    warmT = setTimeout(function () { warm = false; if (!pk.classList.contains('on')) pk.hidden = true; }, 380);
+  }
+
+  /* ── the drawer: layer 3 ───────────────────────────────────────────────── */
+  function add(parent, html) {
+    var d = document.createElement('div'); d.innerHTML = html; parent.appendChild(d); return d;
+  }
+  function depth(key) {
+    var s = document.querySelector('#fv-depth section[data-for="' + key + '"]');
+    if (!s) return null;
+    var c = s.cloneNode(true); c.removeAttribute('data-for'); c.style.display = 'grid'; c.style.gap = '12px';
+    return c;
+  }
+  function openDrawer(type, id) {
+    var body = $('#drBody'), ico = $('#drIco'), kind = $('#drKind'), title = $('#drTitle');
+    body.innerHTML = ''; ico.innerHTML = ''; ico.style.removeProperty('--k');
+    select(type, id);
+    if (type === 'node') nodeDrawer(S.nodes[id], body, ico, kind, title);
+    else if (type === 'edge') edgeDrawer(S.edges[id], body, ico, kind, title);
+    else if (type === 'step') stepDrawer(id, body, ico, kind, title);
+    else aboutDrawer(body, ico, kind, title);
+    wireCopies(body);
+    var d = $('#drawer');
+    d.classList.add('on'); d.setAttribute('aria-hidden', 'false');
+    $('#scrim').classList.add('on');
+    body.scrollTop = 0;
+    S.drawer = { type: type, id: id };
+  }
+  function closeDrawer() {
+    var d = $('#drawer');
+    d.classList.remove('on'); d.setAttribute('aria-hidden', 'true');
+    $('#scrim').classList.remove('on');
+    S.drawer = null; select(null);
+  }
+  function select(type, id) {
+    $$('#map .sel').forEach(function (x) { x.classList.remove('sel'); });
+    if (type === 'node' && S.nref[id]) S.nref[id].g.classList.add('sel');
+    if (type === 'edge' && S.eref[id]) S.eref[id].set.classList.add('sel');
+  }
+  function stepsTouching(pred, body) {
+    var fl = flow(), items = [];
+    fl.steps.forEach(function (st, si) { if (pred(st)) items.push({ st: st, si: si }); });
+    if (items.length) {
+      var wrap = add(body, '<h3>In “' + esc(fl.label) + '”</h3><ol class="steplist"></ol>');
+      wrap.style.setProperty('--fc', 'var(--' + tone(S.flow) + ')');
+      items.forEach(function (it) {
+        var li = document.createElement('li');
+        li.innerHTML = '<button><span class="num' + (it.st.fail ? ' fail' : '') + '">' + (it.si + 1) + '</span><span>' +
+          esc(it.st.say) + '</span></button>';
+        li.querySelector('button').addEventListener('click', function () {
+          if (window.innerWidth < 760) closeDrawer();
+          goStep(it.si);
+        });
+        wrap.querySelector('ol').appendChild(li);
+      });
+    }
+    var others = [];
+    S.spec.flows.forEach(function (o, i) { if (i !== S.flow && o.steps.some(pred)) others.push(i); });
+    if (others.length) {
+      var p = add(body, '<p class="alsoin">' + (items.length ? 'Also in' : 'Not in this flow. It appears in') + ' ' +
+        others.map(function (i) { return '<button data-flow="' + i + '">' + esc(S.spec.flows[i].label) + '</button>'; }).join(' · ') + '</p>');
+      $$('[data-flow]', p).forEach(function (b) {
+        b.addEventListener('click', function () { setFlow(+b.getAttribute('data-flow')); });
+      });
+    }
+  }
+  function nodeDrawer(n, body, ico, kind, title) {
+    ico.style.setProperty('--k', kindVar(n.kind));
+    ico.innerHTML = '<svg><use href="#i-' + (n.icon || 'service') + '"/></svg>';
+    kind.textContent = (KIND_NAME[n.kind] || 'Box') + (n.tech ? ' · ' + n.tech : '');
+    title.textContent = n.label;
+    add(body, '<p class="lead">' + esc(n.peek || '') + '</p>');
+    if (n.facts && n.facts.length) add(body, '<div class="facts-grid">' + n.facts.map(function (x) {
+      return '<div>' + esc(x) + '</div>'; }).join('') + '</div>');
+    stepsTouching(function (st) { return st.path.indexOf(n.id) >= 0; }, body);
+    var dp = depth(scope(n.id)); if (dp) body.appendChild(dp);
+    if (n.segment && ROOT.segments[n.segment]) {
+      var b = add(body, '<button class="segbtn"><svg><use href="#i-zoom"/></svg><span>Open the inside of ' + esc(n.label) +
+        '<small>' + esc(ROOT.segments[n.segment].title) + '</small></span></button>');
+      b.querySelector('button').addEventListener('click', function () { openSegment(n.segment, n.id); });
+    }
+    body.appendChild(noteBox('node:' + n.id));
+  }
+  function edgeDrawer(e, body, ico, kind, title) {
+    ico.style.setProperty('--k', e.mode === 'async' ? 'var(--stream)' : 'var(--f1)');
+    ico.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="' +
+      (e.mode === 'async' ? '.1 4.2' : '4 3') + '"/><path d="M15 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    kind.textContent = (e.mode === 'async' ? 'Asynchronous event' : 'Synchronous call') + (e.both ? ' · both ways' : '');
+    title.textContent = S.nodes[e.from].label + (e.both ? ' ⇄ ' : ' → ') + S.nodes[e.to].label;
+    add(body, '<p class="lead">' + esc(e.peek || '') + '</p>');
+    var facts = [e.label, e.ms].filter(Boolean);
+    if (facts.length) add(body, '<div class="facts-grid">' + facts.map(function (x) { return '<div>' + esc(x) + '</div>'; }).join('') + '</div>');
+    stepsTouching(function (st) { return hops(st).some(function (h) { return h.edge === e; }); }, body);
+    var dp = depth(scope('edge:' + e.id)); if (dp) body.appendChild(dp);
+    body.appendChild(noteBox('edge:' + e.id));
+  }
+  function stepDrawer(si, body, ico, kind, title) {
+    var fl = flow(), st = fl.steps[si];
+    ico.style.setProperty('--k', st.fail ? 'var(--bad)' : 'var(--' + tone(S.flow) + ')');
+    ico.innerHTML = '<b>' + (si + 1) + '</b>';
+    kind.textContent = 'Step ' + (si + 1) + ' of ' + fl.steps.length + ' · ' + fl.label;
+    title.textContent = st.msg || 'Step ' + (si + 1);
+    add(body, '<p class="lead">' + esc(st.say) + '</p>');
+    add(body, '<h3>Route</h3><p class="route">' + st.path.map(function (id) {
+      return esc(S.nodes[id] ? S.nodes[id].label : id); }).join(' <span class="arr">→</span> ') + '</p>');
+    var dp = depth(scope('step:' + st.id)); if (dp) body.appendChild(dp);
+    var nav = add(body, '<div class="stepnav"><button class="copy" data-go="-1"' + (si ? '' : ' disabled') + '>‹ Previous step</button>' +
+      '<button class="copy" data-go="1"' + (si < fl.steps.length - 1 ? '' : ' disabled') + '>Next step ›</button></div>');
+    $$('[data-go]', nav).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var to = si + (+b.getAttribute('data-go'));
+        if (to >= 0 && to < fl.steps.length) { goStep(to); openDrawer('step', to); }
+      });
+    });
+    body.appendChild(noteBox('step:' + st.id));
+  }
+  function aboutDrawer(body, ico, kind, title) {
+    ico.style.setProperty('--k', 'var(--f1)');
+    ico.innerHTML = '<svg><use href="#i-info"/></svg>';
+    kind.textContent = 'Mockup · v' + ROOT.flowviz;
+    title.textContent = 'What this drawing proposes';
+    body.appendChild(document.getElementById('about').content.cloneNode(true));
+  }
+  /* the drawing is an input device too: a note per box, keyed by its id */
+  function noteBox(key) {
+    var full = scope(key), wrap = document.createElement('div');
+    wrap.className = 'notebox';
+    wrap.innerHTML = '<h3>Note for the agent</h3><textarea id="note-' + full.replace(/[^\w-]/g, '_') +
+      '" placeholder="Wrong, missing or unclear? Say so here."></textarea><div class="row"><span>' + esc(full) +
+      '</span><button class="copy" data-notes>copy all notes</button></div>';
+    var ta = wrap.querySelector('textarea');
+    ta.value = notes[full] || '';
+    ta.addEventListener('input', function () {
+      if (ta.value.trim()) notes[full] = ta.value; else delete notes[full];
+      persist(NOTEKEY, notes); renderFoot();
+    });
+    wrap.querySelector('[data-notes]').addEventListener('click', function (ev) {
+      var n = Object.keys(notes).length;
+      copyText('```json\n' + JSON.stringify({ doc: DOC, flowviz: ROOT.flowviz, at: new Date().toISOString(), notes: notes }, null, 2) +
+        '\n```', ev.currentTarget, n + ' note' + (n === 1 ? '' : 's') + ' copied for the agent');
+    });
+    return wrap;
+  }
+  function wireCopies(root) {
+    $$('[data-copy]', root).forEach(function (b) {
+      b.innerHTML = '<svg><use href="#i-copy"/></svg>copy';
+      b.addEventListener('click', function () {
+        var pre = b.parentNode.querySelector('pre');
+        copyText(pre ? pre.innerText : '', b);
+      });
+    });
+  }
+
+  /* ── segments: a box opens into its own drawing ────────────────────────── */
+  function zoom(nodeId, dir, swap) {
+    var wrap = $('#wrap');
+    if (still()) { swap(); return; }
+    var wr = wrap.getBoundingClientRect();
+    if (nodeId && S.nref[nodeId]) {
+      var r = S.nref[nodeId].g.getBoundingClientRect();
+      wrap.style.transformOrigin = f(r.left + r.width / 2 - wr.left) + 'px ' + f(r.top + r.height / 2 - wr.top) + 'px';
+    } else wrap.style.transformOrigin = '50% 50%';
+    wrap.classList.add(dir === 'in' ? 'zoom-out' : 'zoom-back');
+    setTimeout(function () {
+      swap();
+      wrap.classList.remove('zoom-out', 'zoom-back');
+      wrap.style.transformOrigin = '50% 50%';
+      wrap.classList.add(dir === 'in' ? 'zoom-in-start' : 'zoom-from-big');
+      void wrap.offsetWidth;
+      wrap.classList.remove('zoom-in-start', 'zoom-from-big');
+    }, 280);
+  }
+  function openSegment(segId, fromId) {
+    if (!ROOT.segments || !ROOT.segments[segId]) return;
+    closeDrawer(); hoverOff(); rest(); setView('map');
+    zoom(fromId, 'in', function () {
+      S.spec = ROOT.segments[segId]; S.seg = segId; S.flow = 0; S.step = -1;
+      renderAll();
+    });
+  }
+  function leaveSegment(focusId) {
+    if (!S.seg) return;
+    var parent = S.spec.parent;
+    closeDrawer(); hoverOff(); rest(); setView('map');
+    zoom(null, 'out', function () {
+      S.spec = ROOT; S.seg = null; S.flow = 0; S.step = -1;
+      renderAll();
+      var id = typeof focusId === 'string' ? focusId : parent;
+      if (S.nref[id]) {
+        var g = S.nref[id].g;
+        g.classList.add('sel');
+        setTimeout(function () { if (!S.drawer) g.classList.remove('sel'); }, 1600);
+      }
+    });
+  }
+
+  /* ── chrome: header, flows, views, layers, theme, motion ───────────────── */
+  function renderHeader() {
+    var sp = S.spec, c = $('#crumbs');
+    c.innerHTML = '<span class="chip' + (S.seg ? ' seg' : '') + '">' + (S.seg ? 'Segment' : 'System') + '</span>';
+    if (S.seg) {
+      var b = document.createElement('button');
+      b.innerHTML = '<svg><use href="#i-back"/></svg> ' + esc(ROOT.name);
+      b.title = 'Back to the whole system (Esc)';
+      b.addEventListener('click', function () { leaveSegment(); });
+      c.appendChild(b);
+      c.insertAdjacentHTML('beforeend', '<span class="sep">›</span><span>' + esc(sp.name) + '</span>');
+    } else c.insertAdjacentHTML('beforeend', '<span>' + esc(sp.name) + '</span>');
+    $('#title').textContent = sp.title;
+    $('#lede').textContent = sp.lede;
+  }
+  function renderFlows() {
+    var box = $('#flows'); box.innerHTML = '';
+    S.spec.flows.forEach(function (fl, i) {
+      var b = document.createElement('button');
+      b.className = 'flow';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(i === S.flow));
+      b.style.setProperty('--fc', 'var(--' + tone(i) + ')');
+      b.innerHTML = '<span class="fd"></span>' + esc(fl.label) + '<span class="n">' + fl.steps.length + '</span>';
+      b.addEventListener('click', function () { setFlow(i); });
+      box.appendChild(b);
+    });
+  }
+  function setFlow(i) {
+    if (i === S.flow) return;
+    rest(); hoverOff();
+    S.flow = i;
+    renderFlows(); applyFlow();
+    if (S.drawer && S.drawer.type === 'step') closeDrawer();
+    else if (S.drawer && S.drawer.type !== 'about') openDrawer(S.drawer.type, S.drawer.id);
+  }
+  function setView(v) {
+    if (S.view !== v) { pause(); cancelRun(); }
+    S.view = v; ui.view = v; persist(UIKEY, ui);
+    ['map', 'seq', 'spec'].forEach(function (k) {
+      $('#view-' + k).hidden = k !== v;
+      $('#tab-' + k).setAttribute('aria-selected', String(k === v));
+    });
+    $('#layers').hidden = v === 'spec';
+    $('#tgLabels').hidden = $('#tgTimes').hidden = v !== 'map';
+    $('.rail').hidden = v === 'spec';
+    $('#key').hidden = !ui.key || v === 'spec';
+    hoverOff();
+    if (v === 'seq') renderSeq();
+    if (v === 'map') updateChips();
+    if (v !== 'spec' && S.step >= 0) mark(S.step);
+    setPlay();
+  }
+  function applyLayers() {
+    var svg = $('#map');
+    svg.classList.toggle('show-labels', !!ui.labels);
+    svg.classList.toggle('show-times', !!ui.times);
+    $('#tgLabels').setAttribute('aria-pressed', String(!!ui.labels));
+    $('#tgTimes').setAttribute('aria-pressed', String(!!ui.times));
+    $('#tgKey').setAttribute('aria-pressed', String(!!ui.key));
+    $('#key').hidden = !ui.key || S.view === 'spec';
+    updateChips();
+  }
+  var THEMES = ['auto', 'light', 'dark'];
+  /* "auto" defers to whoever hosts the page: the OS, or a viewer that stamps its own theme */
+  var HOST_THEME = ui.theme === 'auto' ? document.documentElement.getAttribute('data-theme') : null;
+  function applyTheme() {
+    var t = ui.theme, root = document.documentElement;
+    if (t !== 'auto') root.setAttribute('data-theme', t);
+    else if (HOST_THEME) root.setAttribute('data-theme', HOST_THEME);
+    else root.removeAttribute('data-theme');
+    $('#btnTheme').innerHTML = '<svg><use href="#i-' + (t === 'auto' ? 'auto' : t === 'light' ? 'sun' : 'moon') +
+      '"/></svg><span>' + (t === 'auto' ? 'Auto' : t === 'light' ? 'Light' : 'Dark') + '</span>';
+  }
+  function applyMotion() {
+    document.documentElement.classList.toggle('still', !ui.motion);
+    $('#btnMotion').setAttribute('aria-pressed', String(!!ui.motion));
+    $('#btnMotion span').textContent = ui.motion ? 'Motion' : 'Still';
+  }
+  function hl(json) {
+    return esc(json).replace(/(&quot;(?:[^&]|&(?!quot;))*?&quot;)(\s*:)?|(-?\b\d+(?:\.\d+)?\b)|([{}\[\],])/g,
+      function (m, s, colon, num, p) {
+        if (s) return '<span class="' + (colon ? 'j-k' : 'j-s') + '">' + s + '</span>' + (colon || '');
+        if (num) return '<span class="j-n">' + num + '</span>';
+        return '<span class="j-p">' + p + '</span>';
+      });
+  }
+  function specSource() { return S.seg ? ROOT.segments[S.seg] : ROOT; }
+  function renderSpec() { $('#specPre').innerHTML = hl(JSON.stringify(specSource(), null, 2)); }
+  function renderFoot() {
+    var sp = S.spec, n = Object.keys(notes).length;
+    $('#foot').innerHTML = '<span><b>FLOW_VIZ drawing</b> v' + esc(ROOT.flowviz) + '</span><span>doc ' + esc(DOC) +
+      (S.seg ? ' / ' + esc(S.seg) : '') + '</span><span>' + sp.nodes.length + ' boxes · ' + sp.edges.length +
+      ' connections · ' + sp.flows.length + ' flow' + (sp.flows.length === 1 ? '' : 's') + '</span><span>built ' + BUILT +
+      '</span><span>' + (n ? n + ' note' + (n === 1 ? '' : 's') + ' saved in this browser' : 'no notes yet') + '</span>';
+  }
+  function printSteps() {
+    $('#printSteps').innerHTML = flow().steps.map(function (st) { return '<li>' + esc(st.say) + '</li>'; }).join('');
+  }
+  function renderAll() {
+    renderHeader(); renderMap(); renderFlows(); applyFlow(); applyLayers(); renderSpec(); renderFoot();
+  }
+
+  /* ── wiring ────────────────────────────────────────────────────────────── */
+  $('#play').addEventListener('click', play);
+  $('#prev').addEventListener('click', function () { stepBy(-1); });
+  $('#next').addEventListener('click', function () { stepBy(1); });
+  $('#drX').addEventListener('click', closeDrawer);
+  $('#scrim').addEventListener('click', closeDrawer);
+  $('#btnAbout').addEventListener('click', function () { openDrawer('about'); });
+  $('#btnTheme').addEventListener('click', function () {
+    ui.theme = THEMES[(THEMES.indexOf(ui.theme) + 1) % THEMES.length]; persist(UIKEY, ui); applyTheme();
+  });
+  $('#btnMotion').addEventListener('click', function () { ui.motion = !ui.motion; persist(UIKEY, ui); applyMotion(); });
+  [['#tgLabels', 'labels'], ['#tgTimes', 'times'], ['#tgKey', 'key']].forEach(function (p) {
+    $(p[0]).addEventListener('click', function () { ui[p[1]] = !ui[p[1]]; persist(UIKEY, ui); applyLayers(); });
+  });
+  ['map', 'seq', 'spec'].forEach(function (k) {
+    $('#tab-' + k).addEventListener('click', function () { setView(k); });
+  });
+  $('#copySpec').addEventListener('click', function (ev) {
+    copyText(JSON.stringify(specSource(), null, 2), ev.currentTarget, 'Spec copied');
+  });
+  $('#map').addEventListener('click', function () {
+    if (S.drawer) closeDrawer();
+    else if (S.step >= 0 && !S.playing) rest();
+  });
+  document.addEventListener('keydown', function (ev) {
+    var t = ev.target;
+    if (t.closest && t.closest('textarea, input')) return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (ev.key === 'Escape') {
+      if (S.drawer) closeDrawer();
+      else if (S.step >= 0 || S.playing) rest();
+      else if (S.seg) leaveSegment();
+    } else if (S.view !== 'spec' && ev.key === 'ArrowRight') { ev.preventDefault(); stepBy(1); }
+    else if (S.view !== 'spec' && ev.key === 'ArrowLeft') { ev.preventDefault(); stepBy(-1); }
+    else if (S.view !== 'spec' && ev.key === ' ' && !(t.closest && t.closest('button, [role="button"], a'))) {
+      ev.preventDefault(); play();
+    }
+  });
+
+  applyTheme();
+  applyMotion();
+  renderAll();
+  setView(ui.view === 'seq' || ui.view === 'spec' ? ui.view : 'map');
+})();
+</script>
+</body>
+</html>

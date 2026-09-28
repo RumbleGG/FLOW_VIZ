@@ -1,0 +1,410 @@
+/* ===========================================================================
+   FLOW_VIZ — flow.css  (v0.6.0)
+   Two themes, one structure.
+     light  = journal: warm paper, serif prose, hairline rules, no vertical grid
+     dark   = traditional: cool slate, sans prose, full grid, soft radii
+   Tokens only. Never hard-code a colour in a report.
+   draw.css builds the drawing component on these same token names, and on
+   [data-kind="drawing"] swaps the neutrals for the canvas/night palette.
+   =========================================================================== */
+
+/* ── JOURNAL (light, default) ─────────────────────────────────────────────── */
+:root{
+  --bg:#f4efe4;
+  --paper:#fdfbf5;
+  --panel:#faf6ec;
+  --panel2:#f2ecdd;
+  --sunk:#f0e9d8;
+  --line:#ded4bd;
+  --line2:#c4b795;
+  --rule:#b9282e;              /* notebook margin rule */
+
+  --fg:#2a2622;
+  --dim:#645c4e;
+  --dim2:#8b8271;
+
+  --acc:#2f5d8f;               /* ink blue */
+  --ok:#3c6f4c;                /* ink green */
+  --warn:#8a6a1f;              /* ochre */
+  --bad:#93372e;               /* oxblood */
+  --mag:#6a437a;               /* violet ink */
+
+  --accbg:#eaf0f7; --okbg:#e9f1ea; --warnbg:#f6f0dd; --badbg:#f8ebe7; --magbg:#f1eaf4;
+
+  --f-body:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --f-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --f-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+
+  --f-size:16.5px; --f-lh:1.66;
+  --r:4px; --r2:5px;
+  --sh:0 1px 2px rgba(70,56,32,.08);
+  --grid:0;                    /* table vertical borders off in journal */
+  --print-bg:#fff;             /* paper is warm on screen, white on paper */
+  --zebra:transparent;         /* journal: hairlines, no stripes */
+  --sh-pop:0 4px 18px rgba(0,0,0,.22);
+}
+
+/* ── TRADITIONAL DARK ─────────────────────────────────────────────────────── */
+[data-theme="dark"]{
+  --bg:#0f1115;
+  --paper:#161a21;
+  --panel:#161a21;
+  --panel2:#1c2129;
+  --sunk:#0b0e13;
+  --line:#2a313d;
+  --line2:#3a4453;
+  --rule:#3a4453;
+
+  --fg:#dfe5ee;
+  --dim:#98a3b3;
+  --dim2:#6d7a8c;
+
+  --acc:#6fb3ff;
+  --ok:#54c98a;
+  --warn:#e8c46a;
+  --bad:#ef6f6f;
+  --mag:#c58bdf;
+
+  --accbg:#121d2b; --okbg:#12211a; --warnbg:#241f12; --badbg:#241618; --magbg:#1f1728;
+
+  --f-body:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --f-size:15px; --f-lh:1.6;
+  --r:9px; --r2:7px;
+  --sh:0 1px 0 #0a0c10 inset;
+  --grid:1px;
+  --zebra:#141821;
+}
+
+/* ── base ─────────────────────────────────────────────────────────────────── */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:var(--f-size)/var(--f-lh) var(--f-body);
+  padding:24px 28px 80px;max-width:1010px}
+p{margin:10px 0}
+ul,ol{margin:9px 0;padding-left:23px} li{margin:5px 0}
+b,strong{color:var(--fg);font-weight:600}
+a{color:var(--acc)}
+em{font-style:italic}
+h3{font:600 14px/1.4 var(--f-ui);margin:20px 0 7px;color:var(--acc);
+  letter-spacing:.3px;text-transform:none}
+.in>h3:first-child{margin-top:0}
+.in>:first-child{margin-top:0}
+.in>:last-child{margin-bottom:0}
+
+code{font:.83em/1.5 var(--f-mono);background:var(--sunk);border:1px solid var(--line);
+  border-radius:3px;padding:.5px 4px;color:var(--fg)}
+pre{margin:0;font:12.5px/1.6 var(--f-mono);white-space:pre;overflow-x:auto;color:var(--fg)}
+pre code{background:none;border:none;padding:0;font-size:12.5px}
+.c{color:var(--dim2)}                       /* inline comment inside pre */
+
+/* uppercase micro-label, used for every slot name */
+.k{display:block;font:700 10.5px/1.3 var(--f-ui);letter-spacing:1.15px;
+  text-transform:uppercase;color:var(--dim2);margin-bottom:3px}
+
+/* ── status pill (fixed, top right) ───────────────────────────────────────── */
+.pill{position:fixed;top:12px;right:14px;z-index:60;display:flex;gap:8px;align-items:center;
+  background:var(--panel2);border:1px solid var(--line);border-radius:20px;
+  padding:5px 8px 5px 12px;font:11.5px var(--f-ui);color:var(--dim);box-shadow:var(--sh)}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:none}
+.pill.disk .dot{background:var(--ok)}
+.pill.err .dot{background:var(--bad)}
+.pill button{background:none;border:1px solid transparent;color:var(--acc);
+  font:11.5px var(--f-ui);cursor:pointer;padding:1px 5px;border-radius:4px}
+.pill button:hover{border-color:var(--line2)}
+.pill .sep{width:1px;height:13px;background:var(--line)}
+
+/* ── LAYER 1 · the card ───────────────────────────────────────────────────── */
+.card{position:relative;background:var(--paper);border:1px solid var(--line2);
+  border-radius:var(--r);padding:20px 24px 18px;margin:2px 0 6px;box-shadow:var(--sh)}
+:root:not([data-theme="dark"]) .card{border-left:3px solid var(--rule);padding-left:26px}
+.card .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.card h1{font:600 27px/1.22 var(--f-body);margin:0 0 15px;letter-spacing:-.3px;max-width:26ch}
+[data-theme="dark"] .card h1{font-size:26px;letter-spacing:-.4px}
+:root:not([data-theme="dark"]) .card h1{border-bottom:1px solid var(--line);padding-bottom:12px}
+
+.chip{display:inline-flex;align-items:center;gap:7px;font:700 11px var(--f-ui);
+  letter-spacing:.8px;text-transform:uppercase;padding:4px 11px;border-radius:var(--r2);
+  border:1px solid var(--line2);color:var(--acc);background:var(--accbg)}
+.chip .d{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.chip.ok{color:var(--ok);background:var(--okbg)}
+.chip.warn{color:var(--warn);background:var(--warnbg)}
+.chip.bad{color:var(--bad);background:var(--badbg)}
+.meta{margin-left:auto;font:11.5px var(--f-ui);color:var(--dim2)}
+
+.slot{margin:0 0 14px}
+.slot .v{font-size:1.02em;line-height:1.56}
+.slot.wh .v{color:var(--dim);font-size:.96em}
+
+.vitals{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;
+  margin:17px 0}
+/* direct children only: `.vitals div` also boxed the .n and .l inside each tile */
+.vitals>div{border:1px solid var(--line);border-radius:var(--r2);background:var(--panel2);
+  padding:10px 12px}
+.vitals .n{font:600 21px/1.1 var(--f-ui);color:var(--acc);letter-spacing:-.5px}
+.vitals .l{font:11px var(--f-ui);color:var(--dim2);text-transform:uppercase;
+  letter-spacing:.5px;margin-top:4px}
+
+.next{border-top:1px solid var(--line);padding-top:13px}
+.next ol{margin:6px 0 0;padding-left:21px}
+.next li{margin:7px 0}
+
+.badge{display:inline-block;font:700 10px var(--f-ui);letter-spacing:.55px;
+  padding:1.5px 6px;border-radius:3px;border:1px solid var(--line2);color:var(--dim2);
+  margin-left:7px;vertical-align:1.5px;text-transform:uppercase;white-space:nowrap}
+.badge.ro{color:var(--ok);background:var(--okbg)}
+.badge.w{color:var(--bad);background:var(--badbg)}
+.badge.acc{color:var(--acc);background:var(--accbg)}
+
+/* ── LAYER 2 · spine ──────────────────────────────────────────────────────── */
+.spine{margin:22px 0 4px}
+.dia{border:1px solid var(--line);border-radius:var(--r);background:var(--paper);
+  padding:8px 12px;overflow-x:auto}
+.dia svg{display:block;margin:0 auto;max-width:100%;height:auto}
+.mermaid{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px;overflow-x:auto}
+/* a drawing as the spine diagram: draw.css styles the component itself */
+.spine .fv-drawing{margin:0}
+
+.ctl{display:flex;gap:8px;align-items:center;margin:20px 0 10px;flex-wrap:wrap}
+.ctl button{background:var(--panel2);color:var(--dim);border:1px solid var(--line);
+  border-radius:var(--r2);font:12px var(--f-ui);padding:5px 12px;cursor:pointer}
+.ctl button:hover{color:var(--fg);border-color:var(--acc)}
+.ctl .hint{color:var(--dim2);font:11.5px var(--f-ui);margin-left:auto}
+
+details.row{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+  margin:9px 0;padding:0 17px}
+details.row[open]{background:var(--paper);border-color:var(--line2)}
+[data-theme="dark"] details.row[open]{background:var(--panel2)}
+details.row>summary{cursor:pointer;padding:13px 0;list-style:none;outline:none;
+  display:flex;gap:12px;align-items:baseline}
+summary::-webkit-details-marker{display:none}
+details.row>summary .ord{font:700 13px var(--f-ui);color:var(--acc);min-width:1.3em;flex:none}
+details.row>summary .cl{font-weight:600;flex:1;line-height:1.42}
+details.row>summary .rt{font:11.5px var(--f-ui);color:var(--dim2);flex:none}
+details.row[open]>summary{border-bottom:1px solid var(--line)}
+details.row .in{padding:15px 0 17px}
+
+/* nested disclosure — "more context", used inside rows and steps */
+details.more{margin:11px 0 0;border-top:1px dashed var(--line);padding-top:9px}
+details.more>summary{cursor:pointer;list-style:none;font:12px var(--f-ui);color:var(--acc)}
+details.more>summary::before{content:"\25B8 ";display:inline-block;width:1.1em;
+  transition:transform .12s}
+details.more[open]>summary::before{transform:rotate(90deg)}
+details.more .in{padding:8px 0 2px;font-size:.95em;color:var(--dim)}
+details.more .in b{color:var(--fg)}
+
+/* ── tables ───────────────────────────────────────────────────────────────── */
+table{border-collapse:collapse;width:100%;margin:12px 0;font:13.5px/1.55 var(--f-ui)}
+th,td{padding:7px 10px;text-align:left;vertical-align:top;
+  border:var(--grid) solid var(--line);border-bottom:1px solid var(--line)}
+th{background:var(--panel2);color:var(--dim);font-weight:600;font-size:11.5px;
+  text-transform:uppercase;letter-spacing:.45px;border-top:1px solid var(--line2)}
+tbody tr:nth-child(even) td{background:var(--zebra)}
+td code{font-size:12px}
+
+/* ── callout boxes ────────────────────────────────────────────────────────── */
+.box{border:1px solid var(--line);border-left:3px solid var(--line2);
+  border-radius:var(--r2);padding:11px 15px;margin:13px 0;background:var(--panel2)}
+.box.key{border-left-color:var(--acc);background:var(--accbg)}
+.box.ok{border-left-color:var(--ok);background:var(--okbg)}
+.box.warn{border-left-color:var(--warn);background:var(--warnbg)}
+.box.bad{border-left-color:var(--bad);background:var(--badbg)}
+.box p:first-child{margin-top:0} .box p:last-child{margin-bottom:0}
+
+/* ── command block ────────────────────────────────────────────────────────── */
+.cmd{position:relative;background:var(--sunk);border:1px solid var(--line);
+  border-radius:var(--r2);padding:11px 14px}
+.cmd .copy{position:absolute;top:6px;right:6px}
+/* .cmd.fig — a figure, not a command: a JSON sample, a tree, a log excerpt.
+   Dashed, so "you run this" and "you read this" do not look identical, and
+   exempt from the paste-safety checks in flowviz-audit.py. */
+.cmd.fig{border-style:dashed}
+.copy{background:var(--panel2);color:var(--dim);border:1px solid var(--line);
+  border-radius:4px;font:10.5px var(--f-ui);padding:2px 8px;cursor:pointer;white-space:nowrap}
+.copy:hover{color:var(--fg);border-color:var(--acc)}
+.expect{font:12.5px/1.55 var(--f-ui);color:var(--dim);margin:9px 0 0}
+.expect b{color:var(--ok)} .expect i{color:var(--bad);font-style:normal}
+
+/* ── LAYER 2/3 · playbook checklist ───────────────────────────────────────── */
+.pb{border:1px solid var(--line2);border-radius:var(--r);background:var(--panel);
+  margin:14px 0;overflow:hidden}
+.pb>.hd{display:flex;align-items:center;gap:11px;flex-wrap:wrap;
+  padding:11px 15px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.pb>.hd .t{font:600 13.5px var(--f-ui)}
+.pb>.hd .prog{margin-left:auto;font:11.5px var(--f-mono);color:var(--dim)}
+.pb>.hd .prog .f{color:var(--bad)}
+.pb>.hd .prog .e{color:var(--warn)}
+.pb .tgt{display:flex;align-items:center;gap:7px;font:11px var(--f-ui);color:var(--dim2);
+  text-transform:uppercase;letter-spacing:.5px}
+.pb .tgt input{background:var(--sunk);color:var(--fg);border:1px solid var(--line);
+  border-radius:4px;padding:2px 7px;font:12px var(--f-mono);width:190px;text-transform:none;
+  letter-spacing:0}
+.pb .tgt input:focus{outline:none;border-color:var(--acc)}
+
+ol.steps{counter-reset:stp;list-style:none;margin:0;padding:0}
+li.step{display:grid;grid-template-columns:20px 1fr auto;gap:0 11px;align-items:start;
+  padding:9px 15px;border-bottom:1px solid var(--line);margin:0}
+li.step:last-child{border-bottom:none}
+li.step.dim{opacity:.45}
+li.step>input.done{grid-column:1;margin:4px 0 0;transform:translateY(1px);cursor:pointer}
+li.step>.sd{grid-column:2;min-width:0}
+li.step>.ctr{grid-column:3;display:flex;align-items:center;gap:7px;padding-top:2px;flex:none}
+li.step>.sd>summary{cursor:pointer;list-style:none;outline:none;display:flex;gap:9px;
+  align-items:baseline;padding:1px 0}
+li.step>.sd>summary .n::before{counter-increment:stp;content:counter(stp);
+  font:700 12px var(--f-ui);color:var(--acc)}
+li.step>.sd>summary .n{min-width:1.2em;flex:none}
+li.step>.sd>summary .ds{flex:1;line-height:1.45;font-size:.97em}
+li.step.done>.sd>summary .ds{color:var(--dim2);text-decoration:line-through}
+li.step>.sd .in{padding:10px 0 6px 0;margin-left:2.1em;border-top:1px dotted var(--line);
+  margin-top:8px}
+/* `Done ☐`, injected by flow.js at the foot of every step — where the work ends,
+   so nobody scrolls back up to the row header to say they finished. Pressing it
+   pops ✅ in place of the box, then the step folds away 300ms later. */
+li.step .in .fin{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:12px;padding-top:9px;border-top:1px dotted var(--line)}
+li.step .in .fin button.fd{display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+  font:600 11.5px var(--f-ui);letter-spacing:.55px;text-transform:uppercase;color:var(--dim);
+  background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);
+  padding:5px 12px;line-height:1}
+li.step .in .fin button.fd:hover{color:var(--fg);border-color:var(--acc)}
+li.step .in .fin button.fd:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+li.step .in .fin button.fd .bx{font:13px/1 var(--f-mono);display:inline-block;width:1.15em;
+  text-align:center}
+li.step .in .fin button.fd.on{color:var(--ok);border-color:var(--ok)}
+/* the tick lands before the collapse, so the state change is seen, not inferred */
+@keyframes fvtick{
+  0%{transform:scale(.3) rotate(-14deg);opacity:0}
+  55%{transform:scale(1.35) rotate(0);opacity:1}
+  100%{transform:scale(1)}
+}
+li.step .in .fin button.fd .bx.pop{animation:fvtick 260ms cubic-bezier(.2,1.3,.4,1) both}
+
+/* min-width holds the column still through the longest label, "no match" */
+.vd{font:700 10px var(--f-ui);letter-spacing:.6px;text-transform:uppercase;color:var(--dim2);
+  min-width:6em;text-align:right;white-space:nowrap}
+.vd.pass{color:var(--ok)} .vd.fail{color:var(--bad)}
+/* error is not fail: fail is evidence about the system, error about the playbook */
+.vd.error{color:var(--warn)} .vd.saved{color:var(--dim)}
+
+/* The same verdict again at the foot of the step, next to `Done` — once a capture
+   is pasted the row header's chip is off the top of the screen, and pass/fail is
+   what you scrolled down to read. Filled, not bare text, so it reads at a glance. */
+.vd.vdf{min-width:0;text-align:left;font-size:10.5px;line-height:1;padding:5px 11px;
+  border:1px solid var(--line);border-radius:999px;background:var(--panel2)}
+.vd.vdf.pass{border-color:var(--ok);background:var(--okbg)}
+.vd.vdf.fail{border-color:var(--bad);background:var(--badbg)}
+.vd.vdf.error{border-color:var(--warn);background:var(--warnbg)}
+.vd.vdf.saved{background:var(--sunk)}
+/* one pulse when the verdict changes under your cursor — never on page load */
+@keyframes fvvd{
+  0%{transform:scale(.88);opacity:.35}
+  60%{transform:scale(1.08);opacity:1}
+  100%{transform:scale(1)}
+}
+.vd.vdf.fl{animation:fvvd 320ms cubic-bezier(.2,1.2,.4,1) both}
+
+/* write-step gate */
+.gate{display:flex;align-items:center;gap:8px;font:12px var(--f-ui);color:var(--bad);
+  background:var(--badbg);border:1px solid var(--line);border-left:3px solid var(--bad);
+  border-radius:var(--r2);padding:7px 11px;margin:0 0 10px}
+.gate input{cursor:pointer;flex:none}
+li.step[data-risk="w"]:not(.acked) .cmd pre{filter:blur(4.5px);user-select:none}
+li.step[data-risk="w"]:not(.acked) .cmd .copy{opacity:.4;pointer-events:none}
+/* the collapsed-row ⧉ stays clickable and is refused in JS, so it can say why */
+li.step[data-risk="w"]:not(.acked)>.ctr .copy{opacity:.45}
+
+/* ── capture box ──────────────────────────────────────────────────────────── */
+.cap{margin-top:11px}
+.cap .cl{display:flex;align-items:center;gap:9px;font:11px var(--f-ui);color:var(--dim2);
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;flex-wrap:wrap}
+.cap .cl .kp{font:11px var(--f-mono);color:var(--mag);text-transform:none;letter-spacing:0}
+.cap textarea{width:100%;min-height:74px;resize:vertical;background:var(--sunk);
+  color:var(--fg);border:1px solid var(--line);border-radius:var(--r2);padding:9px 11px;
+  font:12.5px/1.55 var(--f-mono)}
+.cap textarea:focus{outline:none;border-color:var(--acc)}
+.cap textarea::placeholder{color:var(--dim2);opacity:.65}
+.cap .ft{display:flex;gap:13px;align-items:center;margin-top:6px;font:11.5px var(--f-ui);
+  color:var(--dim2);flex-wrap:wrap}
+.cap .ft input.ec{width:54px;background:var(--sunk);color:var(--fg);border:1px solid var(--line);
+  border-radius:4px;padding:2px 6px;font:12px var(--f-mono)}
+.cap .ft .rn{font:10.5px var(--f-mono);color:var(--mag);letter-spacing:.3px}
+.cap .ft button.rr{margin-left:auto;background:var(--panel2);color:var(--dim);
+  border:1px solid var(--line);border-radius:4px;font:10.5px var(--f-ui);
+  padding:2px 8px;cursor:pointer;white-space:nowrap}
+.cap .ft button.rr:disabled{opacity:.35;cursor:default}
+.cap .ft button.rr:not(:disabled):hover{color:var(--fg);border-color:var(--acc)}
+
+/* one-line note — the only free text in a step, and it lands in the evidence file */
+.cap input.nt{width:100%;margin-top:7px;background:var(--sunk);color:var(--fg);
+  border:1px solid var(--line);border-radius:var(--r2);padding:5px 10px;font:12.5px var(--f-ui)}
+.cap input.nt:focus{outline:none;border-color:var(--acc)}
+.cap input.nt::placeholder{color:var(--dim2);opacity:.65}
+
+/* ── checkboxes, phases ───────────────────────────────────────────────────── */
+label.chk{display:block;padding:5px 0;cursor:pointer;font-size:.97em}
+label.chk input{margin-right:9px;transform:translateY(1px)}
+label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
+.phase{border:1px solid var(--line);border-radius:var(--r2);background:var(--panel2);
+  padding:12px 16px;margin:11px 0}
+.phase .ph{font:700 11.5px var(--f-ui);letter-spacing:.75px;text-transform:uppercase;
+  color:var(--mag);margin-bottom:2px}
+.phase .pt{font-weight:600;margin-bottom:7px}
+
+/* ── footer stamp ─────────────────────────────────────────────────────────── */
+.foot{margin-top:36px;padding-top:13px;border-top:1px solid var(--line2);
+  font:11.5px/1.8 var(--f-ui);color:var(--dim2)}
+.foot .v{color:var(--acc);font-weight:700}
+.foot .rb{margin-top:6px}
+.foot .inl{display:inline-flex;align-items:center;gap:7px;background:var(--sunk);
+  border:1px solid var(--line);border-radius:4px;padding:2px 7px;margin-left:4px}
+
+/* ── audit panel (?audit=1) ───────────────────────────────────────────────── */
+.audit{position:fixed;bottom:12px;left:12px;z-index:60;width:352px;max-height:64vh;
+  overflow:auto;background:var(--paper);border:1px solid var(--line2);border-radius:var(--r);
+  padding:11px 13px;font:11.5px/1.5 var(--f-ui);box-shadow:var(--sh-pop)}
+.audit h4{margin:0 0 8px;font:700 11px var(--f-ui);letter-spacing:.9px;text-transform:uppercase;
+  color:var(--dim2)}
+.audit table{margin:0;font-size:11.5px}
+.audit th,.audit td{padding:3px 6px}
+.audit .p{color:var(--ok);font-weight:700} .audit .f{color:var(--bad);font-weight:700}
+.audit .x{float:right;cursor:pointer;color:var(--dim2);border:none;background:none}
+
+/* ── print ────────────────────────────────────────────────────────────────
+   flow.js forces data-theme="light" and opens every <details> on beforeprint,
+   then restores both afterwards — so print needs no palette of its own, only
+   pagination and the few screen-only affordances turned off.               */
+@media print{
+  @page{margin:14mm}
+  /* .fin repeats the row header's done-box and verdict chip, and paper does not
+     scroll — one tick mark and one verdict per step is enough */
+  .pill,.ctl,.audit,.copy,.gate,.rr,.fin{display:none!important}
+  body{background:var(--print-bg);padding:0;max-width:none;font-size:10.5pt}
+  .card,.dia,.box,.cmd,li.step,.phase,.foot,tr{break-inside:avoid}
+  .card{box-shadow:none;break-after:avoid}
+  details.row{background:var(--print-bg);box-shadow:none}
+  details.row>summary,li.step>.sd>summary,h3,.pb>.hd{break-after:avoid}
+  thead{display:table-header-group}
+  /* the blur on a write command is a screen guard; on paper it is just damage */
+  li.step[data-risk="w"]:not(.acked) .cmd pre{filter:none;user-select:auto}
+  /* JS grows each textarea to its content first, so captures print in full */
+  .cap textarea{overflow:visible;resize:none;min-height:0;background:var(--sunk);
+    break-inside:avoid}
+  .cap textarea::placeholder{color:transparent}
+  .cap .ft input.ec{border:none;background:none;width:auto}
+  a{color:inherit;text-decoration:none}
+}
+@media (prefers-reduced-motion:reduce){
+  details.more>summary::before{transition:none}
+  /* the tick and the verdict still appear — only the motion is dropped */
+  li.step .in .fin button.fd .bx.pop{animation:none}
+  .vd.vdf.fl{animation:none}
+}
+@media (max-width:700px){
+  body{padding:18px 16px 60px}
+  .card h1{font-size:22px}
+  li.step{grid-template-columns:20px 1fr;gap:0 9px}
+  li.step>.ctr{grid-column:2;padding-top:6px}
+  .pb .tgt input{width:140px}
+}
