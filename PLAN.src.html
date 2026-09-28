@@ -45,7 +45,7 @@
     <ol>
       <li>Serve this folder, then walk the checklist in row 3 <span class="badge ro">read-only</span></li>
       <li>Open the checkout drawing and try hover, click and play <span class="badge ro">read-only</span></li>
-      <li>Decide on the two gated steps in row 6 <span class="badge w">write</span></li>
+      <li>Name the GitHub user to add as a collaborator <span class="badge ro">read-only</span></li>
     </ol>
   </div>
 </div>
@@ -505,86 +505,30 @@ alternative against real PowerShell, bash and Python error text, and names the w
 
 <!-- ─────────── ROW 6 ─────────── -->
 <details class="row" data-row="r6">
-<summary><span class="ord">6</span><span class="cl">Two changes outside this folder's files wait for your approval</span><span class="rt">2 min</span></summary>
+<summary><span class="ord">6</span><span class="cl">FLOW_VIZ is its own private repository, and every agent can find it</span><span class="rt">1 min</span></summary>
 <div class="in">
 
-<p>Both are gated writes. Nothing runs until you tick the acknowledgement, and I have run neither.</p>
+<p>You approved both changes on 2026-09-28, and I made them. This report no longer carries them as steps:
+running them twice would add a second pointer.</p>
 
-<div class="pb" data-pb="approvals">
-  <div class="hd">
-    <span class="t">Make FLOW_VIZ reachable and versioned</span>
-    <span class="prog">0 / 2 done</span>
-  </div>
-  <ol class="steps">
+<table>
+<thead><tr><th>Change</th><th>Where</th><th>Undo</th></tr></thead>
+<tbody>
+<tr><td>Its own git repository, tagged <code>v0.6.0</code></td>
+    <td><code>~/Projects/FLOW_VIZ</code>, pushed to <code>github.com/RumbleGG/FLOW_VIZ</code>, private</td>
+    <td>roll the standard back with <code>git -C ~/Projects/FLOW_VIZ checkout v0.6.0</code></td></tr>
+<tr><td>A pointer every agent reads</td>
+    <td><code>~/.claude/CLAUDE.md</code>, the section <b>FLOW_VIZ — pointer</b></td>
+    <td>delete that section</td></tr>
+</tbody>
+</table>
 
-    <li class="step" data-step="gi" data-risk="w">
-      <input type="checkbox" class="done">
-      <details class="sd">
-        <summary><span class="n"></span><span class="ds">Make FLOW_VIZ its own git repository and tag this version.</span></summary>
-        <div class="in">
-          <label class="gate"><input type="checkbox" class="ack">
-            I accept this creates a git repository inside ~/Projects/FLOW_VIZ and commits every file in it.</label>
-          <div class="cmd"><button class="copy">copy</button><pre><code>cd ~/Projects/FLOW_VIZ && git init -q && git add -A && git commit -qm "FLOW_VIZ 0.6.0: reports and drawings" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" && git tag v0.6.0 && git log --oneline --decorate -1</code></pre></div>
-          <p class="expect"><b>Pass:</b> one line ending in <code>(HEAD -&gt; main, tag: v0.6.0)</code> &nbsp;·&nbsp;
-            <i>Fail:</i> <code>fatal:</code></p>
-          <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["gi"]</span></div>
-            <textarea data-cap="gi" data-pass="\btag: v0\.6\.0\b" data-fail="\bfatal\b"
-              placeholder="paste the log line"></textarea>
-            <div class="ft">
-              <span>exit <input class="ec" data-ec="gi" placeholder="0"></span>
-              <span data-cnt="gi">empty</span><span data-at="gi"></span>
-              <span class="rn" data-run="gi"></span>
-              <button class="rr" data-rr="gi" title="keep this attempt and clear the box">re-run</button>
-            </div>
-            <input class="nt" data-note="gi" placeholder="note for the agent (optional)">
-          </div>
-          <details class="more"><summary>why this step</summary>
-          <div class="in"><p>Every footer names the version and git sha that built it, and offers a rollback
-          command. Today FLOW_VIZ sits inside the <code>~/Projects</code> repository, so the footer says
-          <code>untracked</code> and offers no rollback. A repository of its own makes the stamp mean
-          something. The parent repository then sees this folder as a nested one and will not track its files.</p></div></details>
-        </div>
-      </details>
-      <span class="ctr"><span class="badge w">write</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="gi">—</span></span>
-    </li>
+<div class="box warn"><p><b>The parent repository.</b> <code>~/Projects</code> is itself a git repository, and it now
+sees this folder as a nested one: it will not track these files. Leave it that way, or add
+<code>FLOW_VIZ/</code> to its <code>.gitignore</code> to silence it.</p></div>
 
-    <li class="step" data-step="pt" data-risk="w">
-      <input type="checkbox" class="done">
-      <details class="sd">
-        <summary><span class="n"></span><span class="ds">Add a short FLOW_VIZ pointer to your global CLAUDE.md so every agent finds it.</span></summary>
-        <div class="in">
-          <label class="gate"><input type="checkbox" class="ack">
-            I accept this appends six lines to ~/.claude/CLAUDE.md, read by every session in every folder.</label>
-          <div class="cmd"><button class="copy">copy</button><pre><code>printf '%s\n' '' '# FLOW_VIZ - handing finished work back as HTML' '- Reports, runbooks and system explanations for the human: read ~/Projects/FLOW_VIZ/AGENTS.md (only that file) and run ~/Projects/FLOW_VIZ/bin/flowviz for the cheat sheet.' '- Scaffold with `flowviz new report|drawing`, fill every slot, `flowviz build`, then `flowviz audit --browser` until clean. Never raise a cap: split, or make a segment.' '- Commands the human runs are checklist steps: one sentence each, tagged read-only or write, paste-safe, verdict literals anchored.' '- Hand over with `flowviz serve <dir> --open`; read back with `flowviz captures <file>.html`. Ids are join keys: never rename one.' '- For system diagrams, prefer a FLOW_VIZ drawing over Mermaid. Examples: ~/Projects/FLOW_VIZ/PLAN.html, ~/Projects/FLOW_VIZ/examples/checkout/checkout.html' >> ~/.claude/CLAUDE.md && tail -n 6 ~/.claude/CLAUDE.md</code></pre></div>
-          <p class="expect"><b>Pass:</b> the six lines, ending in the two example paths &nbsp;·&nbsp;
-            <i>Fail:</i> <code>No such file or directory</code></p>
-          <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["pt"]</span></div>
-            <textarea data-cap="pt" data-pass="\bexamples/checkout/checkout\.html\b" data-fail="\bNo such file or directory\b"
-              placeholder="paste what tail printed"></textarea>
-            <div class="ft">
-              <span>exit <input class="ec" data-ec="pt" placeholder="0"></span>
-              <span data-cnt="pt">empty</span><span data-at="pt"></span>
-              <span class="rn" data-run="pt"></span>
-              <button class="rr" data-rr="pt" title="keep this attempt and clear the box">re-run</button>
-            </div>
-            <input class="nt" data-note="pt" placeholder="note for the agent (optional)">
-          </div>
-          <details class="more"><summary>why this step</summary>
-          <div class="in"><p>An agent working in another folder cannot use a standard it cannot find. The
-          pointer is deliberately small: where to read, the commands, four rules, two examples. Deleting
-          those six lines is the complete undo. The last line decides one conflict with your existing visual
-          preferences — FLOW_VIZ drawings over Mermaid for system diagrams — so change it if you disagree.</p></div></details>
-        </div>
-      </details>
-      <span class="ctr"><span class="badge w">write</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="pt">—</span></span>
-    </li>
-
-  </ol>
-</div>
+<div class="box key"><p><b>Sharing.</b> GitHub adds collaborators by username, and the address you gave is not
+public on any account. Send me the username and I will invite them with read access or more, as you choose.</p></div>
 
 <details class="more"><summary>what is done, and what is not built yet</summary>
 <div class="in">
@@ -592,7 +536,9 @@ alternative against real PowerShell, bash and Python error text, and names the w
 <label class="chk"><input type="checkbox" data-ck="d2" checked><span>Core runtime rebuilt from 0.5.1, with <code>window.FLOWVIZ</code> for drawings</span></label>
 <label class="chk"><input type="checkbox" data-ck="d3" checked><span>Drawing component: grid, lanes, motion, peek, drawer, walkthrough, sequence, segments, notes</span></label>
 <label class="chk"><input type="checkbox" data-ck="d4" checked><span>Commands: new, build, audit (with <code>--browser</code>), serve, captures</span></label>
-<label class="chk"><input type="checkbox" data-ck="d5" checked><span><code>AGENTS.md</code> with seven drawing recipes; this plan and the checkout example audit clean</span></label>
+<label class="chk"><input type="checkbox" data-ck="d5" checked><span><code>AGENTS.md</code> tested by a fresh agent; this plan and the checkout example audit clean</span></label>
+<label class="chk"><input type="checkbox" data-ck="d6" checked><span>Its own repository, private on GitHub, tagged <code>v0.6.0</code>; the global pointer added</span></label>
+<label class="chk"><input type="checkbox" data-ck="n4"><span>A collaborator on the repository, once the username is known</span></label>
 <label class="chk"><input type="checkbox" data-ck="n1"><span>A pattern library: cache-aside, outbox, fan-out and others as ready segments</span></label>
 <label class="chk"><input type="checkbox" data-ck="n2"><span>State diagrams (lifecycles); sequence views cover timing today</span></label>
 <label class="chk"><input type="checkbox" data-ck="n3"><span>A before-and-after counter-example: a verbose page beside the drawing that replaced it</span></label>
