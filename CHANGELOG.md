@@ -46,7 +46,7 @@ current rules; `examples/checkout/`.
 - `flow.js` now injects the status pill rather than every report carrying it in markup.
 - `flow.js` exposes `window.FLOWVIZ`, the state API drawings use.
 - The report spine defaults to a drawing, and `.spine .fv-drawing` counts as the one diagram.
-- FLOW_VIZ is its own repository again (private, `github.com/RumbleGG/FLOW_VIZ`), so footers carry the sha
+- FLOW_VIZ is its own repository again (`github.com/RumbleGG/FLOW_VIZ`), so footers carry the sha
   that built them and a working rollback command.
 - Mermaid is no longer vendored. Sequence views come from drawing specs; state diagrams are not supported
   yet.

@@ -525,7 +525,7 @@ then tell me "look at the plan" and I will read them back.</p>
 
 <!-- ─────────── ROW 6 ─────────── -->
 <details class="row" data-row="r6" data-kind="record">
-<summary><span class="ord">6</span><span class="cl">FLOW_VIZ is its own private repository, and every agent can find it</span><span class="rt">1 min</span></summary>
+<summary><span class="ord">6</span><span class="cl">FLOW_VIZ is its own public repository, and every agent can find it</span><span class="rt">1 min</span></summary>
 <div class="in">
 
 <p>You approved both changes on 2026-09-28, and I made them. This report no longer carries them as steps:
@@ -535,7 +535,7 @@ running them twice would add a second pointer.</p>
 <thead><tr><th>Change</th><th>Where</th><th>Undo</th></tr></thead>
 <tbody>
 <tr><td>Its own git repository, tagged <code>v0.6.0</code></td>
-    <td><code>~/Projects/FLOW_VIZ</code>, pushed to <code>github.com/RumbleGG/FLOW_VIZ</code>, private</td>
+    <td><code>~/Projects/FLOW_VIZ</code>, pushed to <code>github.com/RumbleGG/FLOW_VIZ</code>, public</td>
     <td>roll the standard back with <code>git -C ~/Projects/FLOW_VIZ checkout v0.6.0</code></td></tr>
 <tr><td>A pointer every agent reads</td>
     <td><code>~/.claude/CLAUDE.md</code>, the section <b>FLOW_VIZ — pointer</b></td>
@@ -547,8 +547,8 @@ running them twice would add a second pointer.</p>
 sees this folder as a nested one: it will not track these files. Leave it that way, or add
 <code>FLOW_VIZ/</code> to its <code>.gitignore</code> to silence it.</p></div>
 
-<div class="box key"><p><b>Sharing.</b> GitHub adds collaborators by username, and the address you gave is not
-public on any account. Send me the username and I will invite them with read access or more, as you choose.</p></div>
+<div class="box key"><p><b>Sharing.</b> The repository is public: anyone can read and clone it. To let someone
+push to it, send me their GitHub username.</p></div>
 
 <details class="more"><summary>what is done, and what is not built yet</summary>
 <div class="in">
@@ -557,8 +557,8 @@ public on any account. Send me the username and I will invite them with read acc
 <label class="chk"><input type="checkbox" data-ck="d3" checked><span>Drawing component: grid, lanes, motion, peek, drawer, walkthrough, sequence, segments, notes</span></label>
 <label class="chk"><input type="checkbox" data-ck="d4" checked><span>Commands: new, build, audit (with <code>--browser</code>), serve, captures</span></label>
 <label class="chk"><input type="checkbox" data-ck="d5" checked><span><code>AGENTS.md</code> tested by a fresh agent; this plan and the checkout example audit clean</span></label>
-<label class="chk"><input type="checkbox" data-ck="d6" checked><span>Its own repository, private on GitHub, tagged <code>v0.6.0</code>; the global pointer added</span></label>
-<label class="chk"><input type="checkbox" data-ck="n4"><span>A collaborator on the repository, once the username is known</span></label>
+<label class="chk"><input type="checkbox" data-ck="d6" checked><span>Its own repository, public on GitHub, tagged <code>v0.6.0</code> and <code>v1.0.0</code>; the global pointer added</span></label>
+<label class="chk"><input type="checkbox" data-ck="n4"><span>Push access for a collaborator, once their username is known</span></label>
 <label class="chk"><input type="checkbox" data-ck="n1"><span>A pattern library: cache-aside, outbox, fan-out and others as ready segments</span></label>
 <label class="chk"><input type="checkbox" data-ck="n2"><span>State diagrams (lifecycles); sequence views cover timing today</span></label>
 <label class="chk"><input type="checkbox" data-ck="n3"><span>A before-and-after counter-example: a verbose page beside the drawing that replaced it</span></label>
