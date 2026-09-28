@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 0.6.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 1.0.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -25,7 +25,7 @@ command. A report may carry a drawing as its spine diagram; that is the same com
 | Layer | Budget | Holds |
 |---|---|---|
 | **1 — Card** | one screen, never scrolls | status chip, claim-title, verdict, so-what, ≤5 vital tiles, ≤4 next actions |
-| **2 — Spine** | one diagram + ≤6 collapsed rows | the shape of the thing, then one row per idea |
+| **2 — Spine** | one diagram + ≤6 collapsed rows under ≤3 headers | the shape of the thing, then one labelled row per idea |
 | **3 — Evidence** | unlimited | logs, stack traces, tables, transcripts, `file:line` citations — only inside rows |
 
 Layer 3 is where verbosity is *welcome*. Nothing gets deleted to satisfy this standard; it moves down a layer.
@@ -45,12 +45,33 @@ Hard limits. An agent that cannot fit splits the report — it does not grow the
 | Rows | ≤6 | Seven ideas is two reports. |
 | Row summary | a claim with a verb, ≤14 words | The collapsed spine reads as a six-line argument. |
 | Open at load | ≤1 row | The cap most often broken; it is what makes a file feel like a wall. |
+| Section headers | ≤3, ≤4 words each; no row before the first | They say what the rows below are for, so six claims are not six mysteries. |
+| Row kind | every row has one (§1.2a) | The reader knows before opening a row whether to read it or act on it. |
 | Step sentence | exactly one sentence, ≤20 words | A nine-step playbook reads as nine sentences. |
 | Words at rest | ≤350 | Card text plus row summaries. The two-minute budget, made countable. |
 | Screens at rest | ≤3 | Needs layout: measured by `?audit=1` or `flowviz audit --browser`. |
 
 Structural checks measured alongside the caps, all must be 0: multi-sentence steps, steps with no
 risk tag, write steps with no gate, untagged next items.
+
+### 1.2a What each row is for
+
+Every row carries `data-kind`. The agent writes the attribute; `flow.js` draws the label at the start of
+the summary, every label as wide as the widest so the claims start in one column. Headers are written by
+the agent: `<h2 class="sec">Try it on this Mac</h2>` before the rows they introduce.
+
+| `data-kind` | Label | Means | Must hold |
+|---|---|---|---|
+| `context` | context | background to read | no steps |
+| `finding` | finding | what the evidence shows | no steps |
+| `record` | record | what was done, and how to undo it | no steps |
+| `investigation` | action · investigation | commands that gather facts and change nothing | a step or a checkbox |
+| `test` | action · test | commands that check that something works | a step or a checkbox |
+| `change` | action · change | commands that change a system | a step or a checkbox |
+| `rollback` | action · rollback | commands that undo a change | a step or a checkbox |
+| `decision` | decision | yours to approve or choose | anything |
+
+The audit fails a label that does not match what the row holds, in either direction.
 
 ### 1.3 Checklist steps
 
@@ -274,6 +295,7 @@ Not caps — they measure the author, not the layout — and they block handover
 | spec: vocabulary | a `kind`, `icon`, `mode`, `tone` or `tag` outside the lists above |
 | spec: grid | a box outside the grid, two boxes in one cell, or a zone outside the grid |
 | spec: straight through a box | a straight connection that would pass through another box |
+| row kind matches its content | an action kind with nothing to run or tick, a read kind that holds steps, or a kind outside §1.2a |
 
 One more is reported but does not block: **unused connection** — an edge no flow walks. It is still
 drawn; if it matters, walk it in a flow, and if it does not, delete it.
@@ -358,7 +380,7 @@ an agent may regenerate the HTML freely and the human's input re-attaches. Ids a
 |---|---|
 | patch | CSS, wording, bug fix |
 | minor | new component, caps unchanged (0.6.0 added drawings) |
-| major | a cap changes, or the card shape changes |
+| major | a cap changes, or the card or spine shape changes (1.0.0 labelled every row and added headers) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then
 rebuild — once FLOW_VIZ is its own repository) and **a deliverable's content**

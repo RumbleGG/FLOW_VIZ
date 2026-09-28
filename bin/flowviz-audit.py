@@ -235,6 +235,16 @@ def report_caps(a, doc):
     a.cap(S, 'longest row summary (words)', longest, '≤ 14', longest <= 14)
     opened = [r for r in rows if 'open' in r.attrs]
     a.cap(S, 'rows open at load', len(opened), '≤ 1', len(opened) <= 1)
+    secs = doc.find(lambda e: e.tag == 'h2' and e.has('sec'))
+    a.cap(S, 'section headers', len(secs), '≤ 3', len(secs) <= 3)
+    longest = max([words(h.text()) for h in secs] or [0])
+    a.cap(S, 'longest section header (words)', longest, '≤ 4', longest <= 4)
+    order = {id(e): i for i, e in enumerate(doc.walk())}
+    first = order[id(secs[0])] if secs else None
+    before = [r for r in rows if first is None or order[id(r)] < first]
+    a.cap(S, 'rows before the first header', len(before), '0', not before)
+    nokind = [r for r in rows if r.attrs.get('data-kind') not in ROW_KINDS]
+    a.cap(S, 'rows with no kind', len(nokind), '0', not nokind)
 
     steps = doc.find(lambda e: e.tag == 'li' and e.has('step'))
     ds = [s.first(cls('ds')) for s in steps]
@@ -247,13 +257,17 @@ def report_caps(a, doc):
     nogate = [s for s in steps if s.attrs.get('data-risk') == 'w' and not s.first(cls('ack'))]
     a.cap(S, 'write steps with no gate', len(nogate), '0', not nogate)
 
-    rest = words(card.text() if card else '') + sum(words(s.text()) for s in summ if s)
+    rest = (words(card.text() if card else '') + sum(words(s.text()) for s in summ if s)
+            + sum(words(h.text()) for h in secs))
     a.cap(S, 'words at rest', rest, '≤ 350', rest <= 350)
     a.unmeasured(S, 'screens at rest', 'needs layout: --browser')
 
 
 # ── drawings ─────────────────────────────────────────────────────────────────
 KINDS = {'client', 'edge', 'service', 'data', 'stream', 'external', 'threat'}
+ROW_READ = {'context', 'finding', 'record'}
+ROW_ACT = {'investigation', 'test', 'change', 'rollback'}
+ROW_KINDS = ROW_READ | ROW_ACT | {'decision'}
 MODES = {'sync', 'async'}
 TONES = {'neutral', 'sync', 'async', 'ext', 'data', 'svc'}
 TAGS = {'tl', 'tr', 'bl', 'br'}
@@ -616,6 +630,7 @@ def page_checks(a, doc, tpl_pages, unfilled):
         ('so what', lambda e: e.attrs.get('data-slot') == 'sowhat'),
         ('vital label', lambda e: e.has('l') and e.inside(cls('vitals'))),
         ('next item', lambda e: e.tag == 'li' and e.inside(cls('next'))),
+        ('section header', lambda e: e.tag == 'h2' and e.has('sec')),
         ('row summary', lambda e: e.has('cl') and e.inside(lambda p: p.tag == 'details' and p.has('row'))),
         ('row body', lambda e: e.tag == 'p' and e.parent is not None and e.parent.has('in')
             and e.parent.parent is not None and e.parent.parent.tag == 'details' and e.parent.parent.has('row')),
@@ -662,6 +677,19 @@ def page_checks(a, doc, tpl_pages, unfilled):
         u = re.sub(r'^(drawing [^:]+: )(box|connection|flow|step|zone) \S+ ', r'\1\2 ', u)
         counted[u] = counted.get(u, 0) + 1
     a.check(S, 'unfilled slots', ['%s%s' % (k, ' ×%d' % v if v > 1 else '') for k, v in counted.items()])
+
+    mismatch = []
+    for r in doc.find(lambda e: e.tag == 'details' and e.has('row')):
+        k, rid = r.attrs.get('data-kind'), r.attrs.get('data-row')
+        steps = r.find(lambda e: e.tag == 'li' and e.has('step'))
+        if k is not None and k not in ROW_KINDS:
+            mismatch.append('row %s: "%s" is not a row kind' % (rid, k))
+        elif k in ROW_ACT and not steps and not r.find(lambda e: e.tag == 'label' and e.has('chk')):
+            mismatch.append('row %s says "action · %s" but holds nothing to run or tick' % (rid, k))
+        elif k in ROW_READ and steps:
+            mismatch.append('row %s says "%s" but holds %d step%s — use an action kind'
+                            % (rid, k, len(steps), '' if len(steps) == 1 else 's'))
+    a.check(S, 'row kind matches its content', mismatch)
 
     cmds = doc.find(lambda e: e.has('cmd') and not e.has('fig'))
     lead, nonascii, span, blank = [], [], [], []

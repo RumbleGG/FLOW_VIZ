@@ -54,6 +54,8 @@ Hard limits, not guidelines. `flowviz audit` measures all of them; screens at re
 | Next | ≤4 items, ≤14 words each, imperative, **each tagged `read-only` or `write`** |
 | Diagram | exactly 1 in the spine: a drawing (≤9 boxes) or a hand-written `div.dia` SVG |
 | Rows | ≤6, each summary a claim with a verb in ≤14 words |
+| Section headers | ≤3, ≤4 words each, saying what the rows below are for; no row before the first |
+| Row kind | every row has `data-kind` (below) |
 | Open at load | ≤1 row. Zero is the norm |
 | Step sentence | ≤20 words, **exactly one sentence** |
 | Words at rest | ≤350 — card text plus row summaries |
@@ -67,6 +69,29 @@ yours to make. Nothing is ever deleted to fit — it moves down a layer:
 | 1 · Card | one screen, never scrolls | chip, claim-title, verdict, so-what, vitals, next |
 | 2 · Spine | 1 diagram + ≤6 collapsed rows | the shape, then one row per idea |
 | 3 · Evidence | **unlimited** | logs, stack traces, tables, `file:line` citations — only inside rows |
+
+### Every row says what it is for
+
+Group the rows under section headers — `<h2 class="sec">Try it on this Mac</h2>` — and give every row a
+`data-kind`. **You do not write the label**: the page draws it from the attribute, the same way in every
+report, and the audit fails a label that does not match what the row holds.
+
+| `data-kind` | The reader sees | Use for | Must hold |
+|---|---|---|---|
+| `context` | context | background they need to follow the argument | no steps |
+| `finding` | finding | what the evidence shows | no steps |
+| `record` | record | what was done, and how to undo it | no steps |
+| `investigation` | action · investigation | commands that gather facts and change nothing | steps |
+| `test` | action · test | commands that check something works | steps |
+| `change` | action · change | commands that change a system | steps, write-gated |
+| `rollback` | action · rollback | commands that undo a change | steps |
+| `decision` | decision | something they approve or choose | anything |
+
+```html
+<h2 class="sec">Fix it</h2>
+<details class="row" data-row="fx" data-kind="change">
+<summary><span class="ord">4</span><span class="cl">Switching the app pool to full trust clears the 500</span><span class="rt">5 min</span></summary>
+```
 
 ### Checklist steps — the playbook
 

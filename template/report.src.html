@@ -107,10 +107,17 @@
 </div>
 
 <!-- ══════════════ THE ROWS ══════════════
-     ≤6. Each summary is a claim with a verb, ≤14 words, so the collapsed spine
-     reads as the argument. Layer 3 — logs, tables, citations — goes inside. -->
+     ≤6 rows under ≤3 section headers (≤4 words each: what the rows below are for).
+     Every row says what it is for with data-kind — the page draws the label:
+       read    context · finding · record      (no steps inside)
+       action  investigation · test · change · rollback   (steps inside)
+               decision                        (yours to approve or choose)
+     Each summary is a claim with a verb, ≤14 words. Layer 3 goes inside. -->
+<!-- sec:begin -->
+<h2 class="sec">Name this group</h2>
+<!-- sec:end -->
 <!-- row:begin -->
-<details class="row" data-row="{{ROW_ID}}">
+<details class="row" data-row="{{ROW_ID}}" data-kind="{{ROW_KIND}}">
 <summary><span class="ord">{{ROW_N}}</span><span class="cl">State this row's idea as a claim with a verb</span><span class="rt">1 min</span></summary>
 <div class="in">
 <p>Layer 3 for this idea: logs, tables, stack traces and <code>file:line</code> citations, as long as it needs.</p>

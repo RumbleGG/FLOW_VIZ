@@ -3,6 +3,21 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 1.0.0 — 2026-09-28 · every row says what it is for
+
+A report's six rows read as six claims with no sign of whether to read them or act on them. Now:
+- **Row kinds.** Every row carries `data-kind` — `context`, `finding`, `record` (read), `investigation`,
+  `test`, `change`, `rollback` (action), or `decision` — and `flow.js` draws the label at the start of the
+  summary, all labels one width so the claims line up. The label is injected, never written.
+- **Section headers.** `<h2 class="sec">` groups the rows: ≤3 per report, ≤4 words each, and no row
+  before the first. Quiet micro-labels with a hairline, counted in words at rest.
+- **Audited.** New caps (section headers, longest header, rows before the first header, rows with no
+  kind) and an author check that fails a label that does not match what the row holds: an action with
+  nothing to run, or a read-only row holding steps.
+
+Major, because the spine's shape changed: a 0.6.0 report still renders, but fails the audit until its rows
+have kinds and headers. `flowviz new report` scaffolds both.
+
 ## 0.6.0 — 2026-09-28 · drawings
 
 Rebuilt on a new machine from the 0.5.1 brief, `AGENTS.md`, `SPEC.md` and `PLAN.html`, and extended with a

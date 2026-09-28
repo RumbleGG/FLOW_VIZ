@@ -105,7 +105,7 @@ def put_spec(text, spec):
 
 def report(a, title, doc):
     t = read('report.src.html')
-    row, pb = block(t, 'row'), block(t, 'pb')
+    row, pb, sec = block(t, 'row'), block(t, 'pb'), block(t, 'sec')
     ro, w = block(t, 'step-ro'), block(t, 'step-w')
 
     steps = []
@@ -117,11 +117,17 @@ def report(a, title, doc):
 
     rows = []
     for i in range(1, a.rows + 1):
+        runs = bool(steps) and i == a.rows
         r = row.replace('{{ROW_ID}}', 'r%d' % i).replace('{{ROW_N}}', str(i))
-        r = r.replace('<!-- playbook -->\n', playbook if (i == a.rows) else '')
+        r = r.replace('{{ROW_KIND}}', 'test' if runs else 'context')
+        r = r.replace('<!-- playbook -->\n', playbook if runs else '')
+        # a header opens the rows, and another opens the playbook when it has company
+        if i == 1 or (runs and a.rows > 1):
+            r = sec + r
         rows.append(r)
 
-    out = re.sub(r'<!-- row:begin -->\n.*?<!-- row:end -->\n', lambda _: ''.join(rows), t, flags=re.S)
+    out = re.sub(r'<!-- sec:begin -->\n.*?<!-- sec:end -->\n', '', t, flags=re.S)
+    out = re.sub(r'<!-- row:begin -->\n.*?<!-- row:end -->\n', lambda _: ''.join(rows), out, flags=re.S)
     out = re.sub(r'\n<!-- ═+ PLAYBOOK SHAPES.*?<!-- step-w:end -->\n', '\n', out, flags=re.S)
     _, tpl = spec_of(out)
     out = put_spec(out, gen_spec(tpl, a.boxes, 1, a.boxes - 1, 4, 'spine'))

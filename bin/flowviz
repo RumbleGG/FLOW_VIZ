@@ -37,7 +37,9 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
   CAPS
     report   title <=70 chars with a verb · verdict <=50 words · so what <=30 · vitals <=5 · next <=4
              (<=14 words, tagged read-only|write) · exactly 1 spine diagram · rows <=6 (summary <=14)
-             · open at load <=1 · step = one sentence <=20 words · words at rest <=350 · screens <=3
+             under <=3 section headers (<=4 words) · every row has a data-kind · open at load <=1
+             · step = one sentence <=20 words · words at rest <=350 · screens <=3
+    kinds    context finding record (read) · investigation test change rollback (action) · decision
     drawing  title <=70 with a verb · lede <=30 · boxes <=12 (<=9 as a report spine) · zones <=4
              · flows 1-3 · steps <=9 per flow, one sentence <=20 · label <=16 chars · peek <=25 words
              · facts <=3 · connection label <=16 · words on canvas <=60 · crossings 0 · screens <=2

@@ -266,6 +266,38 @@
   $$('details.row').forEach(function (d) {
     d.addEventListener('toggle', function () { st.open[d.dataset.row] = d.open; save(); });
   });
+  /* What each row is for. The agent writes one attribute, data-kind; the label is
+     injected here, so every report says it in the same words, in the same place.
+     Action kinds lead with "action ·", so a row you only read never looks like a
+     row where you have to do something. */
+  var ROW_KIND = {
+    context: ['context', 'read', 'Background to read. Nothing to do here.'],
+    finding: ['finding', 'read', 'What the evidence shows. Read it; nothing to run.'],
+    record: ['record', 'read', 'What was done, and how to undo it.'],
+    investigation: ['action · investigation', 'act', 'Commands that gather facts. They change nothing.'],
+    test: ['action · test', 'act', 'Commands that check that something works.'],
+    change: ['action · change', 'act', 'Commands that change a system. Each write is gated.'],
+    rollback: ['action · rollback', 'act', 'Commands that undo a change.'],
+    decision: ['decision', 'decide', 'Yours to approve or choose.']
+  };
+  $$('details.row').forEach(function (d) {
+    var k = ROW_KIND[d.dataset.kind], s = $('summary', d), cl = s && $('.cl', s);
+    if (!k || !cl || $('.rk', s)) return;
+    var b = document.createElement('span');
+    b.className = 'rk rk-' + d.dataset.kind;
+    b.textContent = k[0];
+    b.title = k[2];
+    s.insertBefore(b, cl);
+    var rt = $('.rt', s);
+    if (rt && !rt.title) rt.title = 'about ' + rt.textContent.trim() + (k[1] === 'read' ? ' to read' : ' to work through');
+  });
+  // one column: every label as wide as the widest, so the claims start in line
+  (function () {
+    var ks = $$('details.row > summary > .rk');
+    var w = Math.max.apply(null, [0].concat(ks.map(function (k) { return k.getBoundingClientRect().width; })));
+    if (w) document.documentElement.style.setProperty('--rk-w', Math.ceil(w) + 'px');
+  })();
+
   var xa = $('#flowExpand'), ca = $('#flowCollapse');
   if (xa) xa.addEventListener('click', function () { $$('details.row').forEach(function (d) { d.open = true; }); });
   if (ca) ca.addEventListener('click', function () { $$('details.row').forEach(function (d) { d.open = false; }); });
@@ -768,11 +800,12 @@
     var CAP = { title: 70, verdict: 50, sowhat: 30, vitals: 5, next: 4, nextWords: 14,
                 rows: 6, rowSummary: 14, openAtLoad: 1, stepWords: 20, atRest: 350,
                 screens: KIND === 'drawing' ? 2 : 3 };
-    var rowsEls = $$('details.row');
+    var rowsEls = $$('details.row'), secs = $$('h2.sec');
     var wasOpen = rowsEls.map(function (d) { return d.open; });
     rowsEls.forEach(function (d) { d.open = false; });
     var screens = document.documentElement.scrollHeight / window.innerHeight;
     var restWords = words(($('.card') ? $('.card').innerText : '') + ' ' +
+      secs.map(function (h) { return h.textContent; }).join(' ') + ' ' +
       rowsEls.map(function (d) { var s = $('summary', d); return s ? s.innerText : ''; }).join(' '));
     rowsEls.forEach(function (d, i) { d.open = wasOpen[i]; });
 
@@ -794,6 +827,12 @@
       chk('rows', rowsEls.length, CAP.rows);
       chk('longest row summary', Math.max.apply(null, [0].concat(rowsEls.map(function (d) { var c = $('.cl', d); return words(c ? c.innerText : ''); }))), CAP.rowSummary);
       chk('open at load', wasOpen.filter(Boolean).length, CAP.openAtLoad);
+      chk('section headers', secs.length, 3);
+      chk('longest section header', Math.max.apply(null, [0].concat(secs.map(function (h) { return words(h.textContent); }))), 4);
+      must('rows before the first header', rowsEls.filter(function (d) {
+        return !secs.length || !!(secs[0].compareDocumentPosition(d) & Node.DOCUMENT_POSITION_PRECEDING);
+      }).length, 0);
+      must('rows with no kind', rowsEls.filter(function (d) { return !ROW_KIND[d.dataset.kind]; }).length, 0);
       must('diagrams in spine', $$('.spine .dia, .spine .mermaid, .spine .fv-drawing').length, 1);
       /* textContent, not innerText: the rows were just closed to measure the page
          at rest, and innerText is '' for anything inside a closed <details> — so
