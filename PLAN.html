@@ -6,7 +6,7 @@
 <meta name="flowviz-doc" content="flowviz-plan">
 <meta name="flowviz-kind" content="report">
 <title>FLOW_VIZ now draws systems as well as it writes reports</title>
-<script>window.FLOW={"doc": "flowviz-plan", "version": "0.6.0", "kind": "report", "built": "2026-09-28T19:19:06Z"};
+<script>window.FLOW={"doc": "flowviz-plan", "version": "1.0.0", "kind": "report", "built": "2026-09-28T19:35:22Z"};
 (function(){var h=document.documentElement;h.setAttribute("data-kind",FLOW.kind);try{var q=(location.search.match(/[?&]theme=(light|dark)/)||[])[1];var s=JSON.parse(localStorage.getItem("flowviz:"+FLOW.doc)||"{}"),u=s.ui||{};var t=q||u.theme||"auto";var d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);h.setAttribute("data-theme",d?"dark":"light");if(u.motion===false)h.classList.add("still");}catch(e){h.setAttribute("data-theme","light");}})();</script>
 <style>
 /* ===========================================================================
@@ -195,6 +195,25 @@ details.row>summary .cl{font-weight:600;flex:1;line-height:1.42}
 details.row>summary .rt{font:11.5px var(--f-ui);color:var(--dim2);flex:none}
 details.row[open]>summary{border-bottom:1px solid var(--line)}
 details.row .in{padding:15px 0 17px}
+
+/* ── section headers over the rows, and what each row is for ──────────────
+   A header is a quiet micro-label with a hairline, not a heading that competes
+   with the claims. The row label is injected by flow.js from data-kind and sized
+   by --rk-w to the widest label, so the claims start in one column.           */
+h2.sec{display:flex;align-items:center;gap:12px;margin:24px 0 4px;font:700 10.5px/1.3 var(--f-ui);
+  letter-spacing:1.15px;text-transform:uppercase;color:var(--dim)}
+h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
+.ctl+h2.sec{margin-top:12px}
+details.row>summary .rk{flex:none;min-width:var(--rk-w,0);text-align:center;white-space:nowrap;
+  font:700 10px/1.5 var(--f-ui);letter-spacing:.55px;text-transform:uppercase;padding:1px 7px;
+  border-radius:3px;border:1px solid var(--line2);color:var(--dim2);background:var(--panel2)}
+details.row>summary .rk-finding{color:var(--acc);background:var(--accbg)}
+details.row>summary .rk-record{border-style:dashed}
+details.row>summary .rk-investigation{color:var(--mag);background:var(--magbg)}
+details.row>summary .rk-test{color:var(--ok);background:var(--okbg)}
+details.row>summary .rk-change{color:var(--bad);background:var(--badbg)}
+details.row>summary .rk-rollback{color:var(--warn);background:var(--warnbg)}
+details.row>summary .rk-decision{color:var(--paper);background:var(--acc);border-color:var(--acc)}
 
 /* nested disclosure — "more context", used inside rows and steps */
 details.more{margin:11px 0 0;border-top:1px dashed var(--line);padding-top:9px}
@@ -395,7 +414,7 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
   .card,.dia,.box,.cmd,li.step,.phase,.foot,tr{break-inside:avoid}
   .card{box-shadow:none;break-after:avoid}
   details.row{background:var(--print-bg);box-shadow:none}
-  details.row>summary,li.step>.sd>summary,h3,.pb>.hd{break-after:avoid}
+  details.row>summary,li.step>.sd>summary,h3,h2.sec,.pb>.hd{break-after:avoid}
   thead{display:table-header-group}
   /* the blur on a write command is a screen guard; on paper it is just damage */
   li.step[data-risk="w"]:not(.acked) .cmd pre{filter:none;user-select:auto}
@@ -413,6 +432,8 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
   .vd.vdf.fl{animation:none}
 }
 @media (max-width:700px){
+  details.row>summary{flex-wrap:wrap}
+  details.row>summary .rk{min-width:0}
   body{padding:18px 16px 60px}
   .card h1{font-size:22px}
   li.step{grid-template-columns:20px 1fr;gap:0 9px}
@@ -875,7 +896,7 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
 <div class="card">
   <div class="top">
     <span class="chip ok"><span class="d"></span>Rebuilt, with drawings</span>
-    <span class="meta">v0.6.0 · 2026-09-28 · the toolkit, written to its own standard</span>
+    <span class="meta">v1.0.0 · 2026-09-28 · the toolkit, written to its own standard</span>
   </div>
 
   <h1>FLOW_VIZ now draws systems as well as it writes reports</h1>
@@ -895,8 +916,8 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
 
   <div class="vitals">
     <div><div class="n">2</div><div class="l">deliverables</div></div>
-    <div><div class="n">42</div><div class="l">caps measured</div></div>
-    <div><div class="n">11</div><div class="l">author checks</div></div>
+    <div><div class="n">46</div><div class="l">caps measured</div></div>
+    <div><div class="n">12</div><div class="l">author checks</div></div>
     <div><div class="n">39</div><div class="l">box icons</div></div>
     <div><div class="n">0</div><div class="l">network deps</div></div>
   </div>
@@ -904,7 +925,7 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
   <div class="next">
     <span class="k">Next</span>
     <ol>
-      <li>Serve this folder, then walk the checklist in row 3 <span class="badge ro">read-only</span></li>
+      <li>Serve this folder, then run the checklist under Try it <span class="badge ro">read-only</span></li>
       <li>Open the checkout drawing and try hover, click and play <span class="badge ro">read-only</span></li>
       <li>Name the GitHub user to add as a collaborator <span class="badge ro">read-only</span></li>
     </ol>
@@ -1038,8 +1059,10 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
   <span class="hint">nothing is open at load, by design</span>
 </div>
 
+<h2 class="sec">How it works</h2>
+
 <!-- ─────────── ROW 1 ─────────── -->
-<details class="row" data-row="r1">
+<details class="row" data-row="r1" data-kind="context">
 <summary><span class="ord">1</span><span class="cl">Two deliverables share one toolkit, one token layer and one state file</span><span class="rt">2 min</span></summary>
 <div class="in">
 
@@ -1053,6 +1076,20 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
 <tr><td>Look</td><td>journal light, traditional dark</td><td>canvas light, night dark</td></tr>
 </tbody>
 </table>
+
+<h3>Every row says what it is for</h3>
+<table>
+<thead><tr><th>Label</th><th>Means</th><th>Holds</th></tr></thead>
+<tbody>
+<tr><td><code>context</code> · <code>finding</code> · <code>record</code></td><td>read it: background, what the evidence shows, what was done</td><td>no steps</td></tr>
+<tr><td><code>action · investigation</code> · <code>action · test</code></td><td>run it: commands that gather facts, or check that something works</td><td>steps</td></tr>
+<tr><td><code>action · change</code> · <code>action · rollback</code></td><td>run it: commands that change a system, or undo a change</td><td>steps, gated</td></tr>
+<tr><td><code>decision</code></td><td>yours to approve or choose</td><td>anything</td></tr>
+</tbody>
+</table>
+<p>Rows sit under at most three section headers of four words or fewer. The agent writes the headers
+and one attribute per row; the page draws the labels, and the audit fails a label that does not match
+what the row holds.</p>
 
 <p>A report's spine diagram is now a drawing by default: the same component, capped at nine boxes,
 wearing the report's paper and ink. The one you are looking at above is real — hover it, click a box,
@@ -1073,7 +1110,7 @@ press <b>Walk through</b>.</p>
 </details>
 
 <!-- ─────────── ROW 2 ─────────── -->
-<details class="row" data-row="r2">
+<details class="row" data-row="r2" data-kind="context">
 <summary><span class="ord">2</span><span class="cl">A drawing is written as a spec and drawn by the runtime</span><span class="rt">2 min</span></summary>
 <div class="in">
 
@@ -1118,8 +1155,65 @@ meaning.</p></div></details>
 </details>
 
 <!-- ─────────── ROW 3 ─────────── -->
-<details class="row" data-row="r3">
-<summary><span class="ord">3</span><span class="cl">This checklist is live: run it on this Mac and paste</span><span class="rt">5 min</span></summary>
+<details class="row" data-row="r4" data-kind="context">
+<summary><span class="ord">3</span><span class="cl">Everything you type lands in a sidecar that I read back</span><span class="rt">2 min</span></summary>
+<div class="in">
+
+<p>Nothing you type is stored in the HTML. Ticks, pastes, exit codes, notes on steps and notes on drawing
+boxes all go to <code>&lt;doc&gt;.flow.json</code> beside the page, keyed by ids that never change. I can
+rewrite the page freely; your input re-attaches on load.</p>
+
+<table>
+<thead><tr><th>Tier</th><th>When</th><th>Pill shows</th></tr></thead>
+<tbody>
+<tr><td><code>localStorage</code></td><td>always, 700 ms after you stop typing</td><td>—</td></tr>
+<tr><td>Sidecar on disk</td><td>served by <code>flowviz serve</code></td><td>green, <code>saved 14:05 PDT</code></td></tr>
+<tr><td>Manual export</td><td>opened from Finder</td><td>amber <code>local only</code>, plus a state button</td></tr>
+</tbody>
+</table>
+
+<div class="box key"><p><b><code>error</code> is not <code>fail</code>.</b> <code>fail</code>: the command ran
+and the target said no — evidence about the system. <code>error</code>: the interpreter rejected the
+command, so the target was never asked — evidence about my playbook. Verdicts are re-derived from the
+current rules every time the page loads and every time I read them back.</p></div>
+
+</div>
+</details>
+
+<!-- ─────────── ROW 4 ─────────── -->
+<details class="row" data-row="r5" data-kind="context">
+<summary><span class="ord">4</span><span class="cl">The audit turns the standard into exit codes, layout included</span><span class="rt">2 min</span></summary>
+<div class="in">
+
+<table>
+<thead><tr><th>Measured</th><th>How</th></tr></thead>
+<tbody>
+<tr><td>22 report caps</td><td>from the markup: card slots, headers, row kinds, steps, words at rest</td></tr>
+<tr><td>19 caps per drawing canvas</td><td>from the spec, for the root and every segment</td></tr>
+<tr><td>5 layout caps</td><td>headless Chrome on <code>?audit=1</code>: screens at rest, crossings, boxes hit, labels shrunk, zone labels crossed</td></tr>
+<tr><td>12 author checks</td><td>unfilled slots, four paste checks, fragile regexes, row kind against content, and the spec's ids, references, vocabulary, grid and routing</td></tr>
+</tbody>
+</table>
+
+<p>The unfilled check reads the templates, so a scaffold that was built but never written fails on that
+and nothing else. The fragile-regex check runs every <code>data-pass</code> and <code>data-fail</code>
+alternative against real PowerShell, bash and Python error text, and names the word it matched inside.</p>
+
+<details class="more"><summary>what the audit still cannot tell you</summary>
+<div class="in"><ul>
+<li><b>Whether a command parses.</b> That needs an interpreter per language, and the toolkit installs nothing. Parse-checking is the agent's obligation.</li>
+<li><b>Whether a pass condition can be falsified</b> by what the command really prints.</li>
+<li><b>Whether a drawing tells the truth.</b> It measures shape and budget, not accuracy. Your notes on boxes are how that comes back.</li>
+</ul></div></details>
+
+</div>
+</details>
+
+<h2 class="sec">Try it yourself</h2>
+
+<!-- ─────────── ROW 5 ─────────── -->
+<details class="row" data-row="r3" data-kind="test">
+<summary><span class="ord">5</span><span class="cl">This checklist is live: run it on this Mac and paste</span><span class="rt">5 min</span></summary>
 <div class="in">
 
 <p>Every command runs from any folder in Terminal (zsh or bash). Serve first, so your pastes reach disk;
@@ -1309,63 +1403,10 @@ then tell me "look at the plan" and I will read them back.</p>
 </div>
 </details>
 
-<!-- ─────────── ROW 4 ─────────── -->
-<details class="row" data-row="r4">
-<summary><span class="ord">4</span><span class="cl">Everything you type lands in a sidecar that I read back</span><span class="rt">2 min</span></summary>
-<div class="in">
-
-<p>Nothing you type is stored in the HTML. Ticks, pastes, exit codes, notes on steps and notes on drawing
-boxes all go to <code>&lt;doc&gt;.flow.json</code> beside the page, keyed by ids that never change. I can
-rewrite the page freely; your input re-attaches on load.</p>
-
-<table>
-<thead><tr><th>Tier</th><th>When</th><th>Pill shows</th></tr></thead>
-<tbody>
-<tr><td><code>localStorage</code></td><td>always, 700 ms after you stop typing</td><td>—</td></tr>
-<tr><td>Sidecar on disk</td><td>served by <code>flowviz serve</code></td><td>green, <code>saved 14:05 PDT</code></td></tr>
-<tr><td>Manual export</td><td>opened from Finder</td><td>amber <code>local only</code>, plus a state button</td></tr>
-</tbody>
-</table>
-
-<div class="box key"><p><b><code>error</code> is not <code>fail</code>.</b> <code>fail</code>: the command ran
-and the target said no — evidence about the system. <code>error</code>: the interpreter rejected the
-command, so the target was never asked — evidence about my playbook. Verdicts are re-derived from the
-current rules every time the page loads and every time I read them back.</p></div>
-
-</div>
-</details>
-
-<!-- ─────────── ROW 5 ─────────── -->
-<details class="row" data-row="r5">
-<summary><span class="ord">5</span><span class="cl">The audit turns the standard into exit codes, layout included</span><span class="rt">2 min</span></summary>
-<div class="in">
-
-<table>
-<thead><tr><th>Measured</th><th>How</th></tr></thead>
-<tbody>
-<tr><td>18 report caps</td><td>from the markup: card slots, rows, steps, words at rest</td></tr>
-<tr><td>19 caps per drawing canvas</td><td>from the spec, for the root and every segment</td></tr>
-<tr><td>5 layout caps</td><td>headless Chrome on <code>?audit=1</code>: screens at rest, crossings, boxes hit, labels shrunk, zone labels crossed</td></tr>
-<tr><td>11 author checks</td><td>unfilled slots, four paste checks, fragile regexes, and the spec's ids, references, vocabulary, grid and routing</td></tr>
-</tbody>
-</table>
-
-<p>The unfilled check reads the templates, so a scaffold that was built but never written fails on that
-and nothing else. The fragile-regex check runs every <code>data-pass</code> and <code>data-fail</code>
-alternative against real PowerShell, bash and Python error text, and names the word it matched inside.</p>
-
-<details class="more"><summary>what the audit still cannot tell you</summary>
-<div class="in"><ul>
-<li><b>Whether a command parses.</b> That needs an interpreter per language, and the toolkit installs nothing. Parse-checking is the agent's obligation.</li>
-<li><b>Whether a pass condition can be falsified</b> by what the command really prints.</li>
-<li><b>Whether a drawing tells the truth.</b> It measures shape and budget, not accuracy. Your notes on boxes are how that comes back.</li>
-</ul></div></details>
-
-</div>
-</details>
+<h2 class="sec">What changed</h2>
 
 <!-- ─────────── ROW 6 ─────────── -->
-<details class="row" data-row="r6">
+<details class="row" data-row="r6" data-kind="record">
 <summary><span class="ord">6</span><span class="cl">FLOW_VIZ is its own private repository, and every agent can find it</span><span class="rt">1 min</span></summary>
 <div class="in">
 
@@ -1409,8 +1450,8 @@ public on any account. Send me the username and I will invite them with read acc
 </details>
 
 <div class="foot">
-<span class="v">FLOW-VIZ v0.6.0</span> · doc <code>flowviz-plan</code> · template <code>report@0.6.0</code> · built 2026-09-28 · sha <code>e9c40c1</code> · state <code>flowviz-plan.flow.json</code>
-<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v0.6.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
+<span class="v">FLOW-VIZ v1.0.0</span> · doc <code>flowviz-plan</code> · template <code>report@1.0.0</code> · built 2026-09-28 · sha <code>91aa8b6</code> · state <code>flowviz-plan.flow.json</code>
+<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v1.0.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
 </div>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
 <!-- FLOW_VIZ icon sprite. Stroke icons on a 24 grid; draw.js references them as #i-<name>.
@@ -1742,6 +1783,38 @@ public on any account. Send me the username and I will invite them with read acc
   $$('details.row').forEach(function (d) {
     d.addEventListener('toggle', function () { st.open[d.dataset.row] = d.open; save(); });
   });
+  /* What each row is for. The agent writes one attribute, data-kind; the label is
+     injected here, so every report says it in the same words, in the same place.
+     Action kinds lead with "action ·", so a row you only read never looks like a
+     row where you have to do something. */
+  var ROW_KIND = {
+    context: ['context', 'read', 'Background to read. Nothing to do here.'],
+    finding: ['finding', 'read', 'What the evidence shows. Read it; nothing to run.'],
+    record: ['record', 'read', 'What was done, and how to undo it.'],
+    investigation: ['action · investigation', 'act', 'Commands that gather facts. They change nothing.'],
+    test: ['action · test', 'act', 'Commands that check that something works.'],
+    change: ['action · change', 'act', 'Commands that change a system. Each write is gated.'],
+    rollback: ['action · rollback', 'act', 'Commands that undo a change.'],
+    decision: ['decision', 'decide', 'Yours to approve or choose.']
+  };
+  $$('details.row').forEach(function (d) {
+    var k = ROW_KIND[d.dataset.kind], s = $('summary', d), cl = s && $('.cl', s);
+    if (!k || !cl || $('.rk', s)) return;
+    var b = document.createElement('span');
+    b.className = 'rk rk-' + d.dataset.kind;
+    b.textContent = k[0];
+    b.title = k[2];
+    s.insertBefore(b, cl);
+    var rt = $('.rt', s);
+    if (rt && !rt.title) rt.title = 'about ' + rt.textContent.trim() + (k[1] === 'read' ? ' to read' : ' to work through');
+  });
+  // one column: every label as wide as the widest, so the claims start in line
+  (function () {
+    var ks = $$('details.row > summary > .rk');
+    var w = Math.max.apply(null, [0].concat(ks.map(function (k) { return k.getBoundingClientRect().width; })));
+    if (w) document.documentElement.style.setProperty('--rk-w', Math.ceil(w) + 'px');
+  })();
+
   var xa = $('#flowExpand'), ca = $('#flowCollapse');
   if (xa) xa.addEventListener('click', function () { $$('details.row').forEach(function (d) { d.open = true; }); });
   if (ca) ca.addEventListener('click', function () { $$('details.row').forEach(function (d) { d.open = false; }); });
@@ -2244,11 +2317,12 @@ public on any account. Send me the username and I will invite them with read acc
     var CAP = { title: 70, verdict: 50, sowhat: 30, vitals: 5, next: 4, nextWords: 14,
                 rows: 6, rowSummary: 14, openAtLoad: 1, stepWords: 20, atRest: 350,
                 screens: KIND === 'drawing' ? 2 : 3 };
-    var rowsEls = $$('details.row');
+    var rowsEls = $$('details.row'), secs = $$('h2.sec');
     var wasOpen = rowsEls.map(function (d) { return d.open; });
     rowsEls.forEach(function (d) { d.open = false; });
     var screens = document.documentElement.scrollHeight / window.innerHeight;
     var restWords = words(($('.card') ? $('.card').innerText : '') + ' ' +
+      secs.map(function (h) { return h.textContent; }).join(' ') + ' ' +
       rowsEls.map(function (d) { var s = $('summary', d); return s ? s.innerText : ''; }).join(' '));
     rowsEls.forEach(function (d, i) { d.open = wasOpen[i]; });
 
@@ -2270,6 +2344,12 @@ public on any account. Send me the username and I will invite them with read acc
       chk('rows', rowsEls.length, CAP.rows);
       chk('longest row summary', Math.max.apply(null, [0].concat(rowsEls.map(function (d) { var c = $('.cl', d); return words(c ? c.innerText : ''); }))), CAP.rowSummary);
       chk('open at load', wasOpen.filter(Boolean).length, CAP.openAtLoad);
+      chk('section headers', secs.length, 3);
+      chk('longest section header', Math.max.apply(null, [0].concat(secs.map(function (h) { return words(h.textContent); }))), 4);
+      must('rows before the first header', rowsEls.filter(function (d) {
+        return !secs.length || !!(secs[0].compareDocumentPosition(d) & Node.DOCUMENT_POSITION_PRECEDING);
+      }).length, 0);
+      must('rows with no kind', rowsEls.filter(function (d) { return !ROW_KIND[d.dataset.kind]; }).length, 0);
       must('diagrams in spine', $$('.spine .dia, .spine .mermaid, .spine .fv-drawing').length, 1);
       /* textContent, not innerText: the rows were just closed to measure the page
          at rest, and innerText is '' for anything inside a closed <details> — so
