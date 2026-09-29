@@ -3,6 +3,14 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 2.0.1 — 2026-09-28 · the drawer fits its content
+
+The details drawer was a fixed 440px, and its body was a grid with no column limit: one wide code block or
+table stretched the column past the panel's edge, cutting off everything to its right, and three-column
+tables wrapped into fragments. Now the column is locked to the panel; the drawer starts at 520px and widens
+to fit its widest code block or table, up to min(720px, 55vw); tables that still do not fit scroll inside
+their own box, code wraps, and on a phone the sheet spans the full width.
+
 ## 2.0.0 — 2026-09-28 · results, and quieter drawings
 
 **Results.** When the human has run a playbook, the agent closes the report with a `section.results` placed

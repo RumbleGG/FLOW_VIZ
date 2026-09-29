@@ -305,6 +305,43 @@
     DR.owner = null; DR.what = null;
     o.select(null);
   }
+  /* The drawer is as wide as its content needs, within bounds: 520px to start,
+     widening to fit its widest code block or table up to min(720px, 55vw). Tables
+     that still do not fit scroll inside their own box, and code wraps, so nothing
+     is ever cut off at the panel's edge. A bottom sheet is already full width. */
+  function fitDrawer(D) {
+    var el = D.el, body = D.body;
+    $$('table', body).forEach(function (t) {
+      if (t.parentNode && t.parentNode.classList && t.parentNode.classList.contains('dr-tscroll')) return;
+      var w = document.createElement('div');
+      w.className = 'dr-tscroll';
+      t.parentNode.insertBefore(w, t);
+      w.appendChild(t);
+    });
+    el.style.removeProperty('--dr-w');
+    if (window.matchMedia('(max-width: 760px)').matches) return;
+    var cs = window.getComputedStyle(body);
+    var avail = body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var need = 0;
+    $$('pre', body).forEach(function (p) {
+      var box = p.closest('.cmd') || p, old = p.style.whiteSpace;
+      p.style.whiteSpace = 'pre';                               // its natural, unwrapped width
+      need = Math.max(need, p.scrollWidth + (box.offsetWidth - p.clientWidth));
+      p.style.whiteSpace = old;
+    });
+    $$('table', body).forEach(function (t) {
+      var old = t.style.width;
+      t.style.width = 'max-content';                            // comfortable, not one sentence per cell
+      need = Math.max(need, Math.min(t.offsetWidth, 680));
+      t.style.width = old;
+    });
+    if (need <= avail + 1) return;
+    var now = el.getBoundingClientRect().width;
+    var cap = Math.min(720, window.innerWidth * 0.55);
+    var w = Math.min(cap, now + (need - avail) + 2);
+    if (w > now) el.style.setProperty('--dr-w', Math.round(w) + 'px');
+  }
+  window.addEventListener('resize', function () { if (DR && DR.owner) fitDrawer(DR); });
   var toastEl = null, toastT = null;
   function toast(msg) {
     if (!toastEl) { toastEl = h('div', 'fv-toast', null, document.body); toastEl.setAttribute('role', 'status'); }
@@ -1288,6 +1325,7 @@
       if (type === 'node') nodeDrawer(S.nodes[id], D);
       else if (type === 'edge') edgeDrawer(S.edges[id], D);
       else stepDrawer(id, D);
+      fitDrawer(D);
       D.el.classList.add('on'); D.el.setAttribute('aria-hidden', 'false');
       D.scrim.classList.add('on');
       D.body.scrollTop = 0;

@@ -341,7 +341,8 @@
 /* ── the drawer: layer 3, unlimited, one click away ───────────────────────── */
 .fv-scrim{position:fixed;inset:0;background:var(--d-scrim);opacity:0;pointer-events:none;
   transition:opacity .22s;z-index:66}
-.fv-drawer{position:fixed;top:0;right:0;bottom:0;z-index:70;width:min(440px,94vw);background:var(--panel);
+.fv-drawer{position:fixed;top:0;right:0;bottom:0;z-index:70;width:var(--dr-w,min(520px,94vw));max-width:94vw;
+  background:var(--panel);
   color:var(--fg);border-left:1px solid var(--line);box-shadow:var(--d-drawer-sh);display:flex;flex-direction:column;
   transform:translateX(104%);transition:transform .3s var(--d-ease),visibility 0s linear .3s;visibility:hidden;
   padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -359,7 +360,16 @@
   cursor:pointer;display:grid;place-items:center;color:var(--dim);flex:none;padding:0}
 .fv-drawer .dr-x:hover{color:var(--fg);border-color:var(--line2)}
 .fv-drawer .dr-x svg{width:16px;height:16px}
-.fv-drawer .dr-body{overflow:auto;padding:16px 18px 28px;display:grid;gap:16px;align-content:start;font-size:14px}
+/* one column, exactly as wide as the panel: a wide child can no longer stretch it past the edge */
+.fv-drawer .dr-body{overflow-x:hidden;overflow-y:auto;padding:16px 20px 28px;display:grid;
+  grid-template-columns:minmax(0,1fr);gap:16px;align-content:start;font-size:14px;overflow-wrap:break-word}
+.fv-drawer .dr-body>*,.fv-drawer .dr-body section>*{min-width:0}
+.fv-drawer .dr-hd>div{min-width:0}
+.fv-drawer h2{overflow-wrap:anywhere}
+.fv-drawer .dr-body pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.fv-drawer .dr-body .cmd:not(.fig) pre{padding-right:48px}
+.fv-drawer .dr-tscroll{overflow-x:auto;max-width:100%}
+.fv-drawer .dr-body td code,.fv-drawer .dr-body th code{overflow-wrap:anywhere}
 .fv-drawer .dr-body p{margin:0}
 .fv-drawer .dr-body section{display:grid;gap:12px}
 .fv-drawer .dr-body .lead{font-size:14.5px;color:var(--fg)}
@@ -491,7 +501,7 @@
   .fv-drawing h1.fv-title{font-size:23px}
   .fv-views{margin-left:0}
   .fv-layers{margin-left:0;max-width:100%;overflow-x:auto}
-  .fv-drawer{top:auto;left:0;width:auto;max-height:82vh;border-left:none;border-top:1px solid var(--line);
+  .fv-drawer{top:auto;left:0;width:auto;max-width:none;max-height:82vh;border-left:none;border-top:1px solid var(--line);
     border-radius:18px 18px 0 0;transform:translateY(104%)}
   .fv-drawer.on{transform:none}
   .fv-scrim.on{opacity:1;pointer-events:auto}
