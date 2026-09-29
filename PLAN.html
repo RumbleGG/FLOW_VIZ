@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="flowviz-doc" content="flowviz-plan">
+<meta name="flowviz-relabel" content='[{"at":"2026-09-29T17:36:04.324Z","rows":{"r1":"a","r2":"b","r4":"c","r5":"d","r3":"e","r6":"f"},"steps":{"sv":"e1","cs":"e2","ap":"e3","ac":"e4","sc":"e5","rb":"e6"}}]'>
 <meta name="flowviz-kind" content="report">
 <title>FLOW_VIZ now draws systems as well as it writes reports</title>
-<script>window.FLOW={"doc": "flowviz-plan", "version": "2.1.0", "kind": "report", "built": "2026-09-29T04:36:06Z"};
+<script>window.FLOW={"doc": "flowviz-plan", "version": "3.0.0", "kind": "report", "built": "2026-09-29T19:08:29Z"};
 (function(){var h=document.documentElement;h.setAttribute("data-kind",FLOW.kind);try{var q=(location.search.match(/[?&]theme=(light|dark)/)||[])[1];var s=JSON.parse(localStorage.getItem("flowviz:"+FLOW.doc)||"{}"),u=s.ui||{};var t=q||u.theme||"auto";var d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);h.setAttribute("data-theme",d?"dark":"light");if(u.motion===false)h.classList.add("still");}catch(e){h.setAttribute("data-theme","light");}})();</script>
 <style>
 /* ===========================================================================
@@ -266,6 +267,14 @@ td code{font-size:12px}
 .cmd{position:relative;background:var(--sunk);border:1px solid var(--line);
   border-radius:var(--r2);padding:11px 14px}
 .cmd .copy{position:absolute;top:6px;right:6px}
+/* {{b1.VER}} — a value from an earlier step's capture, resolved in place.
+   ok: the value, ready to copy. pending: the token, waiting for its step.
+   bad: the token, because the value would not survive a paste. One line,
+   monospace, so the command reads exactly as it will be copied. */
+.cmd pre .sub{font:inherit;white-space:pre;border-radius:3px;padding:0 2px}
+.cmd pre .sub.ok{color:var(--ok);background:var(--okbg);border-bottom:1px solid var(--ok)}
+.cmd pre .sub.pending{color:var(--warn);background:var(--warnbg);border-bottom:1px dashed var(--warn)}
+.cmd pre .sub.bad{color:var(--bad);background:var(--badbg);border-bottom:1px solid var(--bad)}
 /* .cmd.fig — a figure, not a command: a JSON sample, a tree, a log excerpt.
    Dashed, so "you run this" and "you read this" do not look identical, and
    exempt from the paste-safety checks in flowviz-audit.py. */
@@ -305,6 +314,10 @@ li.step>.sd>summary{cursor:pointer;list-style:none;outline:none;display:flex;gap
 li.step>.sd>summary .n::before{counter-increment:stp;content:counter(stp);
   font:700 12px var(--f-ui);color:var(--acc)}
 li.step>.sd>summary .n{min-width:1.2em;flex:none}
+/* a named step (b1) shows its id where the counter was, styled as the counter
+   was, and does not count: an unnamed step beside it keeps its own number */
+li.step.named>.sd>summary .n::before{content:none}
+li.step.named>.sd>summary .n{min-width:1.9em;font:700 12px var(--f-ui);color:var(--acc)}
 li.step>.sd>summary .ds{flex:1;line-height:1.45;font-size:.97em}
 li.step.done>.sd>summary .ds{color:var(--dim2);text-decoration:line-through}
 li.step>.sd .in{padding:10px 0 6px 0;margin-left:2.1em;border-top:1px dotted var(--line);
@@ -1098,9 +1111,9 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
   <p>The sidecar is the only state. It is keyed by ids that never change, so I can rewrite the report and
   your captures, ticks and notes re-attach on load.</p>
   <div class="cmd fig"><pre><code>{
-  "schema": 3, "doc": "flowviz-plan", "flowviz": "0.6.0",
+  "schema": 4, "doc": "flowviz-plan", "flowviz": "3.0.0",
   "savedAt": "2026-09-28T21:14:08Z",
-  "captures": { "ap": { "text": "result: clean", "exit": "0",
+  "captures": { "e3": { "text": "result: clean", "exit": "0",
                         "verdict": "pass", "at": "2026-09-28T21:13:57Z",
                         "runs": [ { "text": "result: 1 over", "verdict": "fail" } ] } },
   "notes": { "roundtrip/node:serve": { "text": "port 8787 was taken", "at": "..." } }
@@ -1119,8 +1132,8 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
   4 MB, a doc that does not match the URL, and any path outside the served folder.</p>
 </section>
 <section data-for="captures">
-  <p>What I see when you say "look at step 4":</p>
-  <div class="cmd fig"><pre><code>step 3  ap  read  PASS  Audit this plan against its own standard, layout caps included.
+  <p>What I see when you say "look at e3":</p>
+  <div class="cmd fig"><pre><code>step e3    read   PASS      Audit this plan against its own standard, layout caps included.
   exit 0 · captured 14:13:57 PDT (2026-09-28T21:13:57Z)
   | result: clean
   run 1  14:09:02 PDT  fail
@@ -1141,8 +1154,8 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
 <h2 class="sec">How it works</h2>
 
 <!-- ─────────── ROW 1 ─────────── -->
-<details class="row" data-row="r1" data-kind="context">
-<summary><span class="ord">1</span><span class="cl">Two deliverables share one toolkit, one token layer and one state file</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="a" data-kind="context">
+<summary><span class="ord">a</span><span class="cl">Two deliverables share one toolkit, one token layer and one state file</span><span class="rt">2 min</span></summary>
 <div class="in">
 
 <table>
@@ -1196,8 +1209,8 @@ into <code>~/Archive</code>. <code>flowviz results</code> starts it from the sid
 </details>
 
 <!-- ─────────── ROW 2 ─────────── -->
-<details class="row" data-row="r2" data-kind="context">
-<summary><span class="ord">2</span><span class="cl">A drawing is written as a spec and drawn by the runtime</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="b" data-kind="context">
+<summary><span class="ord">b</span><span class="cl">A drawing is written as a spec and drawn by the runtime</span><span class="rt">2 min</span></summary>
 <div class="in">
 
 <p>The agent writes a JSON spec — boxes placed on a grid, connections, and only when a walkthrough is
@@ -1241,8 +1254,8 @@ meaning.</p></div></details>
 </details>
 
 <!-- ─────────── ROW 3 ─────────── -->
-<details class="row" data-row="r4" data-kind="context">
-<summary><span class="ord">3</span><span class="cl">Everything you type lands in a sidecar that I read back</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="c" data-kind="context">
+<summary><span class="ord">c</span><span class="cl">Everything you type lands in a sidecar that I read back</span><span class="rt">2 min</span></summary>
 <div class="in">
 
 <p>Nothing you type is stored in the HTML. Ticks, pastes, exit codes, notes on steps and notes on drawing
@@ -1267,8 +1280,8 @@ current rules every time the page loads and every time I read them back.</p></di
 </details>
 
 <!-- ─────────── ROW 4 ─────────── -->
-<details class="row" data-row="r5" data-kind="context">
-<summary><span class="ord">4</span><span class="cl">The audit turns the standard into exit codes, layout included</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="d" data-kind="context">
+<summary><span class="ord">d</span><span class="cl">The audit turns the standard into exit codes, layout included</span><span class="rt">2 min</span></summary>
 <div class="in">
 
 <table>
@@ -1299,8 +1312,8 @@ alternative against real PowerShell, bash and Python error text, and names the w
 <h2 class="sec">Try it yourself</h2>
 
 <!-- ─────────── ROW 5 ─────────── -->
-<details class="row" data-row="r3" data-kind="test">
-<summary><span class="ord">5</span><span class="cl">This checklist is live: run it on this Mac and paste</span><span class="rt">5 min</span></summary>
+<details class="row" data-row="e" data-kind="test">
+<summary><span class="ord">e</span><span class="cl">This checklist is live: run it on this Mac and paste</span><span class="rt">5 min</span></summary>
 <div class="in">
 
 <p>Every command runs from any folder in Terminal (zsh or bash). Serve first, so your pastes reach disk;
@@ -1313,7 +1326,7 @@ then tell me "look at the plan" and I will read them back.</p>
   </div>
   <ol class="steps">
 
-    <li class="step" data-step="sv" data-risk="ro">
+    <li class="step" data-step="e1" data-risk="ro">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Serve this folder so your ticks and pastes reach the sidecar.</span></summary>
@@ -1324,24 +1337,24 @@ then tell me "look at the plan" and I will read them back.</p>
           <p class="expect"><b>Pass:</b> a <code>127.0.0.1:8787</code> address, and the pill turns green &nbsp;·&nbsp;
             <i>Fail:</i> <code>Address already in use</code></p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["sv"]</span></div>
-            <textarea data-cap="sv" data-pass="\b127\.0\.0\.1:8787\b" data-fail="\bAddress already in use\b"
+            <div class="cl">Paste output <span class="kp">captures["e1"]</span></div>
+            <textarea data-cap="e1" data-pass="\b127\.0\.0\.1:8787\b" data-fail="\bAddress already in use\b"
               placeholder="paste the first lines it prints"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="sv" placeholder="0"></span>
-              <span data-cnt="sv">empty</span><span data-at="sv"></span>
-              <span class="rn" data-run="sv"></span>
-              <button class="rr" data-rr="sv" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e1" placeholder="0"></span>
+              <span data-cnt="e1">empty</span><span data-at="e1"></span>
+              <span class="rn" data-run="e1"></span>
+              <button class="rr" data-rr="e1" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="sv" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e1" placeholder="note for the agent (optional)">
           </div>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="sv">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e1">—</span></span>
     </li>
 
-    <li class="step" data-step="cs" data-risk="ro">
+    <li class="step" data-step="e2" data-risk="ro">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Print the cheat sheet to prove the toolkit runs from its absolute path.</span></summary>
@@ -1350,24 +1363,24 @@ then tell me "look at the plan" and I will read them back.</p>
           <p class="expect"><b>Pass:</b> <code>FLOW_VIZ 0.6.0</code> and the two workflows &nbsp;·&nbsp;
             <i>Fail:</i> <code>No such file or directory</code></p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["cs"]</span></div>
-            <textarea data-cap="cs" data-pass="\bFLOW_VIZ 0\.6\.0\b" data-fail="\bNo such file or directory\b"
+            <div class="cl">Paste output <span class="kp">captures["e2"]</span></div>
+            <textarea data-cap="e2" data-pass="\bFLOW_VIZ 0\.6\.0\b" data-fail="\bNo such file or directory\b"
               placeholder="paste the first few lines"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="cs" placeholder="0"></span>
-              <span data-cnt="cs">empty</span><span data-at="cs"></span>
-              <span class="rn" data-run="cs"></span>
-              <button class="rr" data-rr="cs" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e2" placeholder="0"></span>
+              <span data-cnt="e2">empty</span><span data-at="e2"></span>
+              <span class="rn" data-run="e2"></span>
+              <button class="rr" data-rr="e2" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="cs" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e2" placeholder="note for the agent (optional)">
           </div>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="cs">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e2">—</span></span>
     </li>
 
-    <li class="step" data-step="ap" data-risk="ro">
+    <li class="step" data-step="e3" data-risk="ro">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Audit this plan against its own standard, layout caps included.</span></summary>
@@ -1376,16 +1389,16 @@ then tell me "look at the plan" and I will read them back.</p>
           <p class="expect"><b>Pass:</b> <code>result: clean</code> &nbsp;·&nbsp;
             <i>Fail:</i> <code>result: 1 over</code> or any failing check — the plan broke its own rules</p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["ap"]</span></div>
-            <textarea data-cap="ap" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
+            <div class="cl">Paste output <span class="kp">captures["e3"]</span></div>
+            <textarea data-cap="e3" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
               placeholder="paste the tail of the audit"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="ap" placeholder="0"></span>
-              <span data-cnt="ap">empty</span><span data-at="ap"></span>
-              <span class="rn" data-run="ap"></span>
-              <button class="rr" data-rr="ap" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e3" placeholder="0"></span>
+              <span data-cnt="e3">empty</span><span data-at="e3"></span>
+              <span class="rn" data-run="e3"></span>
+              <button class="rr" data-rr="e3" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="ap" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e3" placeholder="note for the agent (optional)">
           </div>
           <details class="more"><summary>why this step</summary>
           <div class="in"><p>The standard is only real if its own plan passes it. <code>--browser</code> runs
@@ -1394,10 +1407,10 @@ then tell me "look at the plan" and I will read them back.</p>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="ap">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e3">—</span></span>
     </li>
 
-    <li class="step" data-step="ac" data-risk="ro">
+    <li class="step" data-step="e4" data-risk="ro">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Audit the checkout drawing, which exercises every drawing cap.</span></summary>
@@ -1405,16 +1418,16 @@ then tell me "look at the plan" and I will read them back.</p>
           <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz audit --browser ~/Projects/FLOW_VIZ/examples/checkout/checkout.html | tail -n 12</code></pre></div>
           <p class="expect"><b>Pass:</b> <code>result: clean</code> &nbsp;·&nbsp; <i>Fail:</i> anything over</p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["ac"]</span></div>
-            <textarea data-cap="ac" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
+            <div class="cl">Paste output <span class="kp">captures["e4"]</span></div>
+            <textarea data-cap="e4" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
               placeholder="paste the tail of the audit"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="ac" placeholder="0"></span>
-              <span data-cnt="ac">empty</span><span data-at="ac"></span>
-              <span class="rn" data-run="ac"></span>
-              <button class="rr" data-rr="ac" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e4" placeholder="0"></span>
+              <span data-cnt="e4">empty</span><span data-at="e4"></span>
+              <span class="rn" data-run="e4"></span>
+              <button class="rr" data-rr="e4" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="ac" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e4" placeholder="note for the agent (optional)">
           </div>
           <details class="more"><summary>why this step</summary>
           <div class="in"><p>The first audit of the approved mockup failed on a real cap: a fact of 26
@@ -1423,10 +1436,10 @@ then tell me "look at the plan" and I will read them back.</p>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="ac">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e4">—</span></span>
     </li>
 
-    <li class="step" data-step="sc" data-risk="w" data-after="ac">
+    <li class="step" data-step="e5" data-risk="w" data-after="e4">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Scaffold a throwaway report and confirm the audit fails it on unfilled slots alone.</span></summary>
@@ -1437,16 +1450,16 @@ then tell me "look at the plan" and I will read them back.</p>
           <p class="expect"><b>Pass:</b> exactly one line, <code>FAIL  unfilled slots</code> &nbsp;·&nbsp;
             <i>Fail:</i> any <code>OVER</code>, or a second <code>FAIL</code></p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["sc"]</span></div>
-            <textarea data-cap="sc" data-pass="\bFAIL\s+unfilled slots\b" data-fail="\bOVER\b|\bFAIL\s+(?!unfilled)"
+            <div class="cl">Paste output <span class="kp">captures["e5"]</span></div>
+            <textarea data-cap="e5" data-pass="\bFAIL\s+unfilled slots\b" data-fail="\bOVER\b|\bFAIL\s+(?!unfilled)"
               placeholder="paste what grep printed"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="sc" placeholder="0"></span>
-              <span data-cnt="sc">empty</span><span data-at="sc"></span>
-              <span class="rn" data-run="sc"></span>
-              <button class="rr" data-rr="sc" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e5" placeholder="0"></span>
+              <span data-cnt="e5">empty</span><span data-at="e5"></span>
+              <span class="rn" data-run="e5"></span>
+              <button class="rr" data-rr="e5" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="sc" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e5" placeholder="note for the agent (optional)">
           </div>
           <details class="more"><summary>why this step</summary>
           <div class="in"><p>A checker that passes an empty scaffold measures length, not writing. The
@@ -1455,10 +1468,10 @@ then tell me "look at the plan" and I will read them back.</p>
         </div>
       </details>
       <span class="ctr"><span class="badge w">write</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="sc">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e5">—</span></span>
     </li>
 
-    <li class="step" data-step="rb" data-risk="ro" data-after="sv">
+    <li class="step" data-step="e6" data-risk="ro" data-after="e1">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Read back your own pastes exactly the way I will.</span></summary>
@@ -1467,21 +1480,21 @@ then tell me "look at the plan" and I will read them back.</p>
           <p class="expect"><b>Pass:</b> your earlier steps, each with a verdict &nbsp;·&nbsp;
             <i>Fail:</i> no sidecar — the page was not served when you pasted</p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["rb"]</span></div>
-            <textarea data-cap="rb" data-pass="\bcaptured\b" data-fail="\bno sidecar\b"
+            <div class="cl">Paste output <span class="kp">captures["e6"]</span></div>
+            <textarea data-cap="e6" data-pass="\bcaptured\b" data-fail="\bno sidecar\b"
               placeholder="paste the summary lines"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="rb" placeholder="0"></span>
-              <span data-cnt="rb">empty</span><span data-at="rb"></span>
-              <span class="rn" data-run="rb"></span>
-              <button class="rr" data-rr="rb" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e6" placeholder="0"></span>
+              <span data-cnt="e6">empty</span><span data-at="e6"></span>
+              <span class="rn" data-run="e6"></span>
+              <button class="rr" data-rr="e6" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="rb" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e6" placeholder="note for the agent (optional)">
           </div>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="rb">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e6">—</span></span>
     </li>
 
   </ol>
@@ -1493,8 +1506,8 @@ then tell me "look at the plan" and I will read them back.</p>
 <h2 class="sec">What changed</h2>
 
 <!-- ─────────── ROW 6 ─────────── -->
-<details class="row" data-row="r6" data-kind="record">
-<summary><span class="ord">6</span><span class="cl">FLOW_VIZ is its own public repository, and every agent can find it</span><span class="rt">1 min</span></summary>
+<details class="row" data-row="f" data-kind="record">
+<summary><span class="ord">f</span><span class="cl">FLOW_VIZ is its own public repository, and every agent can find it</span><span class="rt">1 min</span></summary>
 <div class="in">
 
 <p>You approved both changes on 2026-09-28, and I made them. This report no longer carries them as steps:
@@ -1537,8 +1550,8 @@ push to it, send me their GitHub username.</p></div>
 </details>
 
 <div class="foot">
-<span class="v">FLOW-VIZ v2.1.0</span> · doc <code>flowviz-plan</code> · template <code>report@2.1.0</code> · built 2026-09-29 · sha <code>ba5246e</code> · state <code>flowviz-plan.flow.json</code>
-<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v2.1.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
+<span class="v">FLOW-VIZ v3.0.0</span> · doc <code>flowviz-plan</code> · template <code>report@3.0.0</code> · built 2026-09-29 · sha <code>c592fbd</code> · state <code>flowviz-plan.flow.json</code>
+<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.0.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
 </div>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
 <!-- FLOW_VIZ icon sprite. Stroke icons on a 24 grid; draw.js references them as #i-<name>.
@@ -1714,6 +1727,10 @@ push to it, send me their GitHub username.</p></div>
 .fvx .cmd{position:relative;background:var(--sunk);border:1px solid var(--line);
   border-radius:var(--r2);padding:11px 14px}
 .fvx .cmd .copy{position:absolute;top:6px;right:6px}
+.fvx .cmd pre .sub{font:inherit;white-space:pre;border-radius:3px;padding:0 2px}
+.fvx .cmd pre .sub.ok{color:var(--ok);background:var(--okbg);border-bottom:1px solid var(--ok)}
+.fvx .cmd pre .sub.pending{color:var(--warn);background:var(--warnbg);border-bottom:1px dashed var(--warn)}
+.fvx .cmd pre .sub.bad{color:var(--bad);background:var(--badbg);border-bottom:1px solid var(--bad)}
 .fvx .cmd.fig{border-style:dashed}
 .fvx .copy{background:var(--panel2);color:var(--dim);border:1px solid var(--line);
   border-radius:4px;font:10.5px var(--f-ui);padding:2px 8px;cursor:pointer;white-space:nowrap}
@@ -1734,6 +1751,8 @@ push to it, send me their GitHub username.</p></div>
 .fvx li.step>.sd>summary .n::before{counter-increment:stp;content:counter(stp);
   font:700 12px var(--f-ui);color:var(--acc)}
 .fvx li.step>.sd>summary .n{min-width:1.2em;flex:none}
+.fvx li.step.named>.sd>summary .n::before{content:none}
+.fvx li.step.named>.sd>summary .n{min-width:1.9em;font:700 12px var(--f-ui);color:var(--acc)}
 .fvx li.step>.sd>summary .ds{flex:1;line-height:1.45;font-size:.97em}
 .fvx li.step.done>.sd>summary .ds{color:var(--dim2);text-decoration:line-through}
 .fvx li.step>.sd .in{padding:10px 0 6px 0;margin-left:2.1em;border-top:1px dotted var(--line);
@@ -2234,23 +2253,26 @@ figure.fv-drawing{break-inside:avoid}
    A deliverable declares, before this script (the build writes it):
      window.FLOW = { doc:'api-500-rootcause', version:'0.6.0', kind:'report', built:'…' }
 
-   State shape (also the on-disk sidecar <doc>.flow.json), schema 3:
-     { schema:3, doc, flowviz, savedAt,
+   State shape (also the on-disk sidecar <doc>.flow.json), schema 4:
+     { schema:4, doc, flowviz, savedAt,
        ui:{theme:'auto'|'light'|'dark', motion, draw:{<drawingId>:{…}}},
        vars:{host:'app-vm-01'},          // data-var inputs
        checks:{'<id>':true},                 // label.chk checkboxes
        open:{'<rowid>':true},                // which rows were expanded
        steps:{'<id>':{done,acked}},
        captures:{'<id>':{text,exit,verdict,at,note,runs:[{text,exit,verdict,at}]}},
-       notes:{'<drawingId>/[<segment>/]<node|edge|step>:<id>':{text,at}} }
+       notes:{'<drawingId>/[<segment>/]<node|edge|step>:<id>':{text,at}},
+       emits:{'<stepId>':{'<NAME>':'<value>'}},        // derived, never typed
+       relabel:'<ISO time>' }    // the last flowviz relabel this state was moved through
 
    verdict is one of 'pass' | 'fail' | 'error' | 'saved' | null.
      error  the interpreter rejected the command — evidence about the playbook
      fail   the command ran and said no — evidence about the target
      saved  captured, matched neither regex (the chip reads "no match")
 
-   schema 1 and 2 load unchanged: note, runs (2) and notes (3) are additive
-   and default empty.
+   schema 1–3 load unchanged: note, runs (2), notes (3) and emits (4) are
+   additive and default empty. emits are re-derived from the captures on every
+   load, so a stored value is a cache, never a source.
 
    window.FLOWVIZ is the contract with draw.js (see CLAUDE.md): the live state,
    save(), onHydrate(fn), auditHooks, ptTime() and flash(). draw.js keeps its
@@ -2267,9 +2289,12 @@ figure.fv-drawing{break-inside:avoid}
   var served = /^https?:$/.test(location.protocol);
 
   var st = {
-    schema: 3, doc: DOC, flowviz: VER, savedAt: null,
-    ui: { theme: 'auto' }, vars: {}, checks: {}, open: {}, steps: {}, captures: {}, notes: {}
+    schema: 4, doc: DOC, flowviz: VER, savedAt: null,
+    ui: { theme: 'auto' }, vars: {}, checks: {}, open: {}, steps: {}, captures: {}, notes: {},
+    emits: {}
   };
+  var RELABEL = relabels();
+  if (RELABEL.length) st.relabel = RELABEL[RELABEL.length - 1].at;
 
   /* ── the contract with draw.js ─────────────────────────────────────────────
      Exported before anything can call a hook. `state` is the live object —
@@ -2330,13 +2355,48 @@ figure.fv-drawing{break-inside:avoid}
   var loadedFrom = 'nothing';
   try {
     var raw = localStorage.getItem(LSKEY);
-    if (raw) { merge(JSON.parse(raw)); loadedFrom = 'localStorage'; }
+    if (raw) { merge(upgrade(JSON.parse(raw))); loadedFrom = 'localStorage'; }
   } catch (e) {}
   applyTheme();
 
+  /* `flowviz relabel` moved this page's row and step ids and left each move in a
+     meta, oldest first. State saved before a move (a browser's own copy) is
+     re-keyed through every move it predates, in order. st carries the latest
+     stamp, so the server can refuse a tab that still has the old ids.         */
+  function relabels() {
+    try {
+      var m = document.querySelector('meta[name="flowviz-relabel"]');
+      return (m && JSON.parse(m.content)) || [];
+    } catch (e) { return []; }
+  }
+  function rekey(o, map) {
+    var out = {}, rest = [], has = Object.prototype.hasOwnProperty;
+    Object.keys(o).forEach(function (k) {
+      if (has.call(map, k)) out[map[k]] = o[k]; else rest.push(k);
+    });
+    // a key no step owns keeps its place, unless a moved key landed on it
+    rest.forEach(function (k) { out[has.call(out, k) ? k + '~before-relabel' : k] = o[k]; });
+    return out;
+  }
+  function upgrade(d) {
+    if (!d || typeof d !== 'object') return d;
+    RELABEL.forEach(function (r) {
+      if ((d.relabel || '') >= r.at) return;
+      var sm = r.steps || {}, om = {};
+      Object.keys(r.rows || {}).forEach(function (k) { om[k] = r.rows[k]; });
+      Object.keys(sm).forEach(function (k) { om['step:' + k] = 'step:' + sm[k]; });
+      ['captures', 'steps', 'emits'].forEach(function (k) {
+        if (d[k] && typeof d[k] === 'object') d[k] = rekey(d[k], sm);
+      });
+      if (d.open && typeof d.open === 'object') d.open = rekey(d.open, om);
+      d.relabel = r.at;
+    });
+    return d;
+  }
+
   function merge(d) {
     if (!d) return;
-    ['ui', 'vars', 'checks', 'open', 'steps', 'captures', 'notes'].forEach(function (k) {
+    ['ui', 'vars', 'checks', 'open', 'steps', 'captures', 'notes', 'emits'].forEach(function (k) {
       if (d[k] && typeof d[k] === 'object') st[k] = Object.assign(st[k] || {}, d[k]);
     });
     if (d.savedAt) st.savedAt = d.savedAt;
@@ -2359,7 +2419,7 @@ figure.fv-drawing{break-inside:avoid}
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (d && (!st.savedAt || (d.savedAt || '') > st.savedAt)) {
-          live = false; merge(d); hydrate(); applyTheme(); live = true;
+          live = false; merge(upgrade(d)); hydrate(); applyTheme(); live = true;
           loadedFrom = 'sidecar';
           try { localStorage.setItem(LSKEY, JSON.stringify(st)); } catch (e) {}
           setPill('disk', 'loaded from disk');
@@ -2391,7 +2451,8 @@ figure.fv-drawing{break-inside:avoid}
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(st, null, 2)
       }).then(function (r) {
-        setPill(r.ok ? 'disk' : 'err', r.ok ? 'saved ' + ptTime(st.savedAt) : 'save rejected');
+        setPill(r.ok ? 'disk' : 'err', r.ok ? 'saved ' + ptTime(st.savedAt)
+          : r.status === 409 ? 'ids moved: reload' : 'save rejected');
         if (pill && r.ok) pill.title = 'last saved ' + st.savedAt + ' — stored as UTC, shown as Pacific';
       }).catch(function () { setPill('err', 'server down'); });
     }, 700);
@@ -2447,15 +2508,19 @@ figure.fv-drawing{break-inside:avoid}
   }
 
   /* ── copy ──────────────────────────────────────────────────────────────── */
-  function cmdTextFor(btn) {
-    if (btn.dataset.for) {
-      var el = document.getElementById(btn.dataset.for);
-      return el ? el.innerText : '';
-    }
+  // the element whose text a copy button sends: its data-for target, or the pre
+  // of its block — the collapsed-row ⧉ reaches the step's pre the same way
+  function copySource(btn) {
+    if (btn.dataset.for) return document.getElementById(btn.dataset.for);
     var scope = btn.closest('.cmd') || btn.closest('li.step') || btn.parentElement;
-    var pre = scope && scope.querySelector('pre');
-    return pre ? pre.innerText : '';
+    return (scope && scope.querySelector('pre')) || null;
   }
+  /* innerText is '' for anything inside a closed <details> — which is exactly
+     where the ⧉ on a collapsed step reaches — so fall back to textContent. In a
+     <pre> the two agree: whitespace is literal, and a resolved {{step.NAME}}
+     span holds its value either way. */
+  function textOf(el) { return el ? (el.innerText || el.textContent || '') : ''; }
+  function cmdTextFor(btn) { return textOf(copySource(btn)); }
   // strip leading prompts, drop pure-comment lines, keep continuations
   function cleanCmd(s) {
     return s.replace(/\r/g, '').split('\n')
@@ -2485,11 +2550,181 @@ figure.fv-drawing{break-inside:avoid}
       var sd = $('details.sd', li); if (sd) sd.open = true;
       flash(b, 'tick the gate'); return;
     }
-    var txt = cleanCmd(cmdTextFor(b));
+    /* a command that names another step's value copies only once that value is
+       real and paste-safe: a token must never reach a live console unresolved */
+    var src = copySource(b);
+    if (src) {
+      var pend = $('.sub.pending', src), unsafe = $('.sub.bad', src);
+      if (pend) { flash(b, subKey(pend).id + ' has not run'); return; }
+      if (unsafe) { flash(b, subKey(unsafe).key + ' is not paste-safe'); return; }
+    }
+    var txt = cleanCmd(textOf(src));
     if (!txt) return;
     navigator.clipboard.writeText(txt).then(function () { flash(b); },
       function () { flash(b, 'blocked'); });
   });
+
+  /* ── emits: a value one step prints, handed to a later step's command ──────
+     Producer: <textarea data-cap="b1" data-emit="VER=VERSION ([0-9][0-9.]+)">.
+     One or more NAME=<regex> pairs; each needs exactly one capture group, and
+     the value is group 1 of the LAST match, trimmed. Derived from the current
+     capture only — never runs[] — on every paste, on re-run, and on every load,
+     so fixing a regex fixes the value, the same way reverdict() fixes a verdict.
+     Consumer: {{b1.VER}} anywhere inside a .cmd pre, figures included. A bad
+     pair is skipped with a warning here; the audit and the build refuse it. */
+  var EMIT_SPLIT = /;\s*(?=[A-Z][A-Z0-9_]*=)/;
+  var EMIT_NAME = /^[A-Z][A-Z0-9_]*$/;
+  var emitRules = {};                    // step id -> [{name, re}], compiled once
+  function rulesFor(ta) {
+    var id = ta.dataset.cap;
+    if (emitRules[id]) return emitRules[id];
+    var out = [];
+    String(ta.dataset.emit || '').split(EMIT_SPLIT).forEach(function (pair) {
+      pair = pair.replace(/^\s+/, '');
+      if (!pair) return;
+      var eq = pair.indexOf('='), name = eq > 0 ? pair.slice(0, eq) : '', src = pair.slice(eq + 1);
+      if (!EMIT_NAME.test(name)) {
+        console.warn('[flowviz] data-emit on ' + id + ': "' + pair.slice(0, 40) + '" is not NAME=<regex> — skipped');
+        return;
+      }
+      var re, groups;
+      try {
+        re = new RegExp(src, 'g');
+        groups = new RegExp(src + '|').exec('').length - 1;
+      } catch (e) {
+        console.warn('[flowviz] data-emit on ' + id + ': ' + name + ' does not compile — skipped (' + e.message + ')');
+        return;
+      }
+      if (groups !== 1) {
+        console.warn('[flowviz] data-emit on ' + id + ': ' + name + ' has ' + groups +
+          ' capture groups, needs exactly one — skipped');
+        return;
+      }
+      out.push({ name: name, re: re });
+    });
+    return (emitRules[id] = out);
+  }
+  function sameMap(a, b) {
+    var ka = Object.keys(a || {}), kb = Object.keys(b || {});
+    return ka.length === kb.length && ka.every(function (k) {
+      return Object.prototype.hasOwnProperty.call(b, k) && a[k] === b[k];
+    });
+  }
+  // re-derive one step's values from its current capture; true if anything moved
+  function deriveEmits(ta) {
+    var id = ta.dataset.cap, text = (st.captures[id] || {}).text || '', next = {};
+    if (text.trim()) rulesFor(ta).forEach(function (r) {
+      var m, last = null;
+      r.re.lastIndex = 0;
+      while ((m = r.re.exec(text)) !== null) {
+        last = m;
+        if (m[0] === '') r.re.lastIndex++;          // an empty match must still advance
+      }
+      if (last && last[1] !== undefined) next[r.name] = String(last[1]).trim();
+    });
+    var moved = !sameMap(st.emits[id], next);
+    if (Object.keys(next).length) st.emits[id] = next; else delete st.emits[id];
+    return moved;
+  }
+  // every step, from the stored captures and the current rules; a step that no
+  // longer declares an emit loses whatever an older build stored for it
+  function rederiveEmits() {
+    var moved = false, owned = {};
+    $$('textarea[data-cap]').forEach(function (ta) {
+      owned[ta.dataset.cap] = 1;
+      if (deriveEmits(ta)) moved = true;
+    });
+    Object.keys(st.emits).forEach(function (id) {
+      if (!owned[id]) { delete st.emits[id]; moved = true; }
+    });
+    return moved;
+  }
+
+  /* Tokens become spans once, at init — text nodes only, existing markup left
+     alone. A token preceded by `$` is someone else's syntax (GitHub's ${{ … }})
+     and is never touched. The span then shows the value when it is real and
+     paste-safe, and the literal token otherwise, so what you read is what the
+     copy button will send. */
+  var TOKEN = /\{\{([A-Za-z0-9][\w-]*)\.([A-Z][A-Z0-9_]*)\}\}/g;
+  function wrapTokens(pre) {
+    var walk = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT, null), nodes = [], n;
+    while ((n = walk.nextNode())) nodes.push(n);
+    // plan every hit before splitting anything, so each `$` check reads the
+    // original text, including the tail of the previous text node
+    var plan = nodes.map(function (node, i) {
+      var hits = [], text = node.data, m;
+      if (node.parentNode && node.parentNode.closest && node.parentNode.closest('.sub')) return hits;
+      TOKEN.lastIndex = 0;
+      while ((m = TOKEN.exec(text)) !== null) {
+        var prev = m.index > 0 ? text.charAt(m.index - 1) : (i > 0 ? nodes[i - 1].data.slice(-1) : '');
+        if (prev !== '$') hits.push({ at: m.index, len: m[0].length, key: m[1] + '.' + m[2] });
+      }
+      return hits;
+    });
+    nodes.forEach(function (node, i) {
+      for (var k = plan[i].length - 1; k >= 0; k--) {     // from the end: offsets stay valid
+        var h = plan[i][k], tok = node.splitText(h.at);
+        tok.splitText(h.len);
+        var span = document.createElement('span');
+        span.className = 'sub pending';
+        span.setAttribute('data-sub', h.key);
+        span.textContent = '{{' + h.key + '}}';
+        tok.parentNode.replaceChild(span, tok);
+      }
+    });
+  }
+  function subKey(el) {
+    var key = el.getAttribute('data-sub') || '', dot = key.indexOf('.');
+    return { key: key, id: key.slice(0, dot), name: key.slice(dot + 1) };
+  }
+  /* Paste-safe: printable ASCII, 1–120 characters, and none of the characters a
+     shell would act on. A value that fails stays a token and refuses to copy —
+     a version string never needs a quote, a `$` or a parenthesis. */
+  var SAFE = /^[\x20-\x7E]{1,120}$/, UNSAFE = /[`$"'\\;|&<>(){}]/;
+  function pasteSafe(v) { return SAFE.test(v) && !UNSAFE.test(v); }
+  function paintSubs() {
+    $$('.cmd pre .sub[data-sub]').forEach(function (s) {
+      var k = subKey(s), vals = st.emits[k.id] || {};
+      var has = Object.prototype.hasOwnProperty.call(vals, k.name), v = has ? vals[k.name] : null;
+      var token = '{{' + k.key + '}}';
+      if (!has) {
+        s.className = 'sub pending'; s.textContent = token; s.title = 'waiting for step ' + k.id;
+      } else if (pasteSafe(v)) {
+        s.className = 'sub ok'; s.textContent = v; s.title = 'from step ' + k.id;
+      } else {
+        s.className = 'sub bad'; s.textContent = token; s.title = k.key + ' is not paste-safe';
+      }
+    });
+  }
+  $$('.cmd pre').forEach(wrapTokens);
+
+  /* ── labels: rows are lettered, steps are letter + number ─────────────────
+     A row whose id is one letter shows that letter; a step whose id is a letter
+     and a number (b1) shows its id instead of the counter, so "look at b3" means
+     the same thing on screen, in the sidecar and in the agent's read-back.
+     Other ids keep the counter, so an older report looks as it did.        */
+  $$('details.row').forEach(function (d) {
+    if (!/^[a-z]$/.test(d.dataset.row || '')) return;
+    var o = $('summary .ord', d); if (o) o.textContent = d.dataset.row;
+  });
+  $$('li.step').forEach(function (li) {
+    var id = li.dataset.step || '';
+    if (!/^[a-z][0-9]+$/.test(id)) return;
+    var n = $('.sd>summary .n', li);
+    if (n) { n.textContent = id; li.classList.add('named'); }
+  });
+  // the label a human sees for each step: its id when named, else the counter
+  // (which counts only unnamed steps, per playbook, exactly as the CSS does)
+  function stepLabels() {
+    var out = {};
+    $$('ol.steps').forEach(function (ol) {
+      var c = 0;
+      $$('li.step', ol).forEach(function (li) {
+        out[li.dataset.step] = li.classList.contains('named') ? li.dataset.step : String(++c);
+      });
+    });
+    return out;
+  }
 
   /* ── rows ──────────────────────────────────────────────────────────────── */
   $$('details.row').forEach(function (d) {
@@ -2750,7 +2985,9 @@ figure.fv-drawing{break-inside:avoid}
       r.text = ta.value;
       r.at = ta.value.trim() ? new Date().toISOString() : null;
       r.verdict = verdictOf(ta, ta.value);
+      deriveEmits(ta);
       paintCapture(id);
+      paintSubs();
       /* repaint every step, not just this playbook's progress: a capture is what
          releases a `data-after` step, and it should light up on the paste */
       repaintAll();
@@ -2773,9 +3010,10 @@ figure.fv-drawing{break-inside:avoid}
       r.text = ''; r.exit = ''; r.verdict = null; r.at = null;
       var ta = $('textarea[data-cap="' + id + '"]'); if (ta) { ta.value = ''; ta.focus(); }
       var ec = $('input[data-ec="' + id + '"]'); if (ec) ec.value = '';
+      if (ta) deriveEmits(ta); else delete st.emits[id];
       var li = $('li.step[data-step="' + id + '"]');
       if (li) setDone(li, false, false); else { step(id).done = false; }
-      paintCapture(id); repaintAll(); save();
+      paintCapture(id); paintSubs(); repaintAll(); save();
       flash(b, 'run ' + (r.runs.length + 1));
     });
   });
@@ -2793,10 +3031,12 @@ figure.fv-drawing{break-inside:avoid}
   if (ac) ac.addEventListener('click', function () {
     var out = { doc: DOC, flowviz: VER, at: new Date().toISOString(),
                 vars: st.vars, captures: {}, done: [] };
+    var labels = stepLabels();
     Object.keys(st.captures).forEach(function (k) {
       var r = st.captures[k];
       if ((r.text || '').trim()) {
         out.captures[k] = { text: r.text, exit: r.exit, verdict: r.verdict, at: r.at };
+        if (labels[k]) out.captures[k].step = labels[k];
         if (r.note) out.captures[k].note = r.note;
         if (r.runs && r.runs.length) out.captures[k].priorRuns = r.runs.length;
       }
@@ -2804,6 +3044,11 @@ figure.fv-drawing{break-inside:avoid}
     Object.keys(st.steps).forEach(function (k) { if (st.steps[k].done) out.done.push(k); });
     var notes = notesForExport(), nn = Object.keys(notes).length;
     if (nn) out.notes = notes;
+    var emits = {};
+    Object.keys(st.emits || {}).forEach(function (k) {
+      if (Object.keys(st.emits[k] || {}).length) emits[k] = st.emits[k];
+    });
+    if (Object.keys(emits).length) out.emits = emits;
     var n = Object.keys(out.captures).length;
     navigator.clipboard.writeText('```json\n' + JSON.stringify(out, null, 2) + '\n```')
       .then(function () {
@@ -2853,7 +3098,7 @@ figure.fv-drawing{break-inside:avoid}
       var r = peek(id);
       var vd = (VD_LABEL[r.verdict] || 'not captured').toUpperCase();
       line(bar);
-      line('step ' + n + ' · ' + id + ' · ' + (risk === 'w' ? 'WRITE' : 'read') + ' · ' + vd);
+      line('step ' + (n === id ? id : n + ' · ' + id) + ' · ' + (risk === 'w' ? 'WRITE' : 'read') + ' · ' + vd);
       line(bar);
       line(sentence);
       if (cmd) {
@@ -2864,6 +3109,8 @@ figure.fv-drawing{break-inside:avoid}
       if ((r.text || '').trim()) {
         line('captured   ' + (r.at || '—') + '   exit ' + (r.exit === '' ? '—' : r.exit) +
              '   ' + r.text.split('\n').length + ' lines, ' + r.text.length + ' chars');
+        var em = st.emits[id] || {}, en = Object.keys(em);
+        if (en.length) line('emits      ' + en.map(function (k) { return k + '=' + em[k]; }).join('  '));
         L.push(MK + jobs.length + MKE);
         jobs.push(r.text);
         line('output');
@@ -2882,7 +3129,7 @@ figure.fv-drawing{break-inside:avoid}
       line('');
     }
 
-    var seen = {};
+    var seen = {}, labels = stepLabels();
     $$('.pb').forEach(function (pb) {
       var t = $('.hd .t', pb), p = $('.hd .prog', pb);
       line('PLAYBOOK   ' + (t ? t.innerText.trim() : '(untitled)') +
@@ -2891,8 +3138,8 @@ figure.fv-drawing{break-inside:avoid}
       $$('li.step', pb).forEach(function (li, i) {
         var id = li.dataset.step; seen[id] = 1;
         var ds = $('.ds', li), pre = $('.cmd pre', li);
-        emitCapture(id, i + 1, ds ? ds.innerText.trim() : '', li.dataset.risk,
-                    pre ? pre.innerText.trim() : '');
+        emitCapture(id, labels[id] || String(i + 1), textOf(ds).trim(), li.dataset.risk,
+                    textOf(pre).trim());
       });
     });
     var loose = Object.keys(st.captures).filter(function (k) {
@@ -2972,6 +3219,8 @@ figure.fv-drawing{break-inside:avoid}
       if (ta && reverdict(ta, r)) moved++;
       paintCapture(k);
     });
+    if (rederiveEmits()) moved++;
+    paintSubs();
     if (moved) save();
     $$('textarea[data-cap]').forEach(function (ta) { paintCapture(ta.dataset.cap); });
     repaintAll();
