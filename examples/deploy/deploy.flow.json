@@ -1,0 +1,84 @@
+{
+  "schema": 3,
+  "doc": "deploy",
+  "flowviz": "2.0.0",
+  "savedAt": "2026-09-28T20:41:12Z",
+  "ui": {
+    "theme": "auto"
+  },
+  "vars": {},
+  "checks": {},
+  "open": {},
+  "steps": {
+    "pre": {
+      "done": true,
+      "acked": false
+    },
+    "push": {
+      "done": true,
+      "acked": true
+    },
+    "health": {
+      "done": true,
+      "acked": false
+    },
+    "smoke": {
+      "done": true,
+      "acked": false
+    },
+    "rb": {
+      "done": true,
+      "acked": true
+    }
+  },
+  "captures": {
+    "pre": {
+      "text": "{\"status\":\"ok\",\"version\":\"v2.2.4\",\"provider\":\"reachable\"}",
+      "exit": "0",
+      "verdict": "pass",
+      "at": "2026-09-28T20:31:05Z",
+      "note": "",
+      "runs": []
+    },
+    "push": {
+      "text": "deployment.apps/notify image updated\nWaiting for deployment \"notify\" rollout to finish: 1 of 3 updated replicas are available...\nWaiting for deployment \"notify\" rollout to finish: 2 of 3 updated replicas are available...\ndeployment \"notify\" successfully rolled out",
+      "exit": "0",
+      "verdict": "pass",
+      "at": "2026-09-28T20:33:48Z",
+      "note": "",
+      "runs": []
+    },
+    "health": {
+      "text": "{\"status\":\"ok\",\"version\":\"v2.3.0\",\"provider\":\"configured\"}",
+      "exit": "0",
+      "verdict": "pass",
+      "at": "2026-09-28T20:34:30Z",
+      "note": "",
+      "runs": []
+    },
+    "smoke": {
+      "text": "{\"status\":\"failed\",\"reason\":\"timeout waiting for provider callback after 30s\",\"message_id\":\"m-8812\"}",
+      "exit": "0",
+      "verdict": "fail",
+      "at": "2026-09-28T20:37:19Z",
+      "note": "provider dashboard shows no inbound request from the new pods",
+      "runs": [
+        {
+          "text": "zsh: command not found: crul",
+          "exit": "127",
+          "verdict": "error",
+          "at": "2026-09-28T20:35:02Z"
+        }
+      ]
+    },
+    "rb": {
+      "text": "deployment.apps/notify rolled back\nWaiting for deployment \"notify\" rollout to finish: 2 of 3 updated replicas are available...\ndeployment \"notify\" successfully rolled out",
+      "exit": "0",
+      "verdict": "pass",
+      "at": "2026-09-28T20:40:51Z",
+      "note": "",
+      "runs": []
+    }
+  },
+  "notes": {}
+}

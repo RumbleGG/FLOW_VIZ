@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """flowviz new — scaffold a report or a drawing into the folder the work is in.
 
-    flowviz new report  "<claim with a verb>" --dir DIR [--name NAME] [--rows 4] [--steps 3] [--boxes 4]
-    flowviz new drawing "<claim with a verb>" --dir DIR [--name NAME] [--boxes 6] [--flows 1] [--steps N]
+    flowviz new report  "<claim with a verb>" --dir DIR [--name NAME] [--rows 4] [--steps 3] [--boxes 4] [--flows 0]
+    flowviz new drawing "<claim with a verb>" --dir DIR [--name NAME] [--boxes 6] [--flows 0] [--steps N]
+
+Drawings start without flows: boxes and connections, no walkthrough. Add --flows N only when the human
+asked for a step-by-step walkthrough of the order of events.
 
 Writes DIR/NAME.src.html (NAME defaults to the folder's name, upper-cased) and refuses to overwrite
 anything. Every slot carries the template's own words, so `flowviz audit` fails a scaffold that was
@@ -130,7 +133,7 @@ def report(a, title, doc):
     out = re.sub(r'<!-- row:begin -->\n.*?<!-- row:end -->\n', lambda _: ''.join(rows), out, flags=re.S)
     out = re.sub(r'\n<!-- ═+ PLAYBOOK SHAPES.*?<!-- step-w:end -->\n', '\n', out, flags=re.S)
     _, tpl = spec_of(out)
-    out = put_spec(out, gen_spec(tpl, a.boxes, 1, a.boxes - 1, 4, 'spine'))
+    out = put_spec(out, gen_spec(tpl, a.boxes, a.flows, a.boxes - 1, 4, 'spine'))
     return out
 
 
@@ -154,7 +157,8 @@ def main():
     ap.add_argument('--steps', type=int, default=None,
                     help='report: playbook steps (default 3); drawing: steps per flow (default boxes-1, max 9)')
     ap.add_argument('--boxes', type=int, default=None, help='drawing boxes (default 6, max 12); report spine (default 4, max 9)')
-    ap.add_argument('--flows', type=int, default=1, help='drawing flows, 1-3 (default 1)')
+    ap.add_argument('--flows', type=int, default=0,
+                    help='flows, 0-3 (default 0: no walkthrough unless the human asked for one)')
     a = ap.parse_args(argv)
 
     title = ' '.join(a.claim.split())
@@ -167,12 +171,14 @@ def main():
             die('--boxes must be 2-9 for a report spine')
         if not 0 <= a.steps <= 30:
             die('--steps must be 0-30')
+        if not 0 <= a.flows <= 3:
+            die('--flows must be 0-3')
     else:
         a.boxes = 6 if a.boxes is None else a.boxes
         if not 2 <= a.boxes <= 12:
             die('--boxes must be 2-12: a 13th box means a segment')
-        if not 1 <= a.flows <= 3:
-            die('--flows must be 1-3')
+        if not 0 <= a.flows <= 3:
+            die('--flows must be 0-3')
         if a.steps is not None and not 1 <= a.steps <= 9:
             die('--steps must be 1-9 per flow')
 
@@ -195,7 +201,7 @@ def main():
 
     what = ('%d row%s · %d step%s · spine drawing %d boxes' % (a.rows, '' if a.rows == 1 else 's', a.steps,
             '' if a.steps == 1 else 's', a.boxes) if a.kind == 'report'
-            else '%d boxes · %d flow%s' % (a.boxes, a.flows, '' if a.flows == 1 else 's'))
+            else '%d boxes · %s' % (a.boxes, '%d flow%s' % (a.flows, '' if a.flows == 1 else 's') if a.flows else 'no flows'))
     print('created %s  (%s · doc %s · %s)' % (src, a.kind, doc, what))
     if len(title) > 70:
         print('  note: the title is %d characters; the cap is 70.' % len(title))

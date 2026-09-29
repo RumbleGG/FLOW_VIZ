@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 1.0.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 2.0.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -135,7 +135,28 @@ mangles column-0 constructs, and reports syntax errors away from the real cause.
 A block that is **shown, not run** — a JSON sample, a tree, a log excerpt — is `div.cmd.fig`: dashed, no
 copy button, exempt from all of the above. Never use it to smuggle a command past the audit.
 
-### 1.6 Evidence and print
+### 1.6 Results — after the human has run the playbook
+
+When the human has run the playbook and the agent has read the captures back, the agent adds a
+**Results** section: `section.results`, placed **before the card**. What happened is now the main idea;
+the card below stays as the plan that was tested. `flowviz results <report>.src.html` starts it from the
+sidecar — outcome, chip and counts filled in, the diagram started from the spine drawing, the archive step
+written — and never overwrites one that exists.
+
+| Part | Cap |
+|---|---|
+| Outcome | `data-outcome`: `pass` (every step passed) · `fail` (a step failed: the target said no) · `blocked` (a command was rejected, so the target was never asked) · `inconclusive` (no match, or steps not run) — plus its chip |
+| Claim (`h2`) | ≤70 chars with a verb: what happened, not "Results" |
+| Summary | ≤50 words: what ran, what the output proved, where it stopped |
+| Diagram | exactly 1 drawing, ≤9 boxes, marking the point: `"result": "pass" \| "fail" \| "error"` on a box, connection or flow step, agreeing with the outcome |
+| Next | 1 to 4 items, ≤14 words, each tagged `read-only` or `write` |
+| Archive | exactly 1 gated write step (`li.step[data-archive]`) that moves the finished folder into the archive |
+| Words at rest | ≤150 |
+| Height | ≤1.5 screens; the report's own ≤3 screens is measured without it |
+
+A rollback step that was never needed counts as "not needed", not as missing.
+
+### 1.7 Evidence and print
 
 **Save evidence** writes one plain-text turnover record: every step in DOM order with id, blast radius,
 verdict, sentence, command, capture, SHA-256 of the capture (secure context only), exit code, time,
@@ -156,7 +177,10 @@ three after. Print CSS carries pagination only.
 | **Click** | the drawer: depth sections, the steps a box takes part in, a note for the agent | unlimited |
 | **Play** | the flow step by step: a labelled packet and a one-sentence caption | ≤9 steps, ≤20 words each |
 
-Touch has no hover, so a tap opens the drawer, which also carries the peek.
+**Flows are off by default.** A drawing without flows is boxes and connections, with no flow chips, no
+step badges and no Walk through; every connection still moves gently in its own direction. Add flows only
+when the human asks for a walkthrough of the order of events. Touch has no hover, so a tap opens the
+drawer, which also carries the peek.
 
 ### 2.2 Caps
 
@@ -166,7 +190,7 @@ Touch has no hover, so a tap opens the drawer, which also carries the peek.
 | Lede | ≤30 words |
 | Boxes | ≤12 per canvas; **≤9** when the drawing is a report's spine diagram. A 13th box means a segment. |
 | Zones | ≤4 |
-| Flows | 1 to 3 per canvas |
+| Flows | 0 to 3 per canvas; 0 unless the human asked for a walkthrough |
 | Steps | ≤9 per flow |
 | Step `say` | exactly one sentence, ≤20 words |
 | Step `msg` | ≤24 chars |
@@ -193,6 +217,7 @@ Motion carries meaning or it does not move. These meanings are fixed; a drawing 
 | Mark | Means |
 |---|---|
 | Dashes | a synchronous call. They travel the way the request goes. |
+| Plain ink, moving | a connection in a drawing that has no flows |
 | Dots, slower | an asynchronous message. Nobody waits on it. |
 | Two parallel lanes | traffic in both directions (`"both": true`), one direction per lane. A sync edge implies its response and never needs a second lane. |
 | Accent colour, moving | part of the selected flow |
@@ -201,6 +226,9 @@ Motion carries meaning or it does not move. These meanings are fixed; a drawing 
 | Numbered badge | the step that starts on that connection |
 | ⤢ on a box | opens a segment: the inside of that box |
 | Dashed box | a ghost: a box of the parent drawing, shown so a segment has edges |
+| Green, ✓ badge | `"result": "pass"` — verified by a real run |
+| Red, ✕ at the stop | `"result": "fail"` — the run failed here: the target said no |
+| Amber, ⚠ near the source | `"result": "error"` — the command was rejected; the target was never asked |
 
 `prefers-reduced-motion` and the **Motion** switch stop the drift and the packet travel; direction is
 still carried by arrowheads, and every state stays reachable.
@@ -249,7 +277,8 @@ icons, motion, peeks, the drawer, the walkthrough, the sequence view and notes a
 | zone `tag` | the corner the label sits in: `tl` (default) `tr` `bl` `br` |
 | edge `ms` | optional; shown by the Timings layer. Omit it where nothing has a latency. |
 | step `path` | two or more box ids; every consecutive pair must be joined by an edge, either direction |
-| step `fail` | `true` makes the last hop fail |
+| step `fail` | `true` makes the last hop fail (a designed failure path) |
+| `result` | on a box, a connection or a flow step: `pass` · `fail` · `error` — what a real run proved (§1.6) |
 
 Routing is deterministic: a connection leaves the side of its box that faces the target and bends only in
 the gutter between cells. Straight connections own the centre of a side; bent ones fan out beside them.
@@ -380,7 +409,7 @@ an agent may regenerate the HTML freely and the human's input re-attaches. Ids a
 |---|---|
 | patch | CSS, wording, bug fix |
 | minor | new component, caps unchanged (0.6.0 added drawings) |
-| major | a cap changes, or the card or spine shape changes (1.0.0 labelled every row and added headers) |
+| major | a cap changes, or the card or spine shape changes (1.0.0 labelled every row; 2.0.0 made flows optional) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then
 rebuild — once FLOW_VIZ is its own repository) and **a deliverable's content**
@@ -402,6 +431,7 @@ $F audit ~/work/sto/STO.html            # every static cap + author checks; exit
 $F audit --browser ~/work/sto/STO.html  # also the layout caps, via headless Chrome
 $F serve ~/work/sto --open              # so what the human types reaches disk
 $F captures ~/work/sto/STO.html         # read back captures and notes
+$F results ~/work/sto/STO.src.html      # once it has run: start the Results section
 ```
 
 Authors edit `.src.html`. The built `.html` is one file: no asset paths, no network. Deliverables are

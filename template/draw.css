@@ -133,7 +133,7 @@
 .fv-flow[aria-checked="true"]{color:var(--fg);border-color:var(--fc);
   background:color-mix(in srgb,var(--fc) 9%,var(--panel))}
 .fv-flow:active{transform:scale(.97)}
-.fv-views{margin-left:auto;display:inline-flex;background:var(--panel2);border:1px solid var(--line);
+.fv-views{display:inline-flex;background:var(--panel2);border:1px solid var(--line);
   border-radius:10px;padding:3px;gap:2px}
 .fv-views button{background:none;border:none;border-radius:7px;padding:5px 12px;cursor:pointer;
   font:600 12.5px var(--f-ui);color:var(--dim2)}
@@ -152,9 +152,7 @@
 .fv-wrap.zoom-back{opacity:0;transform:scale(.82)}
 .fv-wrap.zoom-from-big{opacity:0;transform:scale(1.2);transition:none}
 
-.fv-layers{position:absolute;top:10px;right:10px;z-index:5;display:flex;gap:5px;
-  background:color-mix(in srgb,var(--paper) 86%,transparent);backdrop-filter:blur(6px);
-  -webkit-backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:999px;padding:3px}
+.fv-layers{margin-left:auto;display:flex;gap:5px;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--panel)}
 .fv-layers button{display:inline-flex;align-items:center;gap:6px;background:none;border:none;
   border-radius:999px;padding:4px 10px;cursor:pointer;font:600 11.5px var(--f-ui);color:var(--dim2)}
 .fv-layers button:hover{color:var(--fg)}
@@ -408,10 +406,80 @@
 .pill .fv-motion{display:inline-flex;align-items:center}
 .pill .fv-motion[aria-pressed="false"]{color:var(--dim2)}
 
+/* ── no flows: every connection drifts in its own direction, in ink ────────── */
+.fv-drawing .edge.ink .line{stroke:var(--dim);stroke-width:1.8}
+.fv-drawing .edge.ink.m-async .line{stroke-width:2.8}
+.fv-drawing .edge.ink .head{fill:var(--dim)}
+.fv-drawing .edge.ink.m-sync .line{animation:fv-march-s 1.6s linear infinite}
+.fv-drawing .edge.ink.m-async .line{animation:fv-march-a 2.2s linear infinite}
+
+/* ── results: passed is green and keeps moving; failed is red, rejected amber,
+      and both stand still with their marker where the call stopped ───────── */
+.fv-drawing .edge.r-pass .line{stroke:var(--ok);stroke-width:2.2}
+.fv-drawing .edge.r-pass .head{fill:var(--ok)}
+.fv-drawing .edge.r-pass:not(.live):not(.ink).m-sync .line{animation:fv-march-s 1.6s linear infinite}
+.fv-drawing .edge.r-pass:not(.live):not(.ink).m-async .line{animation:fv-march-a 2.2s linear infinite}
+.fv-drawing .edge.r-fail .line{stroke:var(--bad);stroke-width:2.2;animation:none!important}
+.fv-drawing .edge.r-fail .head{fill:var(--bad)}
+.fv-drawing .edge.r-error .line{stroke:var(--warn);stroke-width:2.2;animation:none!important}
+.fv-drawing .edge.r-error .head{fill:var(--warn)}
+.fv-drawing svg.stepping .edge.hot.r-pass .line{stroke:var(--ok)}
+.fv-drawing svg.stepping .edge.hot.r-fail .line{stroke:var(--bad)}
+.fv-drawing svg.stepping .edge.hot.r-error .line{stroke:var(--warn)}
+
+/* the marker where a call stopped: ✕ failed, ⚠ rejected — paper-backed so it reads on any line */
+.fv-drawing .rmark .rbg{fill:var(--paper);stroke-width:1.6;stroke-linejoin:round}
+.fv-drawing .rmark .rfg{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.fv-drawing .rmark.r-pass .rbg,.fv-drawing .rmark.r-pass .rfg{stroke:var(--ok)}
+.fv-drawing .rmark.r-fail .rbg,.fv-drawing .rmark.r-fail .rfg{stroke:var(--bad)}
+.fv-drawing .rmark.r-error .rbg,.fv-drawing .rmark.r-error .rfg{stroke:var(--warn)}
+.fv-drawing .rmark.pop{animation:fv-xin .28s var(--d-ease) both}
+.fv-drawing .rmark{transition:opacity .2s var(--d-ease)}
+.fv-drawing svg.stepping .rmark:not(.hot){opacity:.3}
+.fv-drawing svg.focus .rmark:not(.near){opacity:.2}
+.fv-drawing .burst.warn{stroke:var(--warn)}
+.fv-drawing svg.fv-instant *{transition:none!important}
+
+/* a box's own result: a filled badge top-left (top-right belongs to ⤢) and its border */
+.fv-drawing .nres .rbg{stroke:var(--paper);stroke-width:2;stroke-linejoin:round}
+.fv-drawing .nres .rfg{fill:none;stroke:var(--on-tint);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.fv-drawing .nres.r-pass .rbg{fill:var(--ok)}
+.fv-drawing .nres.r-fail .rbg{fill:var(--bad)}
+.fv-drawing .nres.r-error .rbg{fill:var(--warn)}
+.fv-drawing .node.r-pass .shape{stroke:var(--ok);stroke-width:2}
+.fv-drawing .node.r-fail .shape{stroke:var(--bad);stroke-width:2}
+.fv-drawing .node.r-error .shape{stroke:var(--warn);stroke-width:2}
+
+/* a step's result on its badge, its rail dot, its drawer number and its packet */
+.fv-drawing .stepno.r-pass circle{fill:var(--ok)}
+.fv-drawing .stepno.r-fail circle{fill:var(--bad)}
+.fv-drawing .stepno.r-error circle{fill:var(--warn)}
+.fv-dot.r-pass{background:var(--ok);border-color:var(--ok);color:var(--on-tint)}
+.fv-dot.r-fail{background:var(--bad);border-color:var(--bad);color:var(--on-tint)}
+.fv-dot.r-error{background:var(--warn);border-color:var(--warn);color:var(--on-tint)}
+.fv-dot.now.r-pass{box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--ok)}
+.fv-dot.now.r-fail{box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--bad)}
+.fv-dot.now.r-error{box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--warn)}
+.fv-drawer .steplist .num.r-pass{background:var(--ok)}
+.fv-drawer .steplist .num.r-fail{background:var(--bad)}
+.fv-drawer .steplist .num.r-error{background:var(--warn)}
+.fv-drawer .fv-resbox{margin:0}
+.fv-drawing .pkt.pass .halo,.fv-drawing .pkt.pass .core{fill:var(--ok)}
+.fv-drawing .pkt.error .halo,.fv-drawing .pkt.error .core{fill:var(--warn)}
+.fv-res{font-weight:700;white-space:nowrap}
+.fv-res.r-pass,.fv-peek .res.r-pass{color:var(--ok)}
+.fv-res.r-fail,.fv-peek .res.r-fail{color:var(--bad)}
+.fv-res.r-error,.fv-peek .res.r-error{color:var(--warn)}
+.fv-peek .res{margin:0 0 4px;font:700 12px var(--f-ui)}
+.fv-seq .msg.r-pass .line{stroke:var(--ok)} .fv-seq .msg.r-pass .head{fill:var(--ok)}
+.fv-seq .msg.error .line{stroke:var(--warn);stroke-dasharray:none;stroke-width:2.2}
+.fv-seq .msg.now.r-pass .line{stroke:var(--ok)} .fv-seq .msg.now.r-pass .head{fill:var(--ok)}
+.fv-seq .msg.now.error .line{stroke:var(--warn)}
+
 /* ── motion off: the system still reads, only the drift stops ─────────────── */
-.still .fv-drawing .edge.live .line,.still .fv-drawing .stepno.now circle{animation:none!important}
+.still .fv-drawing .edge .line,.still .fv-drawing .stepno.now circle{animation:none!important}
 @media (prefers-reduced-motion:reduce){
-  .fv-drawing .edge.live .line,.fv-drawing .stepno.now circle{animation:none!important}
+  .fv-drawing .edge .line,.fv-drawing .stepno.now circle{animation:none!important}
   .fv-drawer,.fv-wrap,.fv-peek,.fv-flow,.fv-dot{transition:none!important}
 }
 
@@ -422,7 +490,7 @@
   .fv-hd-top{padding-right:0}
   .fv-drawing h1.fv-title{font-size:23px}
   .fv-views{margin-left:0}
-  .fv-layers{position:static;margin:10px 10px 0;width:max-content;max-width:calc(100% - 20px);overflow-x:auto}
+  .fv-layers{margin-left:0;max-width:100%;overflow-x:auto}
   .fv-drawer{top:auto;left:0;width:auto;max-height:82vh;border-left:none;border-top:1px solid var(--line);
     border-radius:18px 18px 0 0;transform:translateY(104%)}
   .fv-drawer.on{transform:none}

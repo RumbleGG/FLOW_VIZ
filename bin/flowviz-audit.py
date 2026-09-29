@@ -141,6 +141,9 @@ receive reduce refuse release remove render repeat replace report require reset 
 return reuse rewrite route run save say scale scaffold see send serve set settle show shrink sit skip slow sort
 split stamp start stay stop store survive swap sync take talk tell test think throw time touch track travel
 trigger trust try turn understand update use validate verify wait walk want warn win work wrap write
+die hang crash stall leak lag spike reject deny cross succeed recover retry restart rotate expire rise
+climb double halve beat cover ship roll speak drain queue land time-out break-even outgrow undo redo
+stick drift slip overflow underflow corrupt duplicate deliver bounce
 '''.split())
 AUX = set('''
 is are was were be been being am has have had do does did can could will would shall should may might must
@@ -215,7 +218,7 @@ def report_caps(a, doc):
     vit = doc.first(cls('vitals'))
     tiles = [k for k in vit.kids if isinstance(k, El)] if vit else []
     a.cap(S, 'vital tiles', len(tiles), '≤ 5', len(tiles) <= 5)
-    nxt = doc.first(cls('next'))
+    nxt = card.first(cls('next')) if card else None
     items = nxt.find(lambda e: e.tag == 'li') if nxt else []
     a.cap(S, 'next items', len(items), '≤ 4', len(items) <= 4)
     longest = max([words(i.text()) for i in items] or [0])
@@ -263,8 +266,70 @@ def report_caps(a, doc):
     a.unmeasured(S, 'screens at rest', 'needs layout: --browser')
 
 
+
+def results_checks(a, doc):
+    """A Results section, once the human has run the playbook: first on the page, an outcome,
+    a claim, a summary, one drawing that marks where it passed or failed, next actions, and one
+    gated step that archives the finished work."""
+    res = doc.find(lambda e: e.tag == 'section' and e.has('results'))
+    if not res:
+        return
+    S = 'results'
+    if len(res) > 1:
+        a.check(S, 'one Results section', ['this report has %d; keep one and edit it' % len(res)])
+    r = res[0]
+    order = {id(e): i for i, e in enumerate(doc.walk())}
+    card = doc.first(cls('card'))
+    ahead = card is None or order[id(r)] < order[id(card)]
+    a.cap(S, 'results come before the card', 'yes' if ahead else 'no', 'first', ahead)
+    outcome = r.attrs.get('data-outcome')
+    a.cap(S, 'outcome', outcome or 'none', 'pass|fail|blocked|inconclusive', outcome in OUTCOMES)
+    chip = r.first(cls('chip'))
+    a.cap(S, 'outcome chip', 'yes' if chip else 'no', 'present', chip is not None)
+    h2 = r.first(lambda e: e.tag == 'h2')
+    title = h2.text() if h2 else ''
+    a.cap(S, 'claim chars', len(title), '≤ 70', 0 < len(title) <= 70)
+    a.cap(S, 'claim contains a verb', 'yes' if has_verb(title) else 'no', 'a claim', has_verb(title))
+    summ = r.first(lambda e: e.attrs.get('data-slot') == 'summary')
+    a.cap(S, 'summary words', words(summ.text() if summ else ''), '≤ 50', 0 < words(summ.text() if summ else '') <= 50)
+    figs = r.find(lambda e: e.tag == 'figure' and e.has('fv-drawing'))
+    a.cap(S, 'diagrams', len(figs), '= 1', len(figs) == 1)
+    marks = []
+    if figs:
+        sc = figs[0].first(lambda e: e.tag == 'script' and e.attrs.get('type') == 'application/json')
+        try:
+            spec = json.loads(sc.raw() if sc else '')
+            things = (spec.get('nodes') or []) + (spec.get('edges') or []) + \
+                [st for f in spec.get('flows') or [] for st in f.get('steps') or []]
+            marks = [x.get('result') for x in things if x.get('result') or x.get('fail')]
+            marks = ['fail' if m is True else m for m in marks]
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            marks = []
+    a.cap(S, 'diagram marks a result', len(marks), '≥ 1', len(marks) >= 1)
+    fits = {'pass': 'fail' not in marks and 'error' not in marks, 'fail': 'fail' in marks,
+            'blocked': 'error' in marks, 'inconclusive': True}.get(outcome, True)
+    a.cap(S, 'diagram agrees with the outcome', 'yes' if fits else 'no', 'yes', fits)
+    nxt = r.first(cls('next'))
+    items = nxt.find(lambda e: e.tag == 'li') if nxt else []
+    a.cap(S, 'next items', len(items), '1 to 4', 1 <= len(items) <= 4)
+    longest = max([words(i.text()) for i in items] or [0])
+    a.cap(S, 'longest next item (words)', longest, '≤ 14', longest <= 14)
+    untagged = [i for i in items if not i.first(cls('badge'))]
+    a.cap(S, 'untagged next items', len(untagged), '0', not untagged)
+    arch = r.find(lambda e: e.tag == 'li' and e.has('step') and 'data-archive' in e.attrs)
+    gated = [x for x in arch if x.attrs.get('data-risk') == 'w' and x.first(cls('ack'))]
+    a.cap(S, 'archive step, gated', len(gated), '= 1', len(arch) == 1 and len(gated) == 1)
+    top = r.first(cls('top'))
+    ds = [x.first(cls('ds')) for x in arch]
+    rest = (words(top.text() if top else '') + words(title) + words(summ.text() if summ else '')
+            + sum(words(i.text()) for i in items) + sum(words(d.text()) for d in ds if d))
+    a.cap(S, 'words at rest', rest, '≤ 150', rest <= 150)
+    a.unmeasured(S, 'results screens', 'needs layout: --browser')
+
 # ── drawings ─────────────────────────────────────────────────────────────────
 KINDS = {'client', 'edge', 'service', 'data', 'stream', 'external', 'threat'}
+RESULTS = {'pass', 'fail', 'error'}
+OUTCOMES = {'pass', 'fail', 'blocked', 'inconclusive'}
 ROW_READ = {'context', 'finding', 'record'}
 ROW_ACT = {'investigation', 'test', 'change', 'rollback'}
 ROW_KINDS = ROW_READ | ROW_ACT | {'decision'}
@@ -334,6 +399,18 @@ def placeholders():
                 else:
                     exact.add(s)
         page.append(parse(text))
+    rpath = os.path.join(TEMPLATE, 'results.src.html')
+    if os.path.exists(rpath):
+        rtext = open(rpath, encoding='utf-8').read()
+        m = re.search(r'<!-- results-spec\n(.*?)\n-->', rtext, re.S)
+        if m:
+            ph = json.loads(m.group(1))
+            exact.update([ph['title'], ph['lede']] + spec_strings(ph['fallback']))
+        rdoc = parse(rtext)
+        # the archive step ships filled in (real paths), so its words are not placeholders
+        for e in rdoc.find(cls('archive')):
+            e.kids = []
+        page.append(rdoc)
     return exact, fams, page
 
 
@@ -374,7 +451,7 @@ def canvas_checks(a, S, spec, root, max_boxes, icons, unfilled, exact, fams):
     a.cap(S, 'lede words', words(lede), '≤ 30', words(lede) <= 30)
     a.cap(S, 'boxes', len(nodes), '≤ %d' % max_boxes, len(nodes) <= max_boxes)
     a.cap(S, 'zones', len(zones), '≤ 4', len(zones) <= 4)
-    a.cap(S, 'flows', len(flows), '1 to 3', 1 <= len(flows) <= 3)
+    a.cap(S, 'flows', len(flows), '0 to 3', len(flows) <= 3)
     most = max([len(f.get('steps') or []) for f in flows] or [0])
     a.cap(S, 'longest flow (steps)', most, '≤ 9', most <= 9)
     says = [s.get('say') or '' for f in flows for s in f.get('steps') or []]
@@ -432,6 +509,9 @@ def canvas_checks(a, S, spec, root, max_boxes, icons, unfilled, exact, fams):
             vocab.append('connection %s: mode "%s"' % (e.get('id'), e.get('mode')))
         if e.get('route') and e['route'] not in ROUTES:
             vocab.append('connection %s: route "%s"' % (e.get('id'), e.get('route')))
+    for x in nodes + edges + [s for f in flows for s in f.get('steps') or []]:
+        if x.get('result') is not None and x.get('result') not in RESULTS:
+            vocab.append('%s: result "%s" is not pass, fail or error' % (x.get('id'), x.get('result')))
     walked = set()
     for f in flows:
         for s in f.get('steps') or []:
@@ -490,7 +570,7 @@ def canvas_checks(a, S, spec, root, max_boxes, icons, unfilled, exact, fams):
     a.check(S, 'spec: grid', gridp)
     a.check(S, 'spec: through a box', through)
     a.unmeasured(S, 'crossings, boxes hit, labels shrunk or crossed', 'needs layout: --browser')
-    unused = [e.get('id') for e in edges if (e.get('from'), e.get('to')) not in walked]
+    unused = [e.get('id') for e in edges if (e.get('from'), e.get('to')) not in walked] if flows else []
     if unused:
         a.note(S, 'unused connection', ', '.join(unused) + ' — no flow walks it')
     for path, s in spec_strings(spec, paths=True):
@@ -512,8 +592,8 @@ def drawing_checks(a, doc, kind, exact, fams, unfilled):
         sid = spec.get('id', '?')
         ids.append(sid)
         S = 'drawing %s' % sid
-        in_spine = fig.inside(cls('spine'))
-        canvas_checks(a, S, spec, spec, 9 if in_spine else 12, icons, unfilled, exact, fams)
+        small = fig.inside(cls('spine')) or fig.inside(lambda p: p.tag == 'section' and p.has('results'))
+        canvas_checks(a, S, spec, spec, 9 if small else 12, icons, unfilled, exact, fams)
         for key, seg in (spec.get('segments') or {}).items():
             T = '%s › %s' % (S, key)
             if seg.get('parent') not in {n.get('id') for n in spec.get('nodes') or []}:
@@ -627,6 +707,8 @@ def page_checks(a, doc, tpl_pages, unfilled):
         ('status chip', lambda e: e.has('chip') and e.inside(cls('card'))),
         ('meta line', lambda e: e.has('meta') and e.inside(cls('card'))),
         ('verdict', lambda e: e.attrs.get('data-slot') == 'verdict'),
+        ('results claim', lambda e: e.tag == 'h2' and e.inside(lambda p: p.tag == 'section' and p.has('results'))),
+        ('results summary', lambda e: e.attrs.get('data-slot') == 'summary'),
         ('so what', lambda e: e.attrs.get('data-slot') == 'sowhat'),
         ('vital label', lambda e: e.has('l') and e.inside(cls('vitals'))),
         ('next item', lambda e: e.tag == 'li' and e.inside(cls('next'))),
@@ -808,6 +890,7 @@ def main():
     unfilled = []
     if kind == 'report':
         report_caps(a, doc)
+        results_checks(a, doc)
     drawing_checks(a, doc, kind, exact, fams, unfilled)
     if kind == 'drawing':
         a.unmeasured('page', 'screens at rest', 'needs layout: --browser')

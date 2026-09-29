@@ -5,3 +5,5 @@
 *.tmp
 __pycache__/
 .DS_Store
+# ...except the worked example, whose captures are the point of it
+!examples/deploy/deploy.flow.json

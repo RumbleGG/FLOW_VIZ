@@ -156,6 +156,26 @@ pre code{background:none;border:none;padding:0;font-size:12.5px}
 .badge.w{color:var(--bad);background:var(--badbg)}
 .badge.acc{color:var(--acc);background:var(--accbg)}
 
+/* ── RESULTS · written after the human ran the playbook ─────────────────────
+   Once a playbook has run, what happened is the main idea, so this block opens
+   the report and the card below it becomes the plan that was tested. The outcome
+   colours the top rule and nothing else; the drawing inside marks the point.   */
+section.results{position:relative;background:var(--paper);border:1px solid var(--line2);
+  border-top:4px solid var(--res,var(--line2));border-radius:var(--r);padding:16px 24px 16px;
+  margin:2px 0 16px;box-shadow:var(--sh)}
+section.results[data-outcome="pass"]{--res:var(--ok)}
+section.results[data-outcome="fail"]{--res:var(--bad)}
+section.results[data-outcome="blocked"]{--res:var(--warn)}
+section.results[data-outcome="inconclusive"]{--res:var(--dim2)}
+section.results .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+section.results .top .k{display:inline-block;margin:0;color:var(--res,var(--dim2))}
+section.results h2{font:600 23px/1.25 var(--f-body);margin:0 0 12px;letter-spacing:-.2px;max-width:34ch;
+  text-wrap:balance}
+section.results .fv-drawing{margin:14px 0 10px}
+section.results .next{margin-top:4px}
+section.results .archive{border-top:1px solid var(--line);padding-top:12px;margin-top:14px}
+section.results .archive .pb{margin:6px 0 0}
+
 /* ── LAYER 2 · spine ──────────────────────────────────────────────────────── */
 .spine{margin:22px 0 4px}
 .dia{border:1px solid var(--line);border-radius:var(--r);background:var(--paper);
@@ -279,9 +299,10 @@ li.step.done>.sd>summary .ds{color:var(--dim2);text-decoration:line-through}
 li.step>.sd .in{padding:10px 0 6px 0;margin-left:2.1em;border-top:1px dotted var(--line);
   margin-top:8px}
 /* `Done ☐`, injected by flow.js at the foot of every step — where the work ends,
-   so nobody scrolls back up to the row header to say they finished. Pressing it
-   pops ✅ in place of the box, then the step folds away 300ms later. */
-li.step .in .fin{display:flex;align-items:center;justify-content:space-between;gap:12px;
+   so nobody scrolls back up to the row header to say they finished. It sits in
+   the bottom-right corner with the verdict chip just before it: read "pass",
+   tick it off, one place. Pressing it pops ✅, then the step folds away 300ms later. */
+li.step .in .fin{display:flex;align-items:center;justify-content:flex-end;gap:10px;
   margin-top:12px;padding-top:9px;border-top:1px dotted var(--line)}
 li.step .in .fin button.fd{display:inline-flex;align-items:center;gap:8px;cursor:pointer;
   font:600 11.5px var(--f-ui);letter-spacing:.55px;text-transform:uppercase;color:var(--dim);
@@ -400,7 +421,7 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
      scroll — one tick mark and one verdict per step is enough */
   .pill,.ctl,.audit,.copy,.gate,.rr,.fin{display:none!important}
   body{background:var(--print-bg);padding:0;max-width:none;font-size:10.5pt}
-  .card,.dia,.box,.cmd,li.step,.phase,.foot,tr{break-inside:avoid}
+  .card,.dia,.box,.cmd,li.step,.phase,.foot,tr,section.results .top,section.results h2{break-inside:avoid}
   .card{box-shadow:none;break-after:avoid}
   details.row{background:var(--print-bg);box-shadow:none}
   details.row>summary,li.step>.sd>summary,h3,h2.sec,.pb>.hd{break-after:avoid}

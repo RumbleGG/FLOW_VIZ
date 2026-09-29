@@ -30,6 +30,7 @@ $F build ~/work/sto/STO.src.html          # 3. one self-contained .html (rebuild
 $F audit --browser ~/work/sto/STO.html    # 4. fix every OVER and FAIL
 $F serve ~/work/sto --open                # 5. hand over, served
 $F captures ~/work/sto/STO.html           # later: what they pasted, and every note they left
+$F results ~/work/sto/STO.src.html        # once they have run it all: start the Results section
 ```
 
 The deliverable lives in **the folder the work is in**; this repository is only the toolkit. Nothing is
@@ -167,6 +168,26 @@ which the toolkit refuses to install: **they are yours**, and so is a pass condi
 real output can actually falsify. Something **shown, not run** — a JSON sample, a tree, a log — is
 `<div class="cmd fig">`: dashed, no copy button, exempt. Never use it to smuggle a command past the audit.
 
+### When they have run it: Results
+
+Once the human has worked the playbook and you have read `flowviz captures`, close the report with a
+**Results** section. It goes **above the card** — what happened is now the main idea — and the card stays
+as the plan that was tested.
+
+1. `$F results <report>.src.html` inserts it with the outcome worked out from the sidecar (`blocked` if a
+   command was rejected, `fail` if the target said no, `pass` if every step passed, else `inconclusive`),
+   the chip and counts filled in, a drawing started from your spine drawing, and the archive step written.
+   Check the outcome; it is a first reading, not a verdict you must keep.
+2. Write the **claim** (`h2`, ≤70 chars with a verb: what happened), the **summary** (≤50 words: what ran,
+   what it proved, where it stopped) and **next** (1 to 4, tagged).
+3. **Mark the diagram**: `"result": "pass"` on the boxes and connections the run proved, `"fail"` where the
+   target said no, `"error"` where a command never ran. Green, a red ✕, an amber ⚠ — no flows needed, and
+   the marks must agree with the outcome.
+4. Keep the **archive step**: one gated write step that moves the finished folder into the workspace's
+   archive (`~/Archive` when it exists; `--archive-to` for another). Suggest it in your reply too; never
+   move anything yourself.
+5. Rebuild, `audit --browser`, hand it back. The worked example is `examples/deploy/`.
+
 ### Components
 
 All exist in the stylesheet. Use the class; never write CSS.
@@ -185,10 +206,14 @@ All exist in the stylesheet. Use the class; never write CSS.
 
 ## Drawings
 
-A drawing shows a whole system, or one segment of it, in motion. The human **looks** (boxes, zones, the
-selected flow moving), **hovers** (a one-sentence peek), **clicks** (the drawer: everything you know
-about that box, and a note box that reaches you), and **plays** (a packet walks the flow, one caption per
-step). You write the **spec** and the **depth**; the runtime lays out, routes, animates and wires the rest.
+A drawing shows a whole system, or one segment of it, with its connections moving in their direction.
+The human **looks** (boxes, zones, motion), **hovers** (a one-sentence peek) and **clicks** (the drawer:
+everything you know about that box, and a note box that reaches you). You write the **spec** and the
+**depth**; the runtime lays out, routes, animates and wires the rest.
+
+**Flows are off by default.** Leave `"flows": []` unless the human asked for a walkthrough of the order of
+events; then add up to three, and the drawing gains flow chips, step numbers and **Walk through** (a packet
+walks each flow, one caption per step), plus a Sequence view.
 
 ### The caps
 
@@ -198,7 +223,7 @@ step). You write the **spec** and the **depth**; the runtime lays out, routes, a
 | Lede | ≤30 words |
 | Boxes | ≤12 per canvas (≤9 as a report's spine). A 13th box means a segment. |
 | Zones | ≤4 |
-| Flows | 1 to 3; ≤9 steps each |
+| Flows | 0 by default; up to 3 when a walkthrough is asked for, ≤9 steps each |
 | Step `say` | exactly one sentence, ≤20 words; `msg` ≤24 chars |
 | Box `label` | ≤16 chars; `tech` ≤24 chars |
 | Connection `label` · `ms` | ≤16 chars · ≤20 chars |
@@ -284,8 +309,9 @@ The grid is the layout; you never write coordinates. `at: [col, row]`, zero-base
 |---|---|
 | **A whole system** | ≤12 boxes; zones for the boundaries that matter (trust, latency, ownership); up to three flows: the happy path, the read path, the failure path. |
 | **The inside of one box** | Give the box `"segment": "<key>"` and add `segments.<key>`: `parent`, its own `title`, `lede`, `grid`, `nodes`, `edges`, `flows`. Its neighbours come along as ghosts: `"ghost": "<parent box id>"`, same kind and icon. The box shows ⤢; the human zooms in and back. |
-| **One request, in order** | One flow, ≤9 steps, one hop or a short path each, the response as a path that walks back. The **Sequence** view lays it out in time with no extra work. |
-| **What fails, and what then** | A flow whose breaking step has `"fail": true`, followed by the steps that compensate. |
+| **One request, in order** *(when asked for)* | One flow, ≤9 steps, one hop or a short path each, the response as a path that walks back. The **Sequence** view lays it out in time with no extra work. |
+| **What fails, and what then** *(when asked for)* | A flow whose breaking step has `"fail": true`, followed by the steps that compensate. |
+| **Where a real run passed or failed** | No flows: `"result"` on the boxes and connections — see Results above. |
 | **Two options** | Two flows on one canvas, `Today` and `Proposed`. Boxes only one option needs go in a zone named for it. The connections only one flow walks are the difference — the human switches flows and watches them light up. |
 | **A system as part of a report** | The report scaffold's spine already holds a drawing (≤9 boxes, no `data-mode`). Extra drawings go inside rows. |
 | **A system too big for 12 boxes** | Split it into segments. A standalone drawing may itself be a segment (`"kind": "segment"`) of one drawn elsewhere. |

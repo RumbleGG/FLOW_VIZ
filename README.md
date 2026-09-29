@@ -27,6 +27,7 @@ Three ideas carry it:
 ~/Projects/FLOW_VIZ/bin/flowviz                      # the whole workflow on one screen
 open ~/Projects/FLOW_VIZ/PLAN.html                   # the toolkit's own plan, written to its standard
 open ~/Projects/FLOW_VIZ/examples/checkout/checkout.html   # a drawing: three flows, a failure, a segment
+open ~/Projects/FLOW_VIZ/examples/deploy/DEPLOY.html       # a report after its run: Results on top
 ~/Projects/FLOW_VIZ/bin/flowviz serve ~/Projects/FLOW_VIZ --open PLAN.html   # so your pastes reach disk
 ```
 
@@ -42,9 +43,9 @@ CLAUDE.md       for agents changing the toolkit itself
 VERSION         stamped into every deliverable's footer
 CHANGELOG.md    why each version changed
 PLAN.src.html   the toolkit's plan, as a report  →  PLAN.html
-bin/            flowviz (cheat sheet + dispatcher), new, build, audit, serve, captures
-template/       flow.css flow.js (core, reports) · draw.css draw.js icons.svg (drawings) · two scaffolds
-examples/       checkout/: the approved drawing, rebuilt by the toolkit
+bin/            flowviz (cheat sheet + dispatcher), new, build, audit, serve, captures, results
+template/       flow.css flow.js (core, reports) · draw.css draw.js icons.svg (drawings) · scaffolds
+examples/       checkout/: the approved drawing, with flows · deploy/: a report closed with Results
 mockups/        the first hand-made mockup of the drawing look, kept for reference
 ```
 

@@ -484,7 +484,6 @@
       b.type = 'button';
       b.className = 'fd';
       b.innerHTML = 'Done <span class="bx"></span>';
-      fin.appendChild(b);
       /* the verdict, repeated where the work ends — same `data-vd` key, so one
          paint path feeds both chips and a step that captures nothing gets no
          chip at all rather than a permanent `not captured`. aria-live, because
@@ -496,6 +495,9 @@
         vd.setAttribute('aria-live', 'polite');
         fin.appendChild(vd);
       }
+      /* Done sits in the bottom-right corner with the verdict just before it:
+         the eye reads "pass", then the hand ticks it off, in one place. */
+      fin.appendChild(b);
       inb.appendChild(fin);
       b.addEventListener('click', function () {
         var on = !step(id).done;
@@ -803,7 +805,11 @@
     var rowsEls = $$('details.row'), secs = $$('h2.sec');
     var wasOpen = rowsEls.map(function (d) { return d.open; });
     rowsEls.forEach(function (d) { d.open = false; });
-    var screens = document.documentElement.scrollHeight / window.innerHeight;
+    /* a Results section has its own budget (1.5 screens), so the report's
+       three-screen budget is measured without it */
+    var resEl = $('section.results');
+    var resH = resEl ? resEl.getBoundingClientRect().height : 0;
+    var screens = (document.documentElement.scrollHeight - resH) / window.innerHeight;
     var restWords = words(($('.card') ? $('.card').innerText : '') + ' ' +
       secs.map(function (h) { return h.textContent; }).join(' ') + ' ' +
       rowsEls.map(function (d) { var s = $('summary', d); return s ? s.innerText : ''; }).join(' '));
@@ -850,6 +856,10 @@
       chk('words at rest', restWords, CAP.atRest);
     }
     rows.push(['screens at rest', screens.toFixed(1), '≤ ' + CAP.screens, screens <= CAP.screens]);
+    if (resEl) {
+      var rs = resH / window.innerHeight;
+      rows.push(['results screens', rs.toFixed(1), '≤ 1.5', rs <= 1.5]);
+    }
 
     // drawings (and anything else that registered) add their own rows
     function add(label, actual, capText, ok) {

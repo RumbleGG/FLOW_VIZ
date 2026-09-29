@@ -14,7 +14,7 @@
 <div class="card">
   <div class="top">
     <span class="chip ok"><span class="d"></span>Rebuilt, with drawings</span>
-    <span class="meta">v1.0.0 · 2026-09-28 · the toolkit, written to its own standard</span>
+    <span class="meta">v2.0.0 · 2026-09-28 · the toolkit, written to its own standard</span>
   </div>
 
   <h1>FLOW_VIZ now draws systems as well as it writes reports</h1>
@@ -34,7 +34,7 @@
 
   <div class="vitals">
     <div><div class="n">2</div><div class="l">deliverables</div></div>
-    <div><div class="n">46</div><div class="l">caps measured</div></div>
+    <div><div class="n">61</div><div class="l">caps measured</div></div>
     <div><div class="n">12</div><div class="l">author checks</div></div>
     <div><div class="n">39</div><div class="l">box icons</div></div>
     <div><div class="n">0</div><div class="l">network deps</div></div>
@@ -59,77 +59,32 @@
   "name": "The round trip",
   "title": "Your paste reaches me because every save lands in one sidecar",
   "lede": "The top row hands a report to you; the bottom row brings what you typed back to me.",
-  "grid": { "cols": 4, "rows": 2 },
+  "grid": {"cols": 4, "rows": 2},
   "zones": [
-    { "id": "out", "label": "Hand over", "cols": [0, 3], "rows": [0, 0], "tone": "sync" },
-    { "id": "back", "label": "Read back", "cols": [0, 3], "rows": [1, 1], "tone": "async", "tag": "bl" }
+    {"id": "out", "label": "Hand over", "cols": [0, 3], "rows": [0, 0], "tone": "sync"},
+    {"id": "back", "label": "Read back", "cols": [0, 3], "rows": [1, 1], "tone": "async", "tag": "bl"}
   ],
   "nodes": [
-    { "id": "agent", "label": "Agent", "kind": "client", "icon": "agent", "at": [0, 0], "tech": "any work folder",
-      "peek": "Works in the project folder, reads only AGENTS.md from here, and hands back one file.",
-      "facts": ["reads 1 doc"] },
-    { "id": "src", "label": "Source", "kind": "data", "icon": "file", "at": [1, 0], "tech": "NAME.src.html",
-      "peek": "The words and the drawing spec. No CSS, no JavaScript and no coordinates: those come from the toolkit.",
-      "facts": ["slots · spec · depth"] },
-    { "id": "build", "label": "Build + audit", "kind": "service", "icon": "gear", "at": [2, 0], "tech": "flowviz build, audit",
-      "peek": "Inlines the runtime, stamps the version, snapshots the old file, then measures every cap.",
-      "facts": ["exit 1 on OVER"] },
-    { "id": "html", "label": "Deliverable", "kind": "data", "icon": "browser", "at": [3, 0], "tech": "NAME.html",
-      "peek": "One self-contained file: styles, scripts and icons inline. Opens offline and prints cleanly.",
-      "facts": ["no network"] },
-    { "id": "you", "label": "You", "kind": "client", "icon": "user", "at": [3, 1], "tech": "a browser",
-      "peek": "You read the card, run the checklist, paste the output and leave notes on boxes.",
-      "facts": ["saves as you type"] },
-    { "id": "serve", "label": "Server", "kind": "service", "icon": "server", "at": [2, 1], "tech": "flowviz serve",
-      "peek": "Serves the folder on localhost and writes the sidecar atomically each time the page saves.",
-      "facts": ["127.0.0.1 only"] },
-    { "id": "sidecar", "label": "Sidecar", "kind": "data", "icon": "json", "at": [1, 1], "tech": "NAME.flow.json",
-      "peek": "The only state: captures, superseded runs, notes and ticks, all keyed by stable ids.",
-      "facts": ["schema 3"] },
-    { "id": "captures", "label": "Captures", "kind": "service", "icon": "terminal", "at": [0, 1], "tech": "flowviz captures",
-      "peek": "Joins each capture to its step and re-derives its verdict from the current rules.",
-      "facts": ["error is not fail"] }
+    {"id": "agent", "label": "Agent", "kind": "client", "icon": "agent", "at": [0, 0], "tech": "any work folder", "peek": "Works in the project folder, reads only AGENTS.md from here, and hands back one file.", "facts": ["reads 1 doc"]},
+    {"id": "src", "label": "Source", "kind": "data", "icon": "file", "at": [1, 0], "tech": "NAME.src.html", "peek": "The words and the drawing spec. No CSS, no JavaScript and no coordinates: those come from the toolkit.", "facts": ["slots · spec · depth"]},
+    {"id": "build", "label": "Build + audit", "kind": "service", "icon": "gear", "at": [2, 0], "tech": "flowviz build, audit", "peek": "Inlines the runtime, stamps the version, snapshots the old file, then measures every cap.", "facts": ["exit 1 on OVER"]},
+    {"id": "html", "label": "Deliverable", "kind": "data", "icon": "browser", "at": [3, 0], "tech": "NAME.html", "peek": "One self-contained file: styles, scripts and icons inline. Opens offline and prints cleanly.", "facts": ["no network"]},
+    {"id": "you", "label": "You", "kind": "client", "icon": "user", "at": [3, 1], "tech": "a browser", "peek": "You read the card, run the checklist, paste the output and leave notes on boxes.", "facts": ["saves as you type"]},
+    {"id": "serve", "label": "Server", "kind": "service", "icon": "server", "at": [2, 1], "tech": "flowviz serve", "peek": "Serves the folder on localhost and writes the sidecar atomically each time the page saves.", "facts": ["127.0.0.1 only"]},
+    {"id": "sidecar", "label": "Sidecar", "kind": "data", "icon": "json", "at": [1, 1], "tech": "NAME.flow.json", "peek": "The only state: captures, superseded runs, notes and ticks, all keyed by stable ids.", "facts": ["schema 3"]},
+    {"id": "captures", "label": "Captures", "kind": "service", "icon": "terminal", "at": [0, 1], "tech": "flowviz captures", "peek": "Joins each capture to its step and re-derives its verdict from the current rules.", "facts": ["error is not fail"]}
   ],
   "edges": [
-    { "id": "agent-src", "from": "agent", "to": "src", "mode": "sync", "label": "writes", "ms": "minutes",
-      "peek": "The agent fills slots in a scaffold; it never invents structure." },
-    { "id": "src-build", "from": "src", "to": "build", "mode": "sync", "label": "build", "ms": "< 1 s",
-      "peek": "One command inlines the runtime and parses every drawing spec." },
-    { "id": "build-html", "from": "build", "to": "html", "mode": "sync", "label": "writes", "ms": "< 1 s",
-      "peek": "The previous output is copied to .flowviz/history before it is overwritten." },
-    { "id": "html-you", "from": "html", "to": "you", "mode": "sync", "label": "HTTP", "ms": "localhost",
-      "peek": "Served by flowviz serve. Opened from Finder instead, nothing you type reaches disk." },
-    { "id": "you-serve", "from": "you", "to": "serve", "mode": "async", "label": "PUT state", "ms": "700 ms debounce",
-      "peek": "Every tick, paste and note saves on its own, 700 ms after you stop typing." },
-    { "id": "serve-sidecar", "from": "serve", "to": "sidecar", "mode": "sync", "label": "atomic write", "ms": "fsync",
-      "peek": "mkstemp, fsync, os.replace: a crash mid-save leaves the old file, never half of one." },
-    { "id": "sidecar-captures", "from": "sidecar", "to": "captures", "mode": "sync", "label": "reads", "ms": "on demand",
-      "peek": "The read-back reads the sidecar, never the HTML, which holds no state." },
-    { "id": "captures-agent", "from": "captures", "to": "agent", "mode": "sync", "label": "joined output", "ms": "on demand",
-      "peek": "Each capture arrives attributed to its step, with its superseded attempts." }
+    {"id": "agent-src", "from": "agent", "to": "src", "mode": "sync", "label": "writes", "ms": "minutes", "peek": "The agent fills slots in a scaffold; it never invents structure."},
+    {"id": "src-build", "from": "src", "to": "build", "mode": "sync", "label": "build", "ms": "< 1 s", "peek": "One command inlines the runtime and parses every drawing spec."},
+    {"id": "build-html", "from": "build", "to": "html", "mode": "sync", "label": "writes", "ms": "< 1 s", "peek": "The previous output is copied to .flowviz/history before it is overwritten."},
+    {"id": "html-you", "from": "html", "to": "you", "mode": "sync", "label": "HTTP", "ms": "localhost", "peek": "Served by flowviz serve. Opened from Finder instead, nothing you type reaches disk."},
+    {"id": "you-serve", "from": "you", "to": "serve", "mode": "async", "label": "PUT state", "ms": "700 ms debounce", "peek": "Every tick, paste and note saves on its own, 700 ms after you stop typing."},
+    {"id": "serve-sidecar", "from": "serve", "to": "sidecar", "mode": "sync", "label": "atomic write", "ms": "fsync", "peek": "mkstemp, fsync, os.replace: a crash mid-save leaves the old file, never half of one."},
+    {"id": "sidecar-captures", "from": "sidecar", "to": "captures", "mode": "sync", "label": "reads", "ms": "on demand", "peek": "The read-back reads the sidecar, never the HTML, which holds no state."},
+    {"id": "captures-agent", "from": "captures", "to": "agent", "mode": "sync", "label": "joined output", "ms": "on demand", "peek": "Each capture arrives attributed to its step, with its superseded attempts."}
   ],
-  "flows": [
-    { "id": "handover", "label": "Hand over", "summary": "4 steps from a blank folder to a file you can open.",
-      "steps": [
-        { "id": "h1", "path": ["agent", "src"], "msg": "new + fill", "say": "The agent scaffolds a source file and writes every slot." },
-        { "id": "h2", "path": ["src", "build"], "msg": "build", "say": "The toolkit inlines the runtime, stamps the version and audits every cap." },
-        { "id": "h3", "path": ["build", "html"], "msg": "NAME.html", "say": "One self-contained file lands in the work folder." },
-        { "id": "h4", "path": ["html", "you"], "msg": "served", "say": "You open it through flowviz serve, never from Finder." }
-      ] },
-    { "id": "readback", "label": "Read back", "summary": "4 steps from your paste to my next move.",
-      "steps": [
-        { "id": "r1", "path": ["you", "serve"], "msg": "PUT state", "say": "Every tick, paste and note saves itself as you work." },
-        { "id": "r2", "path": ["serve", "sidecar"], "msg": "atomic write", "say": "The server writes the sidecar atomically and keeps one backup per run." },
-        { "id": "r3", "path": ["sidecar", "captures"], "msg": "read", "say": "flowviz captures reads the sidecar, never the HTML." },
-        { "id": "r4", "path": ["captures", "agent"], "msg": "joined output", "say": "Each capture reaches me joined to its step, its verdict re-derived." }
-      ] },
-    { "id": "finder", "label": "Opened from Finder", "summary": "3 steps showing the one way the loop fails silently.",
-      "steps": [
-        { "id": "x1", "path": ["html", "you"], "msg": "file://", "say": "Opened from Finder, the page has no server to save to." },
-        { "id": "x2", "path": ["you", "serve"], "msg": "PUT state", "fail": true, "say": "Saves stay in the browser, and the pill says local only." },
-        { "id": "x3", "path": ["sidecar", "captures"], "msg": "no sidecar", "fail": true, "say": "The read-back finds no sidecar and says so instead of guessing." }
-      ] }
-  ]
+  "flows": []
 }
 </script>
 <div class="fv-depth" hidden>
@@ -210,8 +165,15 @@ and one attribute per row; the page draws the labels, and the audit fails a labe
 what the row holds.</p>
 
 <p>A report's spine diagram is now a drawing by default: the same component, capped at nine boxes,
-wearing the report's paper and ink. The one you are looking at above is real — hover it, click a box,
-press <b>Walk through</b>.</p>
+wearing the report's paper and ink. The one above is real: hover it, click a box. It has no flows,
+which is the default; <code>examples/checkout</code> shows what a drawing gains when a walkthrough is asked for.</p>
+
+<h3>After the run: Results</h3>
+<p>When you have run a playbook and I have read your pastes back, I close the report with a
+<b>Results</b> section above the card: the outcome, a claim, a summary, a drawing that marks where the
+run passed (green) or failed (a red ✕), next actions, and a gated step that moves the finished folder
+into <code>~/Archive</code>. <code>flowviz results</code> starts it from the sidecar; see
+<code>examples/deploy</code> for one written end to end.</p>
 
 <div class="cmd fig"><pre><code>FLOW_VIZ/
   AGENTS.md    the only file an agent in another folder reads
@@ -232,8 +194,8 @@ press <b>Walk through</b>.</p>
 <summary><span class="ord">2</span><span class="cl">A drawing is written as a spec and drawn by the runtime</span><span class="rt">2 min</span></summary>
 <div class="in">
 
-<p>The agent writes a JSON spec — boxes placed on a grid, connections, up to three flows of one-sentence
-steps — and plain HTML for depth. It never writes coordinates, colours or animation. That is what makes
+<p>The agent writes a JSON spec — boxes placed on a grid, connections, and only when a walkthrough is
+asked for, up to three flows of one-sentence steps — and plain HTML for depth. It never writes coordinates, colours or animation. That is what makes
 every drawing behave the same, and what lets the audit count a drawing's caps without a browser.</p>
 
 <table>
@@ -242,7 +204,7 @@ every drawing behave the same, and what lets the audit count a drawing's caps wi
 <tr><td><b>Look</b></td><td>boxes, zones, the selected flow in motion, step numbers</td><td>≤12 boxes, ≤60 words</td></tr>
 <tr><td><b>Hover</b></td><td>a peek: one sentence, up to three facts</td><td>≤25 words</td></tr>
 <tr><td><b>Click</b></td><td>the drawer: depth, the steps a box takes part in, a note for the agent</td><td>unlimited</td></tr>
-<tr><td><b>Play</b></td><td>a labelled packet walks the flow, one caption per step</td><td>≤9 steps, ≤20 words each</td></tr>
+<tr><td><b>Play</b></td><td>only when a walkthrough is asked for: a packet walks each flow, one caption per step</td><td>≤9 steps, ≤20 words each</td></tr>
 </tbody>
 </table>
 
@@ -307,6 +269,7 @@ current rules every time the page loads and every time I read them back.</p></di
 <thead><tr><th>Measured</th><th>How</th></tr></thead>
 <tbody>
 <tr><td>22 report caps</td><td>from the markup: card slots, headers, row kinds, steps, words at rest</td></tr>
+<tr><td>15 Results caps</td><td>outcome, claim, summary, a diagram that marks the result and agrees with it, next, the archive step, its own words and height</td></tr>
 <tr><td>19 caps per drawing canvas</td><td>from the spec, for the root and every segment</td></tr>
 <tr><td>5 layout caps</td><td>headless Chrome on <code>?audit=1</code>: screens at rest, crossings, boxes hit, labels shrunk, zone labels crossed</td></tr>
 <tr><td>12 author checks</td><td>unfilled slots, four paste checks, fragile regexes, row kind against content, and the spec's ids, references, vocabulary, grid and routing</td></tr>

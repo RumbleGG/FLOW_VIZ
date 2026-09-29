@@ -347,7 +347,7 @@
     var d = keyTarget();
     if (!d) return;
     if (ev.key === 'Escape') { d.escape(); return; }
-    if (d.view() === 'spec') return;
+    if (d.view() === 'spec' || !d.hasFlows()) return;
     if (ev.key === 'ArrowRight') { ev.preventDefault(); d.stepBy(1); }
     else if (ev.key === 'ArrowLeft') { ev.preventDefault(); d.stepBy(-1); }
     else if (ev.key === ' ' && !(t && t.closest && t.closest('button, [role="button"], a, summary'))) {
@@ -447,6 +447,35 @@
 
     function flow() { return S.spec.flows[S.flow] || { label: '', summary: '', steps: [] }; }
     function scope(key) { return (S.seg ? S.seg + '/' : '') + key; }
+    /* results: what a real run found — on a flow step, a connection or a box.
+       pass = verified; fail = the target said no; error = the command was
+       rejected, so the target was never asked. fail outranks error outranks pass. */
+    var RES = {
+      pass: { glyph: '✓', word: 'Passed', step: 'passed', tone: 'ok',
+              note: 'The run verified this.' },
+      fail: { glyph: '✕', word: 'Failed here', step: 'failed', tone: 'bad',
+              note: 'The target said no here. That is evidence about the system.' },
+      error: { glyph: '⚠\uFE0E', word: 'Rejected: the command never ran', step: 'rejected: the command never ran', tone: 'warn',
+               note: 'The command was rejected before it reached the target, so this says nothing about the system. The defect is in the playbook.' }
+    };
+    var RANK = { pass: 1, error: 2, fail: 3 };
+    function resultOf(x) { var r = x && x.result; return RES[r] ? r : null; }
+    function stronger(a, b) { return !a ? b : !b ? a : (RANK[b] > RANK[a] ? b : a); }
+    function hasFlows() { return (S.spec.flows || []).length > 0; }
+    function flowOutcome(fl) {
+      var steps = (fl && fl.steps) || [], rs = steps.map(resultOf).filter(Boolean);
+      if (!rs.length) return null;
+      if (rs.indexOf('fail') >= 0) return 'fail';
+      if (rs.indexOf('error') >= 0) return 'error';
+      return rs.length === steps.length ? 'pass' : null;
+    }
+    /* the flow's accent: green once every step passed, else its own tone */
+    function flowAccent(i) { return flowOutcome(S.spec.flows[i]) === 'pass' ? 'var(--ok)' : 'var(--' + tone(i) + ')'; }
+    /* the chip's dot says the outcome of a results flow at a glance */
+    function chipColor(i) { var o = flowOutcome(S.spec.flows[i]); return o ? 'var(--' + RES[o].tone + ')' : 'var(--' + tone(i) + ')'; }
+    function resBox(r) {
+      return '<div class="box ' + RES[r].tone + ' fv-resbox"><p><b>' + RES[r].glyph + ' ' + esc(RES[r].word) + '.</b> ' + esc(RES[r].note) + '</p></div>';
+    }
     function noteKey(key) { return ID + '/' + scope(key); }
     function ui() { return uiDraw(ID); }
     function persistUi(patch) { if (S.seg) return; var u = ui(); for (var k in patch) u[k] = patch[k]; save(); }
@@ -483,7 +512,8 @@
 
       R.stage = h('section', 'fv-stage');
       R.stage.setAttribute('aria-label', 'System drawing');
-      R.layers = h('div', 'fv-layers', null, R.stage);
+      R.layers = h('div', 'fv-layers', null, R.strip);
+      R.strip.insertBefore(R.layers, R.views);
       R.tg = {};
       [['labels', 'Labels', 'Protocols on every connection, technology under every box'],
        ['times', 'Timings', 'Latency on every connection'],
@@ -508,15 +538,7 @@
         copyText(JSON.stringify(specSource(), null, 2), ev.currentTarget, 'Spec copied');
       });
       R.peek = h('div', 'fv-peek', null, R.stage); R.peek.hidden = true;
-      R.key = h('div', 'fv-key',
-        '<svg viewBox="0 0 44 14"><g class="edge m-sync live"><path class="line" d="M2 7H42"/></g></svg><span>Synchronous call; the dashes travel with the request</span>' +
-        '<svg viewBox="0 0 44 14"><g class="edge m-async live"><path class="line" d="M2 7H42"/></g></svg><span>Asynchronous message; nobody waits on it</span>' +
-        '<svg viewBox="0 0 44 14"><g class="edge m-async live"><path class="line" d="M2 4H42"/><path class="line" d="M42 10H2"/></g></svg><span>Two lanes: traffic both ways</span>' +
-        '<svg viewBox="0 0 44 14"><g class="edge m-sync"><path class="line" d="M2 7H42"/></g></svg><span>Exists, but not part of this flow</span>' +
-        '<svg viewBox="0 0 44 14"><g class="edge m-sync live failing"><path class="line" d="M2 7H42"/></g></svg><span>The call fails here</span>' +
-        '<svg viewBox="0 0 44 14"><g class="stepno"><circle cx="22" cy="7" r="7"/><text x="22" y="7">3</text></g></svg><span>Step number; press it to play that step</span>' +
-        '<svg viewBox="0 0 44 14"><g class="node k-service"><g class="seg"><circle cx="22" cy="7" r="6.5"/><path d="M19.8 4.8h4.4v4.4M24.2 4.8l-4.4 4.4"/></g></g></svg><span>Opens a segment: the inside of that box</span>',
-        R.stage);
+      R.key = h('div', 'fv-key', null, R.stage);
       R.key.hidden = true;
       R.rail = h('div', 'fv-rail', null, R.stage);
       R.play = h('button', 'fv-play', null, R.rail); R.play.type = 'button';
@@ -559,7 +581,7 @@
       S.layer = {
         zones: el('g', { class: 'zones' }, svg), edges: el('g', { class: 'edges' }, svg),
         nodes: el('g', { class: 'nodes' }, svg), badges: el('g', { class: 'badges' }, svg),
-        fx: el('g', { class: 'fx' }, svg), seqfx: S.layer.seqfx
+        marks: el('g', { class: 'marks' }, svg), fx: el('g', { class: 'fx' }, svg), seqfx: S.layer.seqfx
       };
       L.zones.forEach(drawZone);
       L.plans.forEach(drawEdge);
@@ -609,8 +631,10 @@
       while (s.length > 3 && t.getComputedTextLength() > max) { s = s.slice(0, -1); t.textContent = s + '…'; }
     }
     function drawNode(n, b) {
+      var nr = resultOf(n);
       var g = el('g', {
-        class: 'node k-' + (KIND[n.kind] ? n.kind : 'service') + (n.ghost ? ' ghost' : '') + (n.tech ? ' has-tech' : ''),
+        class: 'node k-' + (KIND[n.kind] ? n.kind : 'service') + (n.ghost ? ' ghost' : '') + (n.tech ? ' has-tech' : '') +
+          (nr ? ' r-' + nr : ''),
         'data-node': n.id, tabindex: 0, role: 'button',
         'aria-label': (n.label || n.id) + (n.peek ? '. ' + n.peek : '')
       }, S.layer.nodes);
@@ -633,8 +657,27 @@
         var tl = el('title', {}, sg); tl.textContent = 'Open the inside of ' + (n.label || n.id);
         sg.addEventListener('click', function (ev) { ev.stopPropagation(); hoverOff(); openSegment(n.segment, n.id); });
       }
+      if (nr) {
+        var rb = el('g', { class: 'nres r-' + nr, transform: 'translate(' + f(b.x + 3) + ' ' + f(b.y + 3) + ')' }, g);
+        resGlyph(rb, nr, 9.5);
+        var rt = el('title', {}, rb); rt.textContent = RES[nr].word;
+      }
       S.nref[n.id] = { g: g, b: b };
       wireHover(g, 'node', n.id, g);
+    }
+    /* ✓ ✕ ⚠ drawn, not typed, so they read the same in every font, theme and print */
+    function resGlyph(g, r, rad) {
+      if (r === 'error') {
+        var k = rad / 9.5;
+        el('path', { class: 'rbg', d: 'M0 ' + f(-9.8 * k) + 'L' + f(9.4 * k) + ' ' + f(7 * k) + 'H' + f(-9.4 * k) + 'Z' }, g);
+        el('path', { class: 'rfg', d: 'M0 ' + f(-3.6 * k) + 'V' + f(1.6 * k) + 'M0 ' + f(4.4 * k) + 'v.1' }, g);
+      } else {
+        el('circle', { class: 'rbg', r: rad }, g);
+        el('path', { class: 'rfg', d: r === 'pass'
+          ? 'M' + f(-rad * 0.42) + ' 0.2l' + f(rad * 0.3) + ' ' + f(rad * 0.3) + 'l' + f(rad * 0.56) + ' ' + f(-rad * 0.6)
+          : 'M' + f(-rad * 0.36) + ' ' + f(-rad * 0.36) + 'L' + f(rad * 0.36) + ' ' + f(rad * 0.36) + 'M' + f(rad * 0.36) + ' ' + f(-rad * 0.36) + 'L' + f(-rad * 0.36) + ' ' + f(rad * 0.36) }, g);
+      }
+      return g;
     }
 
     /* ── flows: which lanes a step walks, and which way ──────────────────── */
@@ -650,37 +693,90 @@
       return { lane: null, back: false, edge: null };
     }
     function hops(st) {
-      var out = [], path = st.path || [];
+      var out = [], path = st.path || [], res = resultOf(st), last = path.length - 2;
       for (var i = 0; i < path.length - 1; i++) {
         var hp = laneFor(path[i], path[i + 1]);
         hp.a = path[i]; hp.b = path[i + 1]; hp.i = i;
-        hp.mode = st.fail && i === path.length - 2 ? 'fail'
+        hp.mode = (st.fail || res === 'fail') && i === last ? 'fail'
+          : res === 'error' && i === 0 ? 'error'
           : hp.edge && hp.edge.mode === 'async' ? 'event'
           : hp.back ? 'response' : 'request';
+        /* a failed step got as far as its last hop; a rejected one never left its first */
+        hp.result = res === 'pass' ? 'pass' : res === 'fail' ? (i === last ? 'fail' : 'pass')
+          : res === 'error' ? (i === 0 ? 'error' : null) : null;
+        hp.walked = !(res === 'error' && i > 0);
         out.push(hp);
       }
       return out;
     }
     function applyFlow() {
-      fig.style.setProperty('--flow', 'var(--' + tone(S.flow) + ')');
-      S.lanes.forEach(function (L) { L.inFlow = L.fwd = L.back = false; });
+      fig.style.setProperty('--flow', hasFlows() ? flowAccent(S.flow) : 'var(--dim)');
+      R.map.classList.toggle('noflow', !hasFlows());
+      S.lanes.forEach(function (L) { L.inFlow = L.fwd = L.back = false; L.res = resultOf(L.edge); });
       flow().steps.forEach(function (st) {
         hops(st).forEach(function (hp) {
-          if (!hp.lane) return;
+          if (!hp.lane || !hp.walked) return;
           hp.lane.inFlow = true;
           if (hp.back) hp.lane.back = true; else hp.lane.fwd = true;
+          hp.lane.res = stronger(hp.lane.res, hp.result);
         });
       });
       restLanes();
-      renderBadges(); renderDots(); caption(-1); renderSeq(); printSteps();
+      renderBadges(); renderMarks(); renderDots(); caption(-1); renderSeq(); printSteps(); renderKey();
     }
-    /* at rest a lane moves the way the flow mostly uses it */
+    /* at rest a lane moves the way the flow mostly uses it; with no flows at all,
+       every connection drifts in its own direction, in ink */
     function restLanes() {
+      var none = !hasFlows();
       S.lanes.forEach(function (L) {
         L.g.classList.toggle('live', !!L.inFlow);
+        L.g.classList.toggle('ink', none);
         L.g.classList.toggle('rev', !!(L.inFlow && !L.fwd && L.back));
-        L.g.classList.remove('hot', 'failing');
+        L.g.classList.remove('hot', 'failing', 'r-pass', 'r-fail', 'r-error');
+        if (L.res) L.g.classList.add('r-' + L.res);
       });
+    }
+    /* the outcome is visible before anyone presses Walk through: a static ✕ where a
+       call failed, a ⚠ where a command was rejected — for connections and steps alike */
+    function markAt(pts, r) { return pointAt(pts, r === 'fail' ? 0.62 : 0.15); }
+    function renderMarks() {
+      var gm = S.layer.marks; gm.innerHTML = '';
+      S.spec.edges.forEach(function (e) {
+        var r = resultOf(e);
+        if ((r !== 'fail' && r !== 'error') || !S.eref[e.id]) return;
+        var pt = markAt(S.eref[e.id].pts, r);
+        resGlyph(el('g', { class: 'rmark r-' + r, 'data-edge': e.id, transform: 'translate(' + f(pt.x) + ' ' + f(pt.y) + ')' }, gm), r, 8.5);
+      });
+      flow().steps.forEach(function (st, si) {
+        var r = resultOf(st);
+        if (r !== 'fail' && r !== 'error') return;
+        var hs = hops(st), hp = r === 'fail' ? hs[hs.length - 1] : hs[0];
+        if (!hp || !hp.lane) return;
+        var pts = hp.back ? hp.lane.pts.slice().reverse() : hp.lane.pts, pt = markAt(pts, r);
+        resGlyph(el('g', { class: 'rmark r-' + r, 'data-si': si, 'data-edge': hp.edge.id,
+          transform: 'translate(' + f(pt.x) + ' ' + f(pt.y) + ')' }, gm), r, 8.5);
+      });
+    }
+    function stopPoint(st, hp) {
+      var pts = hp.back ? hp.lane.pts.slice().reverse() : hp.lane.pts;
+      return markAt(pts, hp.mode === 'fail' ? 'fail' : 'error');
+    }
+    function renderKey() {
+      var fl = hasFlows(), any = { pass: 0, fail: 0, error: 0 }, sp = S.spec;
+      (sp.nodes || []).concat(sp.edges || []).forEach(function (x) { var r = resultOf(x); if (r) any[r] = 1; });
+      (sp.flows || []).forEach(function (f0) { (f0.steps || []).forEach(function (st) { var r = resultOf(st); if (r) any[r] = 1; }); });
+      var mv = fl ? 'live' : 'ink', rows = [
+        '<svg viewBox="0 0 44 14"><g class="edge m-sync ' + mv + '"><path class="line" d="M2 7H42"/></g></svg><span>Synchronous call; the dashes travel with the request</span>',
+        '<svg viewBox="0 0 44 14"><g class="edge m-async ' + mv + '"><path class="line" d="M2 7H42"/></g></svg><span>Asynchronous message; nobody waits on it</span>',
+        '<svg viewBox="0 0 44 14"><g class="edge m-async ' + mv + '"><path class="line" d="M2 4H42"/><path class="line" d="M42 10H2"/></g></svg><span>Two lanes: traffic both ways</span>'];
+      if (fl) rows.push(
+        '<svg viewBox="0 0 44 14"><g class="edge m-sync"><path class="line" d="M2 7H42"/></g></svg><span>Exists, but not part of this flow</span>',
+        '<svg viewBox="0 0 44 14"><g class="stepno"><circle cx="22" cy="7" r="7"/><text x="22" y="7">3</text></g></svg><span>Step number; press it to play that step</span>');
+      if (any.pass) rows.push('<svg viewBox="0 0 44 14"><g class="edge m-sync r-pass ' + mv + '"><path class="line" d="M2 7H42"/></g></svg><span>Passed: verified by the run</span>');
+      if (any.fail) rows.push('<svg viewBox="0 0 44 14"><g class="edge m-sync r-fail"><path class="line" d="M2 7H42"/></g><g class="rmark r-fail" transform="translate(27 7)"><circle class="rbg" r="6.5"/><path class="rfg" d="M-2.3 -2.3L2.3 2.3M2.3 -2.3L-2.3 2.3"/></g></svg><span>Failed here: the target said no</span>');
+      if (any.error) rows.push('<svg viewBox="0 0 44 14"><g class="edge m-sync r-error"><path class="line" d="M2 7H42"/></g><g class="rmark r-error" transform="translate(9 7)"><path class="rbg" d="M0 -6.2L5.9 4.4H-5.9Z"/><path class="rfg" d="M0 -2.5V.8M0 2.6v.1"/></g></svg><span>Rejected: the command never ran</span>');
+      rows.push('<svg viewBox="0 0 44 14"><g class="node k-service"><g class="seg"><circle cx="22" cy="7" r="6.5"/><path d="M19.8 4.8h4.4v4.4M24.2 4.8l-4.4 4.4"/></g></g></svg><span>Opens a segment: the inside of that box</span>');
+      R.key.innerHTML = rows.join('');
     }
     function renderBadges() {
       var gb = S.layer.badges; gb.innerHTML = '';
@@ -690,7 +786,7 @@
         if (!hp || !hp.lane) return;
         var slot = perLane.filter(function (x) { return x.lane === hp.lane; })[0];
         if (!slot) perLane.push(slot = { lane: hp.lane, list: [] });
-        slot.list.push({ st: st, si: si, back: hp.back });
+        slot.list.push({ st: st, si: si, back: hp.back, res: resultOf(st), single: hops(st).length === 1 });
       });
       perLane.forEach(function (slot) {
         var n = slot.list.length;
@@ -698,10 +794,13 @@
           /* one badge sits mid-lane (a response nearer its own start on a two-lane edge);
              several share the lane evenly, in step order, so none lands on another */
           var t = n === 1 ? (slot.lane.edge.both ? 0.3 : 0.5) : 0.3 + k * (0.4 / (n - 1));
+          if (n === 1 && it.res === 'error') t = 0.62;                 // ⚠ sits at 15% of this lane
+          else if (n === 1 && it.res === 'fail' && it.single) t = 0.3;  // ✕ sits at 62% of this lane
           if (it.back && n === 1) t = 1 - t;
           var pt = pointAt(slot.lane.pts, t);
-          var g = el('g', { class: 'stepno' + (it.st.fail ? ' fail' : ''), 'data-si': it.si, 'data-edge': slot.lane.edge.id,
-            tabindex: 0, role: 'button', 'aria-label': 'Step ' + (it.si + 1) + ': ' + (it.st.say || '') }, gb);
+          var g = el('g', { class: 'stepno' + (it.st.fail ? ' fail' : '') + (it.res ? ' r-' + it.res : ''), 'data-si': it.si,
+            'data-edge': slot.lane.edge.id, tabindex: 0, role: 'button',
+            'aria-label': 'Step ' + (it.si + 1) + (it.res ? ', ' + RES[it.res].step : '') + ': ' + (it.st.say || '') }, gb);
           el('circle', { cx: f(pt.x), cy: f(pt.y), r: 9.5 }, g);
           var tx = el('text', { x: f(pt.x), y: f(pt.y) + 0.5 }, g);
           tx.textContent = it.si + 1;
@@ -741,6 +840,7 @@
       var fl = flow(), parts = [], rows = [];
       fl.steps.forEach(function (st, si) {
         hops(st).forEach(function (hp) {
+          if (!hp.walked) return;
           [hp.a, hp.b].forEach(function (id) { if (parts.indexOf(id) < 0) parts.push(id); });
           rows.push({ st: st, si: si, h: hp });
         });
@@ -771,18 +871,21 @@
       rows.forEach(function (r, k) {
         var y = top + headH + 34 + k * rowH, x1 = X(r.h.a), x2 = X(r.h.b), dir = x2 > x1 ? 1 : -1;
         var band = el('rect', { class: 'band', x: 6, y: f(y - rowH / 2 + 3), width: W - 12, height: rowH - 6, rx: 9 }, gRows);
-        var g = el('g', { class: 'msg ' + r.h.mode }, gMsg);
-        var xs = x1 + dir * 12, xe = r.h.mode === 'fail' ? x1 + (x2 - x1) * 0.62 : x2 - dir * 9;
+        var g = el('g', { class: 'msg ' + r.h.mode + (r.h.result ? ' r-' + r.h.result : '') }, gMsg);
+        var xs = x1 + dir * 12;
+        var xe = r.h.mode === 'fail' ? x1 + (x2 - x1) * 0.62 : r.h.mode === 'error' ? x1 + dir * 46 : x2 - dir * 9;
         var p = el('path', { class: 'line', d: 'M' + f(xs) + ' ' + y + 'H' + f(xe) }, g);
-        if (r.h.mode !== 'fail') el('path', { class: 'head', d: 'M' + f(x2 - dir * 1.5) + ' ' + y + 'l' + (-dir * 9) + ' -4.8v9.6z' }, g);
-        else {
+        if (r.h.mode === 'fail') {
           var xg = el('g', { transform: 'translate(' + f(xe) + ' ' + y + ')' }, g), xm = el('g', { class: 'xmark' }, xg);
           el('circle', { r: 8 }, xm); el('path', { d: 'M-3.2 -3.2L3.2 3.2M3.2 -3.2L-3.2 3.2' }, xm);
-        }
-        var tx = el('text', { x: f((x1 + x2) / 2), y: y - 8 }, g);
+        } else if (r.h.mode === 'error') {
+          resGlyph(el('g', { class: 'rmark r-error', transform: 'translate(' + f(xe) + ' ' + y + ')' }, g), 'error', 8.5);
+        } else el('path', { class: 'head', d: 'M' + f(x2 - dir * 1.5) + ' ' + y + 'l' + (-dir * 9) + ' -4.8v9.6z' }, g);
+        var tx = el('text', { x: f(r.h.mode === 'error' ? (xs + xe) / 2 : (x1 + x2) / 2), y: y - 8 }, g);
         tx.textContent = r.st.msg || '';
         if (r.h.i === 0) {
-          var bg = el('g', { class: 'stepno' + (r.st.fail ? ' fail' : ''), 'data-si': r.si }, gMsg);
+          var rr = resultOf(r.st);
+          var bg = el('g', { class: 'stepno' + (r.st.fail ? ' fail' : '') + (rr ? ' r-' + rr : ''), 'data-si': r.si }, gMsg);
           el('circle', { cx: x1, cy: y, r: 9.5 }, bg);
           var bt = el('text', { x: x1, y: y + 0.5 }, bg); bt.textContent = r.si + 1;
           bg.addEventListener('click', function () { goStep(r.si); });
@@ -813,7 +916,9 @@
         b.type = 'button';
         b.setAttribute('role', 'radio');
         b.setAttribute('aria-checked', String(i === S.flow));
-        b.style.setProperty('--fc', 'var(--' + tone(i) + ')');
+        b.style.setProperty('--fc', chipColor(i));
+        var o = flowOutcome(fl);
+        if (o) b.title = o === 'pass' ? 'Every step passed' : o === 'fail' ? 'A step failed' : 'A command was rejected';
         b.addEventListener('click', function () { setFlow(i); });
       });
       R.flows.hidden = S.spec.flows.length < 2;
@@ -829,14 +934,16 @@
       }
     }
     function setView(v, init) {
+      if (v === 'seq' && !hasFlows()) v = 'map';
       if (S.view !== v) { pause(); cancelRun(); }
       S.view = v;
       if (!init) persistUi({ view: v });
+      R.tabs.seq.hidden = !hasFlows();
       R.viewMap.hidden = v !== 'map'; R.viewSeq.hidden = v !== 'seq'; R.viewSpec.hidden = v !== 'spec';
       Object.keys(R.tabs).forEach(function (k) { R.tabs[k].setAttribute('aria-selected', String(k === v)); });
       R.layers.hidden = v === 'spec';
       R.tg.labels.hidden = R.tg.times.hidden = v !== 'map';
-      R.rail.hidden = v === 'spec';
+      R.rail.hidden = v === 'spec' || !hasFlows();
       R.key.hidden = !ui().key || v === 'spec';
       hoverOff();
       if (v === 'seq') renderSeq();
@@ -863,10 +970,18 @@
     }
     function renderSpec() { R.specPre.innerHTML = hl(JSON.stringify(specSource(), null, 2)); }
     function printSteps() {
-      R.print.innerHTML = flow().steps.map(function (st) { return '<li>' + esc(st.say || '') + '</li>'; }).join('');
+      R.print.innerHTML = flow().steps.map(function (st) {
+        var rr = resultOf(st);
+        return '<li>' + (rr ? '<b class="fv-res r-' + rr + '">' + RES[rr].glyph + ' ' + esc(RES[rr].step) + '</b> — ' : '') + esc(st.say || '') + '</li>';
+      }).join('');
+      R.print.hidden = !hasFlows();
     }
     function renderAll() {
+      /* the first paint is the resting state itself, never a transition into it —
+         a screenshot, a print or an audit taken at once sees the real outcome */
+      R.map.classList.add('fv-instant');
       renderHeader(); renderMap(); renderFlows(); applyFlow(); applyLayers(); renderSpec();
+      requestAnimationFrame(function () { requestAnimationFrame(function () { R.map.classList.remove('fv-instant'); }); });
     }
 
     /* ── walking a flow: highlight, then send a packet down each hop ─────── */
@@ -892,9 +1007,13 @@
       $$('.hot, .now', R.map).forEach(function (x) { x.classList.remove('hot', 'now'); });
       R.map.classList.add('stepping');
       hops(st).forEach(function (hp) {
-        if (!hp.lane) return;
+        if (!hp.lane || !hp.walked) return;
         hp.lane.g.classList.add('hot');
         hp.lane.g.classList.toggle('rev', hp.back);
+        if (hp.result || resultOf(st)) {
+          hp.lane.g.classList.remove('r-pass', 'r-fail', 'r-error');
+          if (hp.result) hp.lane.g.classList.add('r-' + hp.result);
+        }
         if (hp.mode === 'fail') hp.lane.g.classList.add('failing');
         S.eref[hp.edge.id].set.classList.add('hot');
         [hp.a, hp.b].forEach(function (id) { if (S.nref[id]) S.nref[id].g.classList.add('hot'); });
@@ -903,6 +1022,7 @@
         var on = +b.getAttribute('data-si') === si;
         b.classList.toggle('hot', on); b.classList.toggle('now', on);
       });
+      $$('.rmark[data-si]', R.map).forEach(function (m) { m.classList.toggle('hot', +m.getAttribute('data-si') === si); });
       S.seqRows.forEach(function (r) {
         var on = r.si === si; r.band.classList.toggle('now', on); r.g.classList.toggle('now', on);
       });
@@ -915,9 +1035,9 @@
       g.classList.add('land');
       setTimeout(function () { g.classList.remove('land'); }, 380);
     }
-    function fly(path, back, mode, msg, layer, cb, token, landId, stop) {
+    function fly(path, back, mode, msg, layer, cb, token, landId, stop, res, endAt) {
       var len = path.getTotalLength();
-      var pk = el('g', { class: 'pkt' + (mode === 'fail' ? ' fail' : '') }, layer);
+      var pk = el('g', { class: 'pkt' + (mode === 'fail' ? ' fail' : mode === 'error' ? ' error' : res === 'pass' ? ' pass' : '') }, layer);
       el('circle', { class: 'halo', r: 10 }, pk);
       el('circle', { class: 'core', r: 5 }, pk);
       var tag = null;
@@ -940,18 +1060,21 @@
         if (token !== S.run) return;
         var k = dur ? Math.min(1, (now - t0) / dur) : 1, p = place(k);
         if (k < 1) { S.raf = requestAnimationFrame(frame); return; }
-        if (mode === 'fail') {
-          var at = el('g', { transform: 'translate(' + f(p.x) + ' ' + f(p.y) + ')' }, layer);
-          el('circle', { class: 'burst', r: 7 }, at);
-          var xm = el('g', { class: 'xmark' }, at);
-          el('circle', { r: 8.5 }, xm);
-          el('path', { d: 'M-3.4 -3.4L3.4 3.4M3.4 -3.4L-3.4 3.4' }, xm);
+        if (mode === 'fail' || mode === 'error') {
+          var q = endAt || p;                              // land exactly on the resting ✕ or ⚠
+          var at = el('g', { transform: 'translate(' + f(q.x) + ' ' + f(q.y) + ')' }, layer);
+          el('circle', { class: 'burst' + (mode === 'error' ? ' warn' : ''), r: 7 }, at);
+          if (mode === 'fail') {
+            var xm = el('g', { class: 'xmark' }, at);
+            el('circle', { r: 8.5 }, xm);
+            el('path', { d: 'M-3.4 -3.4L3.4 3.4M3.4 -3.4L-3.4 3.4' }, xm);
+          } else resGlyph(el('g', { class: 'rmark r-error pop' }, at), 'error', 8.5);
           pk.remove();
         } else {
           land(landId);
           setTimeout(function () { if (pk.parentNode) pk.remove(); }, 160);
         }
-        if (tag) setTimeout(function () { if (tag.parentNode) tag.remove(); }, mode === 'fail' ? 1200 : 160);
+        if (tag) setTimeout(function () { if (tag.parentNode) tag.remove(); }, mode === 'fail' || mode === 'error' ? 1200 : 160);
         cb();
       }
       place(0);
@@ -965,14 +1088,18 @@
       S.step = si;
       mark(si);
       var rows = S.seqRows.filter(function (r) { return r.si === si; });
+      hs = hs.filter(function (hp) { return hp.walked; });
       (function next() {
         if (token !== S.run) return;
         if (i >= hs.length) { if (done) done(token); return; }
         var hp = hs[i], row = rows[i];
         i++;
-        if (S.view === 'seq' && row) fly(row.path, false, hp.mode, st.msg, S.layer.seqfx, next, token, null, 1);
-        else if (S.view === 'map' && hp.lane) fly(hp.lane.path, hp.back, hp.mode, st.msg, S.layer.fx, next, token, hp.b, hp.mode === 'fail' ? 0.62 : 1);
-        else next();
+        var stop = hp.mode === 'fail' ? 0.62 : hp.mode === 'error' ? 0.15 : 1;
+        if (S.view === 'seq' && row) fly(row.path, false, hp.mode, st.msg, S.layer.seqfx, next, token, null, 1, hp.result);
+        else if (S.view === 'map' && hp.lane) {
+          fly(hp.lane.path, hp.back, hp.mode, st.msg, S.layer.fx, next, token, hp.b, stop, hp.result,
+            stop < 1 && resultOf(st) ? stopPoint(st, hp) : null);
+        } else next();
       })();
     }
     function setPlay(ended) {
@@ -1007,9 +1134,10 @@
     function renderDots() {
       R.dots.innerHTML = '';
       flow().steps.forEach(function (st, si) {
-        var b = h('button', 'fv-dot' + (st.fail ? ' fail' : ''), String(si + 1), R.dots);
+        var rr = resultOf(st);
+        var b = h('button', 'fv-dot' + (st.fail ? ' fail' : '') + (rr ? ' r-' + rr : ''), String(si + 1), R.dots);
         b.type = 'button';
-        b.setAttribute('aria-label', 'Step ' + (si + 1) + ': ' + (st.say || ''));
+        b.setAttribute('aria-label', 'Step ' + (si + 1) + (rr ? ', ' + RES[rr].step : '') + ': ' + (st.say || ''));
         b.addEventListener('click', function () { goStep(si); });
         b.addEventListener('mouseenter', function () { if (S.step < 0 && !S.playing) mark(si); });
         b.addEventListener('mouseleave', function () { if (S.step < 0 && !S.playing) clearStep(); });
@@ -1025,8 +1153,10 @@
     function caption(si) {
       var fl = flow();
       if (si < 0) { R.cap.textContent = fl.summary || ''; return; }
-      var st = fl.steps[si];
-      R.cap.innerHTML = '<b>' + (si + 1) + '.</b> ' + esc(st.say || '') + ' <button class="fv-more" type="button">Details</button>';
+      var st = fl.steps[si], rr = resultOf(st);
+      R.cap.innerHTML = '<b>' + (si + 1) + '.</b> ' +
+        (rr ? '<span class="fv-res r-' + rr + '">' + RES[rr].glyph + ' ' + esc(RES[rr].step) + '</span> — ' : '') +
+        esc(st.say || '') + ' <button class="fv-more" type="button">Details</button>';
       $('.fv-more', R.cap).addEventListener('click', function () { openDrawer('step', si); });
     }
 
@@ -1071,7 +1201,7 @@
         Object.keys(near).forEach(function (n) { if (S.nref[n]) S.nref[n].g.classList.add('near'); });
         ids.forEach(function (eid) {
           S.eref[eid].set.classList.add('near');
-          $$('.edge[data-edge="' + eid + '"], .stepno[data-edge="' + eid + '"]', svg)
+          $$('.edge[data-edge="' + eid + '"], .stepno[data-edge="' + eid + '"], .rmark[data-edge="' + eid + '"]', svg)
             .forEach(function (x) { x.classList.add('near'); });
         });
       }, 60);
@@ -1099,7 +1229,9 @@
           var n = S.nodes[id]; if (!n) return;
           k = n.ghost ? 'var(--dim2)' : kindVar(n.kind);
           html = '<div class="pk">' + esc(n.ghost ? 'In the whole system' : (KIND_NAME[n.kind] || 'Box')) +
-            (n.tech ? ' · ' + esc(n.tech) : '') + '</div><h4>' + esc(n.label || id) + '</h4><p>' + esc(n.peek || '') + '</p>' +
+            (n.tech ? ' · ' + esc(n.tech) : '') + '</div><h4>' + esc(n.label || id) + '</h4>' +
+            (resultOf(n) ? '<div class="res r-' + resultOf(n) + '">' + RES[resultOf(n)].glyph + ' ' + esc(RES[resultOf(n)].word) + '</div>' : '') +
+            '<p>' + esc(n.peek || '') + '</p>' +
             factsHtml(n.facts) + '<div class="hint">' + (n.ghost && S.seg ? '<span>Click to go back to it</span>'
               : '<span>Click for everything</span>' + (n.segment && !n.ghost ? '<span>⤢ opens its inside</span>' : '')) + '</div>';
           r = anchor.getBoundingClientRect();
@@ -1108,7 +1240,9 @@
           k = e.mode === 'async' ? 'var(--stream)' : 'var(--f1)';
           html = '<div class="pk">' + (e.mode === 'async' ? 'Message' : 'Call') + (e.both ? ' · both ways' : '') +
             (e.label ? ' · ' + esc(e.label) : '') + '</div><h4>' + esc((S.nodes[e.from] || {}).label || e.from) +
-            (e.both ? ' ⇄ ' : ' → ') + esc((S.nodes[e.to] || {}).label || e.to) + '</h4><p>' + esc(e.peek || '') + '</p>' +
+            (e.both ? ' ⇄ ' : ' → ') + esc((S.nodes[e.to] || {}).label || e.to) + '</h4>' +
+            (resultOf(e) ? '<div class="res r-' + resultOf(e) + '">' + RES[resultOf(e)].glyph + ' ' + esc(RES[resultOf(e)].word) + '</div>' : '') +
+            '<p>' + esc(e.peek || '') + '</p>' +
             factsHtml(e.ms ? [e.ms] : []) + '<div class="hint"><span>Click for everything</span></div>';
           var m = pointAt(S.eref[id].pts, 0.5), s = svgToScreen(R.map, m.x, m.y);
           r = { left: s.x, top: s.y, bottom: s.y, width: 0, height: 0 };
@@ -1171,7 +1305,8 @@
         var wrap = add(body, '<h3>In “' + esc(fl.label || 'this flow') + '”</h3><ol class="steplist"></ol>');
         wrap.style.setProperty('--fc', 'var(--' + tone(S.flow) + ')');
         items.forEach(function (it) {
-          var li = h('li', null, '<button type="button"><span class="num' + (it.st.fail ? ' fail' : '') + '">' + (it.si + 1) +
+          var li = h('li', null, '<button type="button"><span class="num' + (it.st.fail ? ' fail' : '') +
+            (resultOf(it.st) ? ' r-' + resultOf(it.st) : '') + '">' + (it.si + 1) +
             '</span><span>' + esc(it.st.say || '') + '</span></button>', $('ol', wrap));
           $('button', li).addEventListener('click', function () {
             if (window.innerWidth < 760) closeDrawer();
@@ -1196,6 +1331,7 @@
       D.kind.textContent = (n.ghost ? 'In the whole system' : (KIND_NAME[n.kind] || 'Box')) + (n.tech ? ' · ' + n.tech : '');
       D.title.textContent = n.label || n.id;
       add(D.body, '<p class="lead">' + esc(n.peek || '') + '</p>');
+      if (resultOf(n)) add(D.body, resBox(resultOf(n)));
       if (n.facts && n.facts.length) add(D.body, '<div class="facts-grid">' + n.facts.map(function (x) {
         return '<div>' + esc(x) + '</div>'; }).join('') + '</div>');
       stepsTouching(function (st) { return (st.path || []).indexOf(n.id) >= 0; }, D.body);
@@ -1215,21 +1351,24 @@
       D.kind.textContent = (e.mode === 'async' ? 'Asynchronous message' : 'Synchronous call') + (e.both ? ' · both ways' : '');
       D.title.textContent = ((S.nodes[e.from] || {}).label || e.from) + (e.both ? ' ⇄ ' : ' → ') + ((S.nodes[e.to] || {}).label || e.to);
       add(D.body, '<p class="lead">' + esc(e.peek || '') + '</p>');
+      if (resultOf(e)) add(D.body, resBox(resultOf(e)));
       var facts = [e.label, e.ms].filter(Boolean);
       if (facts.length) add(D.body, '<div class="facts-grid">' + facts.map(function (x) { return '<div>' + esc(x) + '</div>'; }).join('') + '</div>');
-      stepsTouching(function (st) { return hops(st).some(function (hp) { return hp.edge === e; }); }, D.body);
+      stepsTouching(function (st) { return hops(st).some(function (hp) { return hp.edge === e && hp.walked; }); }, D.body);
       var dp = depth(scope('edge:' + e.id)); if (dp) D.body.appendChild(dp);
       D.body.appendChild(noteBox('edge:' + e.id));
     }
     function stepDrawer(si, D) {
       var fl = flow(), st = fl.steps[si];
       if (!st) return;
-      var kv = st.fail ? 'var(--bad)' : 'var(--' + tone(S.flow) + ')';
+      var rr = resultOf(st);
+      var kv = rr ? 'var(--' + RES[rr].tone + ')' : st.fail ? 'var(--bad)' : 'var(--' + tone(S.flow) + ')';
       D.ico.style.setProperty('--k', kv); D.kind.style.setProperty('--k', kv);
       D.ico.innerHTML = '<b>' + (si + 1) + '</b>';
-      D.kind.textContent = 'Step ' + (si + 1) + ' of ' + fl.steps.length + ' · ' + (fl.label || '');
+      D.kind.textContent = 'Step ' + (si + 1) + ' of ' + fl.steps.length + ' · ' + (rr ? RES[rr].step.split(':')[0] : (fl.label || ''));
       D.title.textContent = st.msg || 'Step ' + (si + 1);
       add(D.body, '<p class="lead">' + esc(st.say || '') + '</p>');
+      if (rr) add(D.body, resBox(rr));
       add(D.body, '<h3>Route</h3><p class="route">' + (st.path || []).map(function (id) {
         return esc(S.nodes[id] ? S.nodes[id].label : id); }).join(' <span class="arr">→</span> ') + '</p>');
       var dp = depth(scope('step:' + st.id)); if (dp) D.body.appendChild(dp);
@@ -1319,7 +1458,7 @@
 
     /* ── the audit: every canvas, measured from the routing itself ───────── */
     function audit(add) {
-      var inSpine = !!fig.closest('.spine'), cap = inSpine ? 9 : 12, pre = 'drawing ' + ID + ': ';
+      var inSpine = !!fig.closest('.spine, .results'), cap = inSpine ? 9 : 12, pre = 'drawing ' + ID + ': ';
       var canvases = [{ name: 'root', spec: ROOT }];
       Object.keys(ROOT.segments || {}).forEach(function (k) { canvases.push({ name: k, spec: ROOT.segments[k] }); });
       var segMax = 0, zones = 0, flowsOk = true, flowsMax = 0, longest = 0, cross = [], thru = [], shrunk = 0, zl = [];
@@ -1328,7 +1467,7 @@
         if (i) segMax = Math.max(segMax, n);
         zones = Math.max(zones, (sp.zones || []).length);
         flowsMax = Math.max(flowsMax, fl);
-        if (fl < 1 || fl > 3) flowsOk = false;
+        if (fl > 3) flowsOk = false;
         (sp.flows || []).forEach(function (x) { longest = Math.max(longest, (x.steps || []).length); });
         var L = layout(sp);
         crossings(L).forEach(function (x) { cross.push(c.name + ': ' + x); });
@@ -1340,7 +1479,7 @@
       add(pre + 'boxes', nRoot, '≤ ' + cap, nRoot <= cap);
       if (canvases.length > 1) add(pre + 'boxes in the largest segment', segMax, '≤ 12', segMax <= 12);
       add(pre + 'zones', zones, '≤ 4', zones <= 4);
-      add(pre + 'flows', flowsMax, '1 – 3', flowsOk);
+      add(pre + 'flows', flowsMax, '0 – 3', flowsOk);
       add(pre + 'longest flow', longest, '≤ 9', longest <= 9);
       var w = restWords(ROOT);
       add(pre + 'words on canvas at rest', w, '≤ 60', w <= 60);
@@ -1354,6 +1493,7 @@
     self.id = ID;
     self.select = select;
     self.view = function () { return S.view; };
+    self.hasFlows = hasFlows;
     self.stepBy = stepBy;
     self.play = play;
     self.escape = function () {

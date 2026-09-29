@@ -3,6 +3,28 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 2.0.0 — 2026-09-28 · results, and quieter drawings
+
+**Results.** When the human has run a playbook, the agent closes the report with a `section.results` placed
+above the card: the outcome (`pass`, `fail`, `blocked`, `inconclusive`) with its chip, a claim, a summary, one
+drawing marking where the run passed or failed, next actions, and a gated step that moves the finished folder
+into the archive. `flowviz results` starts it from the sidecar — outcome and counts worked out, the diagram
+begun from the spine drawing, the archive step written — and never overwrites one. Audited: its own caps,
+≤150 words and ≤1.5 screens, with the report's three screens measured without it. `examples/deploy/` is the
+worked example, with its captures committed.
+
+**Result marks on drawings.** `"result": "pass" | "fail" | "error"` on a box, connection or flow step: green
+with a ✓, red with a ✕ at the stop, amber with a ⚠ near the source — the verdict vocabulary, drawn.
+
+**Flows are off by default.** A drawing is boxes and connections with no flow chips, step badges or Walk
+through unless the human asks for a walkthrough; its connections still move, in plain ink. `flowviz new`
+scaffolds none; `--flows N` adds them.
+
+**Done moved.** The `Done` button sits in the bottom-right corner of each step, beside the verdict chip.
+
+Major, because the flows cap loosened from 1–3 to 0–3: the standard's rule counts any cap change as major,
+so a looser drawing is a visible decision rather than a quiet one.
+
 ## 1.0.0 — 2026-09-28 · every row says what it is for
 
 A report's six rows read as six claims with no sign of whether to read them or act on them. Now:

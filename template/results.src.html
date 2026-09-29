@@ -1,0 +1,90 @@
+<!-- results-spec
+{"title": "Say where the run passed or failed", "lede": "One sentence: which box or connection the result points at, and why it matters.",
+ "fallback": {"id": "results", "name": "System name", "title": "Say where the run passed or failed",
+  "lede": "One sentence: which box or connection the result points at, and why it matters.",
+  "grid": {"cols": 3, "rows": 1}, "zones": [],
+  "nodes": [
+   {"id": "box1", "label": "Box 1", "kind": "client", "icon": "user", "at": [0, 0], "peek": "One sentence: what this box does, and the number that matters most."},
+   {"id": "box2", "label": "Box 2", "kind": "service", "icon": "service", "at": [1, 0], "peek": "One sentence: what this box does, and the number that matters most."},
+   {"id": "box3", "label": "Box 3", "kind": "data", "icon": "db", "at": [2, 0], "peek": "One sentence: what this box does, and the number that matters most."}],
+  "edges": [
+   {"id": "box1-box2", "from": "box1", "to": "box2", "mode": "sync", "label": "protocol", "peek": "One sentence: what travels on this connection and why."},
+   {"id": "box2-box3", "from": "box2", "to": "box3", "mode": "sync", "label": "protocol", "peek": "One sentence: what travels on this connection and why."}],
+  "flows": []}}
+-->
+<!-- ══════════════ RESULTS ══════════════
+     Written by the agent after the human ran the playbook and it read the captures
+     back (flowviz captures). It opens the report, because what happened is now the
+     main idea; the card below stays as the plan that was tested.
+     data-outcome: pass · fail · blocked (an error stopped the run: the playbook was
+     wrong, the target was never asked) · inconclusive (no match, or steps not run).
+     Title ≤70 chars with a verb · summary ≤50 words · one drawing (≤9 boxes) that
+     marks where it passed or failed · ≤4 next, tagged · one gated archive step. -->
+<section class="results" data-outcome="{{OUTCOME}}">
+  <div class="top">
+    <span class="k">Results</span>
+    <span class="chip {{CHIP}}"><span class="d"></span>{{CHIP_TEXT}}</span>
+    <span class="meta">reviewed {{DATE}} · {{COUNTS}}</span>
+  </div>
+
+  <h2>Say what happened, as a claim with a verb</h2>
+
+  <div class="slot">
+    <span class="k">Summary</span>
+    <div class="v" data-slot="summary">What ran, what the output proved, and where it stopped, in two or three sentences.</div>
+  </div>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{{RESULTS_SPEC}}
+</script>
+<div class="fv-depth" hidden>
+</div>
+</figure>
+
+  <div class="next">
+    <span class="k">Next</span>
+    <ol>
+      <li>Name the first thing to do about this result <span class="badge ro">read-only</span></li>
+    </ol>
+  </div>
+
+  <div class="archive">
+    <span class="k">Archive</span>
+    <div class="pb" data-pb="archive">
+      <ol class="steps">
+        <li class="step" data-step="archive" data-risk="w" data-archive>
+          <input type="checkbox" class="done">
+          <details class="sd">
+            <summary><span class="n"></span><span class="ds">Stop flowviz serve, then move this finished work into the archive.</span></summary>
+            <div class="in">
+              <label class="gate"><input type="checkbox" class="ack">
+                I accept this moves the whole folder {{FOLDER}} into {{ARCHIVE}}.</label>
+              <div class="cmd"><button class="copy">copy</button><pre><code>{{ARCHIVE_CMD}}</code></pre></div>
+              <p class="expect"><b>Pass:</b> the folder's new path under the archive &nbsp;·&nbsp;
+                <i>Fail:</i> <code>No such file or directory</code>, or <code>File exists</code></p>
+              <div class="cap">
+                <div class="cl">Paste output <span class="kp">captures["archive"]</span></div>
+                <textarea data-cap="archive" data-pass="{{ARCHIVE_PASS}}" data-fail="\bNo such file or directory\b|\bFile exists\b|\bPermission denied\b"
+                  placeholder="paste what it printed"></textarea>
+                <div class="ft">
+                  <span>exit <input class="ec" data-ec="archive" placeholder="0"></span>
+                  <span data-cnt="archive">empty</span><span data-at="archive"></span>
+                  <span class="rn" data-run="archive"></span>
+                  <button class="rr" data-rr="archive" title="keep this attempt and clear the box">re-run</button>
+                </div>
+                <input class="nt" data-note="archive" placeholder="note for the agent (optional)">
+              </div>
+              <details class="more"><summary>why archive it</summary>
+              <div class="in"><p>The work is finished and its results are written down. Moving the folder keeps
+              active work lean; the page, its sidecar and every capture move with it, so it still opens from
+              the archive exactly as it is now.</p></div></details>
+            </div>
+          </details>
+          <span class="ctr"><span class="badge w">write</span>
+            <button class="copy">⧉</button><span class="vd" data-vd="archive">—</span></span>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
