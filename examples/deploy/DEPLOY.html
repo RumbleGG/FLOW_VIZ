@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="flowviz-doc" content="flowviz-plan">
+<meta name="flowviz-doc" content="deploy">
 <meta name="flowviz-kind" content="report">
-<title>FLOW_VIZ now draws systems as well as it writes reports</title>
-<script>window.FLOW={"doc": "flowviz-plan", "version": "2.0.0", "kind": "report", "built": "2026-09-29T03:46:41Z"};
+<title>Notify v2.3 is ready for staging behind a one-command rollback</title>
+<script>window.FLOW={"doc": "deploy", "version": "2.0.0", "kind": "report", "built": "2026-09-29T03:46:41Z"};
 (function(){var h=document.documentElement;h.setAttribute("data-kind",FLOW.kind);try{var q=(location.search.match(/[?&]theme=(light|dark)/)||[])[1];var s=JSON.parse(localStorage.getItem("flowviz:"+FLOW.doc)||"{}"),u=s.ui||{};var t=q||u.theme||"auto";var d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);h.setAttribute("data-theme",d?"dark":"light");if(u.motion===false)h.classList.add("still");}catch(e){h.setAttribute("data-theme","light");}})();</script>
 <style>
 /* ===========================================================================
@@ -981,42 +981,145 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
 </head>
 <body>
 
-<!-- ══════════════ LAYER 1 — THE CARD ══════════════ -->
-<div class="card">
+<!-- ══════════════ RESULTS ══════════════
+     Written by the agent after the human ran the playbook and it read the captures
+     back (flowviz captures). It opens the report, because what happened is now the
+     main idea; the card below stays as the plan that was tested.
+     data-outcome: pass · fail · blocked (an error stopped the run: the playbook was
+     wrong, the target was never asked) · inconclusive (no match, or steps not run).
+     Title ≤70 chars with a verb · summary ≤50 words · one drawing (≤9 boxes) that
+     marks where it passed or failed · ≤4 next, tagged · one gated archive step. -->
+<section class="results" data-outcome="fail">
   <div class="top">
-    <span class="chip ok"><span class="d"></span>Rebuilt, with drawings</span>
-    <span class="meta">v2.0.0 · 2026-09-28 · the toolkit, written to its own standard</span>
+    <span class="k">Results</span>
+    <span class="chip bad"><span class="d"></span>Failed at step 4</span>
+    <span class="meta">reviewed 2026-09-28 · 5 steps: 4 pass, 1 fail</span>
   </div>
 
-  <h1>FLOW_VIZ now draws systems as well as it writes reports</h1>
+  <h2>v2.3 cannot reach the email provider, so staging runs v2.2 again</h2>
+
+  <div class="slot">
+    <span class="k">Summary</span>
+    <div class="v" data-slot="summary">The rollout and health checks passed, but the end-to-end send timed out waiting for the provider, whose dashboard shows no request from the new pods. The rollback succeeded, so staging is back on v2.2.</div>
+  </div>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "results",
+  "name": "Notify on staging",
+  "title": "The request dies between the worker and the provider",
+  "lede": "Everything up to the worker passed; the provider never saw a request from the new pods.",
+  "grid": {"cols": 4, "rows": 2},
+  "zones": [
+    {"id": "cluster", "label": "Staging cluster", "cols": [1, 2], "rows": [0, 1], "tone": "svc"},
+    {"id": "ext", "label": "External", "cols": [3, 3], "rows": [0, 0], "tone": "ext"}
+  ],
+  "nodes": [
+    {"id": "smoke", "label": "Smoke test", "kind": "client", "icon": "terminal", "at": [0, 0], "tech": "curl, from a laptop", "peek": "One real request, sent the way a customer's app would send it.", "facts": ["30 s timeout"]},
+    {"id": "api", "label": "Notify API", "kind": "service", "icon": "api", "at": [1, 0], "tech": "HTTP · 2 pods", "peek": "Accepts the send request and hands it to the worker without waiting for delivery.", "facts": ["p99 40 ms"], "result": "pass"},
+    {"id": "worker", "label": "Notify worker", "kind": "service", "icon": "worker", "at": [2, 0], "tech": "v2.3.0 · 3 pods", "peek": "New in v2.3: it owns retries, so a slow provider no longer holds up the API.", "facts": ["3 retries", "new secret"], "result": "pass"},
+    {"id": "queue", "label": "Retry queue", "kind": "stream", "icon": "queue", "at": [2, 1], "tech": "Redis streams", "peek": "Holds a message between attempts, with its next retry time.", "facts": ["backoff 2 s, 8 s"]},
+    {"id": "provider", "label": "Email provider", "kind": "external", "icon": "mail", "at": [3, 0], "tech": "third party", "peek": "Delivers the email and calls back to confirm. It only accepts calls from allowlisted IPs.", "facts": ["IP allowlist"]}
+  ],
+  "edges": [
+    {"id": "smoke-api", "from": "smoke", "to": "api", "mode": "sync", "label": "HTTPS", "peek": "POST /test-send with a throwaway address.", "result": "pass"},
+    {"id": "api-worker", "from": "api", "to": "worker", "mode": "sync", "label": "HTTP", "peek": "Internal call; the API answers once the worker has the job.", "result": "pass"},
+    {"id": "worker-queue", "from": "worker", "to": "queue", "mode": "async", "both": true, "label": "retries", "peek": "A failed attempt goes to the queue and comes back after its backoff."},
+    {"id": "worker-provider", "from": "worker", "to": "provider", "mode": "sync", "label": "HTTPS", "ms": "p99 1.2 s", "peek": "Timed out after 30 s: the provider has no record of the call, so it never arrived.", "result": "fail"}
+  ],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden>
+</div>
+</figure>
+
+  <div class="next">
+    <span class="k">Next</span>
+    <ol>
+      <li>Compare the provider allowlist with the new pods' egress addresses <span class="badge ro">read-only</span></li>
+      <li>Re-run the four steps once the allowlist includes them <span class="badge w">write</span></li>
+    </ol>
+  </div>
+
+  <div class="archive">
+    <span class="k">Archive</span>
+    <div class="pb" data-pb="archive">
+      <ol class="steps">
+        <li class="step" data-step="archive" data-risk="w" data-archive>
+          <input type="checkbox" class="done">
+          <details class="sd">
+            <summary><span class="n"></span><span class="ds">Stop flowviz serve, then move this finished work into the archive.</span></summary>
+            <div class="in">
+              <label class="gate"><input type="checkbox" class="ack">
+                I accept this moves the whole folder ~/work/notify-deploy into ~/Archive.</label>
+              <div class="cmd"><button class="copy">copy</button><pre><code>mv ~/work/notify-deploy ~/Archive/notify-deploy &amp;&amp; ls -d ~/Archive/notify-deploy</code></pre></div>
+              <p class="expect"><b>Pass:</b> the folder's new path under the archive &nbsp;·&nbsp;
+                <i>Fail:</i> <code>No such file or directory</code>, or <code>File exists</code></p>
+              <div class="cap">
+                <div class="cl">Paste output <span class="kp">captures["archive"]</span></div>
+                <textarea data-cap="archive" data-pass="\bArchive/notify\-deploy\b" data-fail="\bNo such file or directory\b|\bFile exists\b|\bPermission denied\b"
+                  placeholder="paste what it printed"></textarea>
+                <div class="ft">
+                  <span>exit <input class="ec" data-ec="archive" placeholder="0"></span>
+                  <span data-cnt="archive">empty</span><span data-at="archive"></span>
+                  <span class="rn" data-run="archive"></span>
+                  <button class="rr" data-rr="archive" title="keep this attempt and clear the box">re-run</button>
+                </div>
+                <input class="nt" data-note="archive" placeholder="note for the agent (optional)">
+              </div>
+              <details class="more"><summary>why archive it</summary>
+              <div class="in"><p>The work is finished and its results are written down. Moving the folder keeps
+              active work lean; the page, its sidecar and every capture move with it, so it still opens from
+              the archive exactly as it is now.</p></div></details>
+            </div>
+          </details>
+          <span class="ctr"><span class="badge w">write</span>
+            <button class="copy">⧉</button><span class="vd" data-vd="archive">—</span></span>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ LAYER 1 — THE CARD ══════════════
+     A reference report, written before the playbook ran. The Results section above it
+     was added afterwards with `flowviz results`, from the captures in deploy.flow.json. -->
+<div class="card">
+  <div class="top">
+    <span class="chip"><span class="d"></span>Ready to run</span>
+    <span class="meta">staging · 2026-09-28 · notify v2.2 to v2.3</span>
+  </div>
+
+  <h1>Notify v2.3 is ready for staging behind a one-command rollback</h1>
 
   <div class="slot">
     <span class="k">Verdict</span>
-    <div class="v" data-slot="verdict">One toolkit now makes two deliverables. Reports keep the card, the
-    rows and the checklist playbook with paste boxes. Drawings put a system on a grid with motion, peeks,
-    a drawer, a walkthrough and segments. Both save what you type to a sidecar I read back with one command.</div>
+    <div class="v" data-slot="verdict">v2.3 moves email retries from the API into the worker and adds one
+    secret. The rollout is four checked steps, and if the end-to-end smoke test fails, one gated command puts
+    v2.2 back within a minute.</div>
   </div>
 
   <div class="slot wh">
     <span class="k">So what</span>
-    <div class="v" data-slot="sowhat">Point any agent at <code>AGENTS.md</code>: it scaffolds, fills, builds
-    and audits either kind, and your pastes and notes come back to it structured.</div>
+    <div class="v" data-slot="sowhat">Run the steps in order, paste each output, and stop at the first red
+    chip: the rollback is written and waiting.</div>
   </div>
 
   <div class="vitals">
-    <div><div class="n">2</div><div class="l">deliverables</div></div>
-    <div><div class="n">61</div><div class="l">caps measured</div></div>
-    <div><div class="n">12</div><div class="l">author checks</div></div>
-    <div><div class="n">39</div><div class="l">box icons</div></div>
-    <div><div class="n">0</div><div class="l">network deps</div></div>
+    <div><div class="n">4</div><div class="l">steps to ship</div></div>
+    <div><div class="n">1</div><div class="l">rollback step</div></div>
+    <div><div class="n">3</div><div class="l">pods</div></div>
+    <div><div class="n">30 s</div><div class="l">smoke timeout</div></div>
   </div>
 
   <div class="next">
     <span class="k">Next</span>
     <ol>
-      <li>Serve this folder, then run the checklist under Try it <span class="badge ro">read-only</span></li>
-      <li>Open the checkout drawing and try hover, click and play <span class="badge ro">read-only</span></li>
-      <li>Name the GitHub user to add as a collaborator <span class="badge ro">read-only</span></li>
+      <li>Serve this folder and open the page from it <span class="badge ro">read-only</span></li>
+      <li>Run the four steps under Ship it, pasting each output <span class="badge w">write</span></li>
+      <li>Run the rollback only if the smoke test fails <span class="badge w">write</span></li>
     </ol>
   </div>
 </div>
@@ -1026,70 +1129,44 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
 <figure class="fv-drawing">
 <script type="application/json">
 {
-  "id": "roundtrip",
-  "name": "The round trip",
-  "title": "Your paste reaches me because every save lands in one sidecar",
-  "lede": "The top row hands a report to you; the bottom row brings what you typed back to me.",
-  "grid": {"cols": 4, "rows": 2},
+  "id": "spine",
+  "name": "Notify on staging",
+  "title": "A notification crosses four boxes before anyone receives it",
+  "lede": "The smoke test sends one real email through the API, the worker and the provider.",
+  "grid": { "cols": 4, "rows": 2 },
   "zones": [
-    {"id": "out", "label": "Hand over", "cols": [0, 3], "rows": [0, 0], "tone": "sync"},
-    {"id": "back", "label": "Read back", "cols": [0, 3], "rows": [1, 1], "tone": "async", "tag": "bl"}
+    { "id": "cluster", "label": "Staging cluster", "cols": [1, 2], "rows": [0, 1], "tone": "svc" },
+    { "id": "ext", "label": "External", "cols": [3, 3], "rows": [0, 0], "tone": "ext" }
   ],
   "nodes": [
-    {"id": "agent", "label": "Agent", "kind": "client", "icon": "agent", "at": [0, 0], "tech": "any work folder", "peek": "Works in the project folder, reads only AGENTS.md from here, and hands back one file.", "facts": ["reads 1 doc"]},
-    {"id": "src", "label": "Source", "kind": "data", "icon": "file", "at": [1, 0], "tech": "NAME.src.html", "peek": "The words and the drawing spec. No CSS, no JavaScript and no coordinates: those come from the toolkit.", "facts": ["slots · spec · depth"]},
-    {"id": "build", "label": "Build + audit", "kind": "service", "icon": "gear", "at": [2, 0], "tech": "flowviz build, audit", "peek": "Inlines the runtime, stamps the version, snapshots the old file, then measures every cap.", "facts": ["exit 1 on OVER"]},
-    {"id": "html", "label": "Deliverable", "kind": "data", "icon": "browser", "at": [3, 0], "tech": "NAME.html", "peek": "One self-contained file: styles, scripts and icons inline. Opens offline and prints cleanly.", "facts": ["no network"]},
-    {"id": "you", "label": "You", "kind": "client", "icon": "user", "at": [3, 1], "tech": "a browser", "peek": "You read the card, run the checklist, paste the output and leave notes on boxes.", "facts": ["saves as you type"]},
-    {"id": "serve", "label": "Server", "kind": "service", "icon": "server", "at": [2, 1], "tech": "flowviz serve", "peek": "Serves the folder on localhost and writes the sidecar atomically each time the page saves.", "facts": ["127.0.0.1 only"]},
-    {"id": "sidecar", "label": "Sidecar", "kind": "data", "icon": "json", "at": [1, 1], "tech": "NAME.flow.json", "peek": "The only state: captures, superseded runs, notes and ticks, all keyed by stable ids.", "facts": ["schema 3"]},
-    {"id": "captures", "label": "Captures", "kind": "service", "icon": "terminal", "at": [0, 1], "tech": "flowviz captures", "peek": "Joins each capture to its step and re-derives its verdict from the current rules.", "facts": ["error is not fail"]}
+    { "id": "smoke", "label": "Smoke test", "kind": "client", "icon": "terminal", "at": [0, 0], "tech": "curl, from a laptop",
+      "peek": "One real request, sent the way a customer's app would send it.", "facts": ["30 s timeout"] },
+    { "id": "api", "label": "Notify API", "kind": "service", "icon": "api", "at": [1, 0], "tech": "HTTP · 2 pods",
+      "peek": "Accepts the send request and hands it to the worker without waiting for delivery.", "facts": ["p99 40 ms"] },
+    { "id": "worker", "label": "Notify worker", "kind": "service", "icon": "worker", "at": [2, 0], "tech": "v2.3.0 · 3 pods",
+      "peek": "New in v2.3: it owns retries, so a slow provider no longer holds up the API.", "facts": ["3 retries", "new secret"] },
+    { "id": "queue", "label": "Retry queue", "kind": "stream", "icon": "queue", "at": [2, 1], "tech": "Redis streams",
+      "peek": "Holds a message between attempts, with its next retry time.", "facts": ["backoff 2 s, 8 s"] },
+    { "id": "provider", "label": "Email provider", "kind": "external", "icon": "mail", "at": [3, 0], "tech": "third party",
+      "peek": "Delivers the email and calls back to confirm. It only accepts calls from allowlisted IPs.", "facts": ["IP allowlist"] }
   ],
   "edges": [
-    {"id": "agent-src", "from": "agent", "to": "src", "mode": "sync", "label": "writes", "ms": "minutes", "peek": "The agent fills slots in a scaffold; it never invents structure."},
-    {"id": "src-build", "from": "src", "to": "build", "mode": "sync", "label": "build", "ms": "< 1 s", "peek": "One command inlines the runtime and parses every drawing spec."},
-    {"id": "build-html", "from": "build", "to": "html", "mode": "sync", "label": "writes", "ms": "< 1 s", "peek": "The previous output is copied to .flowviz/history before it is overwritten."},
-    {"id": "html-you", "from": "html", "to": "you", "mode": "sync", "label": "HTTP", "ms": "localhost", "peek": "Served by flowviz serve. Opened from Finder instead, nothing you type reaches disk."},
-    {"id": "you-serve", "from": "you", "to": "serve", "mode": "async", "label": "PUT state", "ms": "700 ms debounce", "peek": "Every tick, paste and note saves on its own, 700 ms after you stop typing."},
-    {"id": "serve-sidecar", "from": "serve", "to": "sidecar", "mode": "sync", "label": "atomic write", "ms": "fsync", "peek": "mkstemp, fsync, os.replace: a crash mid-save leaves the old file, never half of one."},
-    {"id": "sidecar-captures", "from": "sidecar", "to": "captures", "mode": "sync", "label": "reads", "ms": "on demand", "peek": "The read-back reads the sidecar, never the HTML, which holds no state."},
-    {"id": "captures-agent", "from": "captures", "to": "agent", "mode": "sync", "label": "joined output", "ms": "on demand", "peek": "Each capture arrives attributed to its step, with its superseded attempts."}
+    { "id": "smoke-api", "from": "smoke", "to": "api", "mode": "sync", "label": "HTTPS",
+      "peek": "POST /test-send with a throwaway address." },
+    { "id": "api-worker", "from": "api", "to": "worker", "mode": "sync", "label": "HTTP",
+      "peek": "Internal call; the API answers once the worker has the job." },
+    { "id": "worker-queue", "from": "worker", "to": "queue", "mode": "async", "both": true, "label": "retries",
+      "peek": "A failed attempt goes to the queue and comes back after its backoff." },
+    { "id": "worker-provider", "from": "worker", "to": "provider", "mode": "sync", "label": "HTTPS", "ms": "p99 1.2 s",
+      "peek": "Send, then wait for the provider's delivery callback." }
   ],
   "flows": []
 }
 </script>
 <div class="fv-depth" hidden>
-<section data-for="sidecar">
-  <p>The sidecar is the only state. It is keyed by ids that never change, so I can rewrite the report and
-  your captures, ticks and notes re-attach on load.</p>
-  <div class="cmd fig"><pre><code>{
-  "schema": 3, "doc": "flowviz-plan", "flowviz": "0.6.0",
-  "savedAt": "2026-09-28T21:14:08Z",
-  "captures": { "ap": { "text": "result: clean", "exit": "0",
-                        "verdict": "pass", "at": "2026-09-28T21:13:57Z",
-                        "runs": [ { "text": "result: 1 over", "verdict": "fail" } ] } },
-  "notes": { "roundtrip/node:serve": { "text": "port 8787 was taken", "at": "..." } }
-}</code></pre></div>
-</section>
-<section data-for="serve">
-  <table>
-    <thead><tr><th>Request</th><th>Does</th></tr></thead>
-    <tbody>
-      <tr><td><code>GET /</code></td><td>indexes every report and drawing under the folder, with capture and note counts</td></tr>
-      <tr><td><code>PUT …/_flow/state/&lt;doc&gt;</code></td><td>atomic write of <code>&lt;doc&gt;.flow.json</code> beside the page that saved it</td></tr>
-      <tr><td>first overwrite per run</td><td>copies the old sidecar to <code>.flowviz/state-backup/</code></td></tr>
-    </tbody>
-  </table>
-  <p>Binds <code>127.0.0.1</code> only. Refuses a doc id outside <code>[A-Za-z0-9._-]</code>, a body over
-  4 MB, a doc that does not match the URL, and any path outside the served folder.</p>
-</section>
-<section data-for="captures">
-  <p>What I see when you say "look at step 4":</p>
-  <div class="cmd fig"><pre><code>step 3  ap  read  PASS  Audit this plan against its own standard, layout caps included.
-  exit 0 · captured 14:13:57 PDT (2026-09-28T21:13:57Z)
-  | result: clean
-  run 1  14:09:02 PDT  fail
-  | result: 1 over, 0 failing checks</code></pre></div>
+<section data-for="worker">
+  <p>v2.3 moves retries out of the API. The API used to retry inline, which held a request open for up to
+  eleven seconds when the provider was slow. Now the worker retries from a queue and the API answers at once.</p>
 </section>
 </div>
 </figure>
@@ -1103,338 +1180,178 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
   <span class="hint">nothing is open at load, by design</span>
 </div>
 
-<h2 class="sec">How it works</h2>
+<h2 class="sec">What changes</h2>
 
 <!-- ─────────── ROW 1 ─────────── -->
-<details class="row" data-row="r1" data-kind="context">
-<summary><span class="ord">1</span><span class="cl">Two deliverables share one toolkit, one token layer and one state file</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="chg" data-kind="context">
+<summary><span class="ord">1</span><span class="cl">v2.3 moves retries into the worker and needs one new secret</span><span class="rt">1 min</span></summary>
 <div class="in">
-
 <table>
-<thead><tr><th></th><th>Report</th><th>Drawing</th></tr></thead>
+<thead><tr><th>Change</th><th>Why</th></tr></thead>
 <tbody>
-<tr><td>For</td><td>an answer, a root cause, a plan, commands to run</td><td>a system: what talks to what, in what order, what breaks</td></tr>
-<tr><td>Lands in</td><td>two minutes: card, then six collapsed rows</td><td>ten seconds: boxes and one moving flow</td></tr>
-<tr><td>Depth</td><td>inside rows, unlimited</td><td>in the drawer, unlimited</td></tr>
-<tr><td>You type</td><td>pasted output per step, a note per step</td><td>a note per box, connection or step</td></tr>
-<tr><td>Look</td><td>journal light, traditional dark</td><td>canvas light, night dark</td></tr>
+<tr><td>Retries move from the API to the worker</td><td>a slow provider no longer holds API requests open</td></tr>
+<tr><td>New secret <code>NOTIFY_PROVIDER_TOKEN</code></td><td>the worker now calls the provider itself</td></tr>
+<tr><td>Worker image <code>notify:2.3.0</code></td><td>replaces <code>notify:2.2.4</code></td></tr>
 </tbody>
 </table>
-
-<h3>Every row says what it is for</h3>
-<table>
-<thead><tr><th>Label</th><th>Means</th><th>Holds</th></tr></thead>
-<tbody>
-<tr><td><code>context</code> · <code>finding</code> · <code>record</code></td><td>read it: background, what the evidence shows, what was done</td><td>no steps</td></tr>
-<tr><td><code>action · investigation</code> · <code>action · test</code></td><td>run it: commands that gather facts, or check that something works</td><td>steps</td></tr>
-<tr><td><code>action · change</code> · <code>action · rollback</code></td><td>run it: commands that change a system, or undo a change</td><td>steps, gated</td></tr>
-<tr><td><code>decision</code></td><td>yours to approve or choose</td><td>anything</td></tr>
-</tbody>
-</table>
-<p>Rows sit under at most three section headers of four words or fewer. The agent writes the headers
-and one attribute per row; the page draws the labels, and the audit fails a label that does not match
-what the row holds.</p>
-
-<p>A report's spine diagram is now a drawing by default: the same component, capped at nine boxes,
-wearing the report's paper and ink. The one above is real: hover it, click a box. It has no flows,
-which is the default; <code>examples/checkout</code> shows what a drawing gains when a walkthrough is asked for.</p>
-
-<h3>After the run: Results</h3>
-<p>When you have run a playbook and I have read your pastes back, I close the report with a
-<b>Results</b> section above the card: the outcome, a claim, a summary, a drawing that marks where the
-run passed (green) or failed (a red ✕), next actions, and a gated step that moves the finished folder
-into <code>~/Archive</code>. <code>flowviz results</code> starts it from the sidecar; see
-<code>examples/deploy</code> for one written end to end.</p>
-
-<div class="cmd fig"><pre><code>FLOW_VIZ/
-  AGENTS.md    the only file an agent in another folder reads
-  SPEC.md      the standard: caps, schemas, vocabulary
-  CLAUDE.md    for agents changing the toolkit
-  VERSION      0.6.0, stamped into every footer
-  bin/         flowviz (cheat sheet) · new · build · audit · serve · captures
-  template/    flow.css flow.js (core, reports) · draw.css draw.js icons.svg (drawings)
-               report.src.html · drawing.src.html (the scaffolds)
-  examples/    checkout/ : the approved drawing, rebuilt by the toolkit
-  PLAN.html    this file</code></pre></div>
-
 </div>
 </details>
 
+<h2 class="sec">Ship it</h2>
+
 <!-- ─────────── ROW 2 ─────────── -->
-<details class="row" data-row="r2" data-kind="context">
-<summary><span class="ord">2</span><span class="cl">A drawing is written as a spec and drawn by the runtime</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="ship" data-kind="change">
+<summary><span class="ord">2</span><span class="cl">Four checked steps take staging from v2.2 to v2.3</span><span class="rt">6 min</span></summary>
 <div class="in">
 
-<p>The agent writes a JSON spec — boxes placed on a grid, connections, and only when a walkthrough is
-asked for, up to three flows of one-sentence steps — and plain HTML for depth. It never writes coordinates, colours or animation. That is what makes
-every drawing behave the same, and what lets the audit count a drawing's caps without a browser.</p>
+<div class="box warn"><p>Run these from a shell with <code>kubectl</code> pointed at the staging cluster.</p></div>
 
-<table>
-<thead><tr><th>Gesture</th><th>Shows</th><th>Budget</th></tr></thead>
-<tbody>
-<tr><td><b>Look</b></td><td>boxes, zones, the selected flow in motion, step numbers</td><td>≤12 boxes, ≤60 words</td></tr>
-<tr><td><b>Hover</b></td><td>a peek: one sentence, up to three facts</td><td>≤25 words</td></tr>
-<tr><td><b>Click</b></td><td>the drawer: depth, the steps a box takes part in, a note for the agent</td><td>unlimited</td></tr>
-<tr><td><b>Play</b></td><td>only when a walkthrough is asked for: a packet walks each flow, one caption per step</td><td>≤9 steps, ≤20 words each</td></tr>
-</tbody>
-</table>
+<div class="pb" data-pb="ship">
+  <div class="hd">
+    <span class="t">Roll out notify v2.3 to staging</span>
+    <span class="prog">0 / 4 done</span>
+  </div>
+  <ol class="steps">
 
-<table>
-<thead><tr><th>Mark</th><th>Means</th></tr></thead>
-<tbody>
-<tr><td>dashes</td><td>a synchronous call, moving the way the request goes</td></tr>
-<tr><td>dots, slower</td><td>an asynchronous message nobody waits on</td></tr>
-<tr><td>two lanes</td><td>traffic both ways, one direction per lane</td></tr>
-<tr><td>grey and still</td><td>exists, but not in the selected flow</td></tr>
-<tr><td>red, packet stops at ✕</td><td>the call fails</td></tr>
-<tr><td>⤢ on a box</td><td>opens a segment: the inside of that box</td></tr>
-</tbody>
-</table>
+    <li class="step" data-step="pre" data-risk="ro">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Confirm staging runs a healthy v2.2 before anything changes.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>curl -s https://notify.staging.example.test/healthz</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>"version":"v2.2.x"</code> and <code>"status":"ok"</code> &nbsp;·&nbsp;
+            <i>Fail:</i> already v2.3, or <code>unhealthy</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["pre"]</span></div>
+            <textarea data-cap="pre" data-pass="\bv2\.2\.\d+\b" data-fail="\bv2\.3\.\d+\b|\bunhealthy\b"
+              placeholder="paste the JSON it prints"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="pre" placeholder="0"></span>
+              <span data-cnt="pre">empty</span><span data-at="pre"></span>
+              <span class="rn" data-run="pre"></span>
+              <button class="rr" data-rr="pre" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="pre" placeholder="note for the agent (optional)">
+          </div>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="pre">—</span></span>
+    </li>
 
-<div class="box key"><p><b>Recipes, not rules.</b> <code>AGENTS.md</code> gives an agent seven: a whole
-system, the inside of one box, one request in order, what fails and what then, two options side by side,
-a system inside a report, and a system too big for twelve boxes.</p></div>
+    <li class="step" data-step="push" data-risk="w" data-after="pre">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Roll out v2.3 across the three pods and wait for all of them.</span></summary>
+        <div class="in">
+          <label class="gate"><input type="checkbox" class="ack">
+            I accept this replaces the running notify pods in staging.</label>
+          <div class="cmd"><button class="copy">copy</button><pre><code>kubectl -n staging set image deploy/notify notify=registry.example.test/notify:2.3.0 &amp;&amp; kubectl -n staging rollout status deploy/notify --timeout=120s</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>successfully rolled out</code> &nbsp;·&nbsp;
+            <i>Fail:</i> <code>exceeded its progress deadline</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["push"]</span></div>
+            <textarea data-cap="push" data-pass="\bsuccessfully rolled out\b" data-fail="\bexceeded its progress deadline\b|\berror\b"
+              placeholder="paste the rollout output"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="push" placeholder="0"></span>
+              <span data-cnt="push">empty</span><span data-at="push"></span>
+              <span class="rn" data-run="push"></span>
+              <button class="rr" data-rr="push" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="push" placeholder="note for the agent (optional)">
+          </div>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge w">write</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="push">—</span></span>
+    </li>
 
-<details class="more"><summary>why a grid and not auto-layout</summary>
-<div class="in"><p>A grid is deterministic: the same spec draws the same picture every time, the audit can
-reason about it statically (two boxes in one cell, a straight line through a box), and an agent can place
-boxes by reading the story left to right. Auto-layout would save the agent a decision and cost the
-reader a stable picture. You chose the grid for now; it can change later without touching a spec's
-meaning.</p></div></details>
+    <li class="step" data-step="health" data-risk="ro" data-after="push">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Check the new pods report v2.3 and a configured provider client.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>curl -s https://notify.staging.example.test/healthz</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>"version":"v2.3.0"</code> &nbsp;·&nbsp; <i>Fail:</i> still v2.2, or <code>unhealthy</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["health"]</span></div>
+            <textarea data-cap="health" data-pass="\bv2\.3\.0\b" data-fail="\bv2\.2\.\d+\b|\bunhealthy\b"
+              placeholder="paste the JSON it prints"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="health" placeholder="0"></span>
+              <span data-cnt="health">empty</span><span data-at="health"></span>
+              <span class="rn" data-run="health"></span>
+              <button class="rr" data-rr="health" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="health" placeholder="note for the agent (optional)">
+          </div>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="health">—</span></span>
+    </li>
+
+    <li class="step" data-step="smoke" data-risk="ro" data-after="health">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Send one test email end to end and wait up to 30 seconds for delivery.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>curl -s -X POST https://notify.staging.example.test/test-send -d to=smoke@example.test --max-time 35</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>"status":"delivered"</code> &nbsp;·&nbsp;
+            <i>Fail:</i> <code>timeout</code>, <code>failed</code> or <code>rejected</code> — then run the rollback</p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["smoke"]</span></div>
+            <textarea data-cap="smoke" data-pass="\bdelivered\b" data-fail="\btimeout\b|\bfailed\b|\brejected\b"
+              placeholder="paste the JSON it prints"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="smoke" placeholder="0"></span>
+              <span data-cnt="smoke">empty</span><span data-at="smoke"></span>
+              <span class="rn" data-run="smoke"></span>
+              <button class="rr" data-rr="smoke" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="smoke" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>Health checks prove the pods started; only a real send proves the worker can reach
+          the provider with the new secret, from the new pods' addresses.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="smoke">—</span></span>
+    </li>
+
+  </ol>
+</div>
 
 </div>
 </details>
 
 <!-- ─────────── ROW 3 ─────────── -->
-<details class="row" data-row="r4" data-kind="context">
-<summary><span class="ord">3</span><span class="cl">Everything you type lands in a sidecar that I read back</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="back" data-kind="rollback">
+<summary><span class="ord">3</span><span class="cl">One gated command puts v2.2 back within a minute</span><span class="rt">2 min</span></summary>
 <div class="in">
 
-<p>Nothing you type is stored in the HTML. Ticks, pastes, exit codes, notes on steps and notes on drawing
-boxes all go to <code>&lt;doc&gt;.flow.json</code> beside the page, keyed by ids that never change. I can
-rewrite the page freely; your input re-attaches on load.</p>
-
-<table>
-<thead><tr><th>Tier</th><th>When</th><th>Pill shows</th></tr></thead>
-<tbody>
-<tr><td><code>localStorage</code></td><td>always, 700 ms after you stop typing</td><td>—</td></tr>
-<tr><td>Sidecar on disk</td><td>served by <code>flowviz serve</code></td><td>green, <code>saved 14:05 PDT</code></td></tr>
-<tr><td>Manual export</td><td>opened from Finder</td><td>amber <code>local only</code>, plus a state button</td></tr>
-</tbody>
-</table>
-
-<div class="box key"><p><b><code>error</code> is not <code>fail</code>.</b> <code>fail</code>: the command ran
-and the target said no — evidence about the system. <code>error</code>: the interpreter rejected the
-command, so the target was never asked — evidence about my playbook. Verdicts are re-derived from the
-current rules every time the page loads and every time I read them back.</p></div>
-
-</div>
-</details>
-
-<!-- ─────────── ROW 4 ─────────── -->
-<details class="row" data-row="r5" data-kind="context">
-<summary><span class="ord">4</span><span class="cl">The audit turns the standard into exit codes, layout included</span><span class="rt">2 min</span></summary>
-<div class="in">
-
-<table>
-<thead><tr><th>Measured</th><th>How</th></tr></thead>
-<tbody>
-<tr><td>22 report caps</td><td>from the markup: card slots, headers, row kinds, steps, words at rest</td></tr>
-<tr><td>15 Results caps</td><td>outcome, claim, summary, a diagram that marks the result and agrees with it, next, the archive step, its own words and height</td></tr>
-<tr><td>19 caps per drawing canvas</td><td>from the spec, for the root and every segment</td></tr>
-<tr><td>5 layout caps</td><td>headless Chrome on <code>?audit=1</code>: screens at rest, crossings, boxes hit, labels shrunk, zone labels crossed</td></tr>
-<tr><td>12 author checks</td><td>unfilled slots, four paste checks, fragile regexes, row kind against content, and the spec's ids, references, vocabulary, grid and routing</td></tr>
-</tbody>
-</table>
-
-<p>The unfilled check reads the templates, so a scaffold that was built but never written fails on that
-and nothing else. The fragile-regex check runs every <code>data-pass</code> and <code>data-fail</code>
-alternative against real PowerShell, bash and Python error text, and names the word it matched inside.</p>
-
-<details class="more"><summary>what the audit still cannot tell you</summary>
-<div class="in"><ul>
-<li><b>Whether a command parses.</b> That needs an interpreter per language, and the toolkit installs nothing. Parse-checking is the agent's obligation.</li>
-<li><b>Whether a pass condition can be falsified</b> by what the command really prints.</li>
-<li><b>Whether a drawing tells the truth.</b> It measures shape and budget, not accuracy. Your notes on boxes are how that comes back.</li>
-</ul></div></details>
-
-</div>
-</details>
-
-<h2 class="sec">Try it yourself</h2>
-
-<!-- ─────────── ROW 5 ─────────── -->
-<details class="row" data-row="r3" data-kind="test">
-<summary><span class="ord">5</span><span class="cl">This checklist is live: run it on this Mac and paste</span><span class="rt">5 min</span></summary>
-<div class="in">
-
-<p>Every command runs from any folder in Terminal (zsh or bash). Serve first, so your pastes reach disk;
-then tell me "look at the plan" and I will read them back.</p>
-
-<div class="pb" data-pb="try">
+<div class="pb" data-pb="back">
   <div class="hd">
-    <span class="t">Prove the toolkit on this machine</span>
-    <span class="prog">0 / 6 done</span>
+    <span class="t">Roll staging back to v2.2</span>
+    <span class="prog">0 / 1 done</span>
   </div>
   <ol class="steps">
 
-    <li class="step" data-step="sv" data-risk="ro">
+    <li class="step" data-step="rb" data-risk="w" data-after="smoke">
       <input type="checkbox" class="done">
       <details class="sd">
-        <summary><span class="n"></span><span class="ds">Serve this folder so your ticks and pastes reach the sidecar.</span></summary>
-        <div class="in">
-          <div class="box warn"><p>This keeps running. Use a second Terminal tab for the other steps, and
-          reopen this page from the address it prints.</p></div>
-          <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz serve ~/Projects/FLOW_VIZ --open PLAN.html</code></pre></div>
-          <p class="expect"><b>Pass:</b> a <code>127.0.0.1:8787</code> address, and the pill turns green &nbsp;·&nbsp;
-            <i>Fail:</i> <code>Address already in use</code></p>
-          <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["sv"]</span></div>
-            <textarea data-cap="sv" data-pass="\b127\.0\.0\.1:8787\b" data-fail="\bAddress already in use\b"
-              placeholder="paste the first lines it prints"></textarea>
-            <div class="ft">
-              <span>exit <input class="ec" data-ec="sv" placeholder="0"></span>
-              <span data-cnt="sv">empty</span><span data-at="sv"></span>
-              <span class="rn" data-run="sv"></span>
-              <button class="rr" data-rr="sv" title="keep this attempt and clear the box">re-run</button>
-            </div>
-            <input class="nt" data-note="sv" placeholder="note for the agent (optional)">
-          </div>
-        </div>
-      </details>
-      <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="sv">—</span></span>
-    </li>
-
-    <li class="step" data-step="cs" data-risk="ro">
-      <input type="checkbox" class="done">
-      <details class="sd">
-        <summary><span class="n"></span><span class="ds">Print the cheat sheet to prove the toolkit runs from its absolute path.</span></summary>
-        <div class="in">
-          <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz</code></pre></div>
-          <p class="expect"><b>Pass:</b> <code>FLOW_VIZ 0.6.0</code> and the two workflows &nbsp;·&nbsp;
-            <i>Fail:</i> <code>No such file or directory</code></p>
-          <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["cs"]</span></div>
-            <textarea data-cap="cs" data-pass="\bFLOW_VIZ 0\.6\.0\b" data-fail="\bNo such file or directory\b"
-              placeholder="paste the first few lines"></textarea>
-            <div class="ft">
-              <span>exit <input class="ec" data-ec="cs" placeholder="0"></span>
-              <span data-cnt="cs">empty</span><span data-at="cs"></span>
-              <span class="rn" data-run="cs"></span>
-              <button class="rr" data-rr="cs" title="keep this attempt and clear the box">re-run</button>
-            </div>
-            <input class="nt" data-note="cs" placeholder="note for the agent (optional)">
-          </div>
-        </div>
-      </details>
-      <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="cs">—</span></span>
-    </li>
-
-    <li class="step" data-step="ap" data-risk="ro">
-      <input type="checkbox" class="done">
-      <details class="sd">
-        <summary><span class="n"></span><span class="ds">Audit this plan against its own standard, layout caps included.</span></summary>
-        <div class="in">
-          <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz audit --browser ~/Projects/FLOW_VIZ/PLAN.html | tail -n 12</code></pre></div>
-          <p class="expect"><b>Pass:</b> <code>result: clean</code> &nbsp;·&nbsp;
-            <i>Fail:</i> <code>result: 1 over</code> or any failing check — the plan broke its own rules</p>
-          <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["ap"]</span></div>
-            <textarea data-cap="ap" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
-              placeholder="paste the tail of the audit"></textarea>
-            <div class="ft">
-              <span>exit <input class="ec" data-ec="ap" placeholder="0"></span>
-              <span data-cnt="ap">empty</span><span data-at="ap"></span>
-              <span class="rn" data-run="ap"></span>
-              <button class="rr" data-rr="ap" title="keep this attempt and clear the box">re-run</button>
-            </div>
-            <input class="nt" data-note="ap" placeholder="note for the agent (optional)">
-          </div>
-          <details class="more"><summary>why this step</summary>
-          <div class="in"><p>The standard is only real if its own plan passes it. <code>--browser</code> runs
-          headless Chrome on <code>?audit=1</code>, so the layout caps — screens at rest, crossings, labels
-          that had to shrink — are measured, not asserted.</p></div></details>
-        </div>
-      </details>
-      <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="ap">—</span></span>
-    </li>
-
-    <li class="step" data-step="ac" data-risk="ro">
-      <input type="checkbox" class="done">
-      <details class="sd">
-        <summary><span class="n"></span><span class="ds">Audit the checkout drawing, which exercises every drawing cap.</span></summary>
-        <div class="in">
-          <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz audit --browser ~/Projects/FLOW_VIZ/examples/checkout/checkout.html | tail -n 12</code></pre></div>
-          <p class="expect"><b>Pass:</b> <code>result: clean</code> &nbsp;·&nbsp; <i>Fail:</i> anything over</p>
-          <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["ac"]</span></div>
-            <textarea data-cap="ac" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
-              placeholder="paste the tail of the audit"></textarea>
-            <div class="ft">
-              <span>exit <input class="ec" data-ec="ac" placeholder="0"></span>
-              <span data-cnt="ac">empty</span><span data-at="ac"></span>
-              <span class="rn" data-run="ac"></span>
-              <button class="rr" data-rr="ac" title="keep this attempt and clear the box">re-run</button>
-            </div>
-            <input class="nt" data-note="ac" placeholder="note for the agent (optional)">
-          </div>
-          <details class="more"><summary>why this step</summary>
-          <div class="in"><p>The first audit of the approved mockup failed on a real cap: a fact of 26
-          characters against a cap of 24. The fix went into the drawing, not the cap — which is the whole
-          point of measuring.</p></div></details>
-        </div>
-      </details>
-      <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="ac">—</span></span>
-    </li>
-
-    <li class="step" data-step="sc" data-risk="w" data-after="ac">
-      <input type="checkbox" class="done">
-      <details class="sd">
-        <summary><span class="n"></span><span class="ds">Scaffold a throwaway report and confirm the audit fails it on unfilled slots alone.</span></summary>
+        <summary><span class="n"></span><span class="ds">Put v2.2 back if the smoke test failed, and wait for the pods.</span></summary>
         <div class="in">
           <label class="gate"><input type="checkbox" class="ack">
-            I accept this creates a throwaway folder under the system temp directory.</label>
-          <div class="cmd"><button class="copy">copy</button><pre><code>D=$(mktemp -d) && python3 ~/Projects/FLOW_VIZ/bin/flowviz new report "The toolkit scaffolds a report" --dir "$D/fvt" >/dev/null && python3 ~/Projects/FLOW_VIZ/bin/flowviz build "$D/fvt/FVT.src.html" >/dev/null && python3 ~/Projects/FLOW_VIZ/bin/flowviz audit "$D/fvt/FVT.html" | grep -E "OVER|FAIL"</code></pre></div>
-          <p class="expect"><b>Pass:</b> exactly one line, <code>FAIL  unfilled slots</code> &nbsp;·&nbsp;
-            <i>Fail:</i> any <code>OVER</code>, or a second <code>FAIL</code></p>
-          <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["sc"]</span></div>
-            <textarea data-cap="sc" data-pass="\bFAIL\s+unfilled slots\b" data-fail="\bOVER\b|\bFAIL\s+(?!unfilled)"
-              placeholder="paste what grep printed"></textarea>
-            <div class="ft">
-              <span>exit <input class="ec" data-ec="sc" placeholder="0"></span>
-              <span data-cnt="sc">empty</span><span data-at="sc"></span>
-              <span class="rn" data-run="sc"></span>
-              <button class="rr" data-rr="sc" title="keep this attempt and clear the box">re-run</button>
-            </div>
-            <input class="nt" data-note="sc" placeholder="note for the agent (optional)">
-          </div>
-          <details class="more"><summary>why this step</summary>
-          <div class="in"><p>A checker that passes an empty scaffold measures length, not writing. The
-          scaffold's placeholder words sit inside every cap on purpose, so a report that was built but
-          never written fails on exactly one thing.</p></div></details>
-        </div>
-      </details>
-      <span class="ctr"><span class="badge w">write</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="sc">—</span></span>
-    </li>
-
-    <li class="step" data-step="rb" data-risk="ro" data-after="sv">
-      <input type="checkbox" class="done">
-      <details class="sd">
-        <summary><span class="n"></span><span class="ds">Read back your own pastes exactly the way I will.</span></summary>
-        <div class="in">
-          <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz captures ~/Projects/FLOW_VIZ/PLAN.html | tail -n 20</code></pre></div>
-          <p class="expect"><b>Pass:</b> your earlier steps, each with a verdict &nbsp;·&nbsp;
-            <i>Fail:</i> no sidecar — the page was not served when you pasted</p>
+            I accept this replaces the notify pods in staging with v2.2 again.</label>
+          <div class="cmd"><button class="copy">copy</button><pre><code>kubectl -n staging rollout undo deploy/notify &amp;&amp; kubectl -n staging rollout status deploy/notify --timeout=120s</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>successfully rolled out</code> &nbsp;·&nbsp; <i>Fail:</i> any <code>error</code></p>
           <div class="cap">
             <div class="cl">Paste output <span class="kp">captures["rb"]</span></div>
-            <textarea data-cap="rb" data-pass="\bcaptured\b" data-fail="\bno sidecar\b"
-              placeholder="paste the summary lines"></textarea>
+            <textarea data-cap="rb" data-pass="\bsuccessfully rolled out\b" data-fail="\berror\b"
+              placeholder="paste the rollout output"></textarea>
             <div class="ft">
               <span>exit <input class="ec" data-ec="rb" placeholder="0"></span>
               <span data-cnt="rb">empty</span><span data-at="rb"></span>
@@ -1445,7 +1362,7 @@ then tell me "look at the plan" and I will read them back.</p>
           </div>
         </div>
       </details>
-      <span class="ctr"><span class="badge ro">read</span>
+      <span class="ctr"><span class="badge w">write</span>
         <button class="copy">⧉</button><span class="vd" data-vd="rb">—</span></span>
     </li>
 
@@ -1455,54 +1372,8 @@ then tell me "look at the plan" and I will read them back.</p>
 </div>
 </details>
 
-<h2 class="sec">What changed</h2>
-
-<!-- ─────────── ROW 6 ─────────── -->
-<details class="row" data-row="r6" data-kind="record">
-<summary><span class="ord">6</span><span class="cl">FLOW_VIZ is its own public repository, and every agent can find it</span><span class="rt">1 min</span></summary>
-<div class="in">
-
-<p>You approved both changes on 2026-09-28, and I made them. This report no longer carries them as steps:
-running them twice would add a second pointer.</p>
-
-<table>
-<thead><tr><th>Change</th><th>Where</th><th>Undo</th></tr></thead>
-<tbody>
-<tr><td>Its own git repository, tagged <code>v0.6.0</code></td>
-    <td><code>~/Projects/FLOW_VIZ</code>, pushed to <code>github.com/RumbleGG/FLOW_VIZ</code>, public</td>
-    <td>roll the standard back with <code>git -C ~/Projects/FLOW_VIZ checkout v0.6.0</code></td></tr>
-<tr><td>A pointer every agent reads</td>
-    <td><code>~/.claude/CLAUDE.md</code>, the section <b>FLOW_VIZ — pointer</b></td>
-    <td>delete that section</td></tr>
-</tbody>
-</table>
-
-<div class="box warn"><p><b>The parent repository.</b> <code>~/Projects</code> is itself a git repository, and it now
-sees this folder as a nested one: it will not track these files. Leave it that way, or add
-<code>FLOW_VIZ/</code> to its <code>.gitignore</code> to silence it.</p></div>
-
-<div class="box key"><p><b>Sharing.</b> The repository is public: anyone can read and clone it. To let someone
-push to it, send me their GitHub username.</p></div>
-
-<details class="more"><summary>what is done, and what is not built yet</summary>
-<div class="in">
-<label class="chk"><input type="checkbox" data-ck="d1" checked><span>Standard: <code>SPEC.md</code> for both kinds, state schema 3, the motion grammar</span></label>
-<label class="chk"><input type="checkbox" data-ck="d2" checked><span>Core runtime rebuilt from 0.5.1, with <code>window.FLOWVIZ</code> for drawings</span></label>
-<label class="chk"><input type="checkbox" data-ck="d3" checked><span>Drawing component: grid, lanes, motion, peek, drawer, walkthrough, sequence, segments, notes</span></label>
-<label class="chk"><input type="checkbox" data-ck="d4" checked><span>Commands: new, build, audit (with <code>--browser</code>), serve, captures</span></label>
-<label class="chk"><input type="checkbox" data-ck="d5" checked><span><code>AGENTS.md</code> tested by a fresh agent; this plan and the checkout example audit clean</span></label>
-<label class="chk"><input type="checkbox" data-ck="d6" checked><span>Its own repository, public on GitHub, tagged <code>v0.6.0</code> and <code>v1.0.0</code>; the global pointer added</span></label>
-<label class="chk"><input type="checkbox" data-ck="n4"><span>Push access for a collaborator, once their username is known</span></label>
-<label class="chk"><input type="checkbox" data-ck="n1"><span>A pattern library: cache-aside, outbox, fan-out and others as ready segments</span></label>
-<label class="chk"><input type="checkbox" data-ck="n2"><span>State diagrams (lifecycles); sequence views cover timing today</span></label>
-<label class="chk"><input type="checkbox" data-ck="n3"><span>A before-and-after counter-example: a verbose page beside the drawing that replaced it</span></label>
-</div></details>
-
-</div>
-</details>
-
 <div class="foot">
-<span class="v">FLOW-VIZ v2.0.0</span> · doc <code>flowviz-plan</code> · template <code>report@2.0.0</code> · built 2026-09-29 · sha <code>ac51673</code> · state <code>flowviz-plan.flow.json</code>
+<span class="v">FLOW-VIZ v2.0.0</span> · doc <code>deploy</code> · template <code>report@2.0.0</code> · built 2026-09-29 · sha <code>ac51673</code> · state <code>deploy.flow.json</code>
 <div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v2.0.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
 </div>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
