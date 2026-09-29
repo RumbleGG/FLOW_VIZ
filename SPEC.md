@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 2.0.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 2.1.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -298,7 +298,22 @@ title, lede, grid and flows; the boxes it talks to come along as **ghosts** (`"g
 that lead back. When a system will not fit in 12 boxes, split it into segments instead of raising the cap.
 A standalone drawing may itself be a segment (`"kind": "segment"`) of a system drawn elsewhere.
 
-### 2.7 Views
+### 2.7 Copy HTML — a drawing for a wiki page
+
+Every drawing has a **Copy HTML** button. It copies one self-contained snippet to paste into a wiki page or
+any page that accepts HTML, and the snippet works in three situations:
+
+| The page… | The reader gets |
+|---|---|
+| allows scripts (Confluence's HTML macro, Wiki.js, a static site) | the live drawing: peek, drawer, flows and Walk through, segments, notes kept in that browser |
+| strips scripts (Obsidian, GitHub, MediaWiki) | a still picture with its colours and result marks inlined, and a `<details>` per box with its peek, facts and depth |
+| is markdown | either of the above: the snippet has no blank lines, so the HTML block is not cut short |
+
+The snippet's styles are scoped to its wrapper (`.fvx`), so it cannot restyle the page around it. Several
+snippets on one page, or one on a FLOW_VIZ page, share one runtime and never mount twice. The build
+provides the scoped stylesheet as `script#fvEmbedCss`; the runtime assembles the rest.
+
+### 2.8 Views
 
 One spec, three views: **Map** (the drawing), **Sequence** (the selected flow laid out in time: one
 lifeline per box it touches, one arrow per hop, the same step numbers), and **Spec** (the JSON, with a
@@ -408,7 +423,7 @@ an agent may regenerate the HTML freely and the human's input re-attaches. Ids a
 | Bump | Means |
 |---|---|
 | patch | CSS, wording, bug fix |
-| minor | new component, caps unchanged (0.6.0 added drawings) |
+| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML) |
 | major | a cap changes, or the card or spine shape changes (1.0.0 labelled every row; 2.0.0 made flows optional) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then

@@ -37,6 +37,11 @@ A `.src.html` is a full HTML document holding content only. It carries two metas
 <!-- flowviz:js -->     before </body>: build puts the icon sprite, flow.js and draw.js here
 ```
 
+The build also writes `<script type="text/plain" id="fvEmbedCss">`: flow.css and draw.css transformed into
+one stylesheet scoped to `.fvx` (token blocks moved from `:root`, page-level rules dropped, core components
+prefixed), which `draw.js` puts into every **Copy HTML** snippet. Keep draw.css's own rules namespaced
+`fv-`: anything else is prefixed with `.fvx` by the transform, and a host page's classes must never collide.
+
 The boot script build writes is, in order: `window.FLOW={doc,version,kind,built}`; then, from
 `localStorage['flowviz:'+doc]`, set `data-theme` (`light`/`dark`, resolving `auto` with
 `matchMedia`), set `data-kind` from `FLOW.kind`, and add class `still` to `<html>` when

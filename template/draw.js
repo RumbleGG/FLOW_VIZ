@@ -17,6 +17,15 @@
    =========================================================================== */
 (function () {
   'use strict';
+  /* this runtime's own source, so "Copy HTML" can carry it into a wiki page */
+  var SRC = (document.currentScript && document.currentScript.textContent) || '';
+  /* one runtime per page: a pasted drawing on a FLOW_VIZ page, or several pasted
+     drawings on one wiki page, hand their figures to whichever loaded first */
+  if (window.__fvDraw && window.__fvDraw.mount) {
+    var again = function () { window.__fvDraw.mount(); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', again); else again();
+    return;
+  }
   var NS = 'http://www.w3.org/2000/svg';
   /* one grid for every drawing: agents place boxes in cells, never in pixels */
   var G = { cw: 240, ch: 132, nw: 172, nh: 56, px: 22, py: 18, r: 10, lane: 4.5 };
@@ -60,6 +69,7 @@
   var LKEY = 'flowviz:' + ((window.FLOW && window.FLOW.doc) || 'drawing');
   var local = null, saveT = null;
   function state() {
+    if (!FV && window.FLOWVIZ) FV = window.FLOWVIZ;
     if (FV && FV.state) return FV.state;
     if (!local) {
       try { local = JSON.parse(localStorage.getItem(LKEY) || '{}') || {}; } catch (e) { local = {}; }
@@ -295,6 +305,7 @@
            body: $('.dr-body', d), owner: null, what: null };
     $('.dr-x', d).addEventListener('click', closeDrawer);
     scrim.addEventListener('click', closeDrawer);
+    if (!window.FLOW) { scrim.classList.add('fvx'); d.classList.add('fvx'); paintEmbedTheme(); }
     return DR;
   }
   function closeDrawer() {
@@ -344,7 +355,10 @@
   window.addEventListener('resize', function () { if (DR && DR.owner) fitDrawer(DR); });
   var toastEl = null, toastT = null;
   function toast(msg) {
-    if (!toastEl) { toastEl = h('div', 'fv-toast', null, document.body); toastEl.setAttribute('role', 'status'); }
+    if (!toastEl) {
+      toastEl = h('div', 'fv-toast', null, document.body); toastEl.setAttribute('role', 'status');
+      if (!window.FLOW) { toastEl.classList.add('fvx'); paintEmbedTheme(); }
+    }
     toastEl.textContent = msg; toastEl.classList.add('on');
     clearTimeout(toastT); toastT = setTimeout(function () { toastEl.classList.remove('on'); }, 1600);
   }
@@ -367,10 +381,62 @@
     catch (e) { done(false); }
   }
 
+  /* ── embeds: a drawing pasted into a wiki page ─────────────────────────────
+     Inside an embed (a figure[data-embed], or anything under .fvx) there is no
+     flow.js and no FLOW_VIZ page: the wrapper and the singletons carry class
+     fvx and a data-theme that follows the host — the page's theme on a FLOW_VIZ
+     page, prefers-color-scheme anywhere else — and motion is a class on each
+     figure, so nothing is ever written onto the host's <html>. */
+  function isEmbedFig(fig) { return fig.hasAttribute('data-embed') || !!(fig.closest && fig.closest('.fvx')); }
+  function embedTheme() {
+    if (window.FLOW) return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  function paintEmbedTheme() {
+    var t = embedTheme();
+    $$('.fvx').forEach(function (w) { if (!w.hasAttribute('data-fvx-snap')) w.setAttribute('data-theme', t); });
+  }
+  if (window.matchMedia) {
+    var pcs = window.matchMedia('(prefers-color-scheme: dark)');
+    if (pcs.addEventListener) pcs.addEventListener('change', paintEmbedTheme);
+  }
+  if (window.MutationObserver) {
+    new MutationObserver(function () { if (window.FLOW) paintEmbedTheme(); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+  function applyStill() {
+    var off = !motionOn();
+    if (window.FLOW) document.documentElement.classList.toggle('still', off);
+    $$('figure.fv-drawing').forEach(function (fg) { fg.classList.toggle('fv-still', off); });
+  }
+  /* flow.js owns .copy on a FLOW_VIZ page; without it, a pasted drawing handles its own */
+  document.addEventListener('click', function (ev) {
+    if (window.FLOWVIZ) return;
+    var b = ev.target.closest && ev.target.closest('.copy');
+    if (!b || !b.closest('.fv-drawer, .fvx')) return;
+    ev.preventDefault();
+    var box = b.closest('.cmd') || b.parentNode, pre = box && box.querySelector('pre');
+    if (pre) copyText(pre.innerText.replace(/\s+$/, ''), b);
+  });
+  /* The scoped styling a pasted drawing carries: the build writes it into every
+     page as script#fvEmbedCss — tokens on .fvx, components under their fv- names,
+     nothing that can reach the host page. */
+  function embedCss() {
+    var e = document.getElementById('fvEmbedCss');
+    return e ? e.textContent.trim() : '';
+  }
+  function spriteHtml() {
+    var sym = $('svg symbol[id^="i-"]');
+    return sym ? sym.closest('svg').outerHTML : '';
+  }
+  function kb(str) { return Math.max(1, Math.round((window.Blob ? new Blob([str]).size : str.length) / 1024)); }
+
   /* ── instances, the keyboard, and the page-wide motion switch ──────────── */
   var INST = [], active = null;
   var PAGE_KIND = document.documentElement.getAttribute('data-kind') || (window.FLOW && window.FLOW.kind) || 'report';
-  function keyTarget() { return active || (PAGE_KIND === 'drawing' ? INST[0] : null); }
+  function keyTarget() {
+    return active || (PAGE_KIND === 'drawing' ? INST.filter(function (d) { return !d.embedded; })[0] || null : null);
+  }
   document.addEventListener('pointerdown', function (ev) {
     var fig = ev.target.closest && ev.target.closest('figure.fv-drawing');
     if (fig) { active = fig._fvd || active; return; }
@@ -399,7 +465,7 @@
   }
   function toggleMotion() {
     uiAll().motion = !motionOn();
-    document.documentElement.classList.toggle('still', !motionOn());
+    applyStill();
     save();
     $$('.fv-motion').forEach(paintMotion);
     INST.forEach(function (d) { d.motionChanged(); });
@@ -472,13 +538,16 @@
     ROOT.nodes = ROOT.nodes || []; ROOT.edges = ROOT.edges || []; ROOT.flows = ROOT.flows || [];
     var ID = ROOT.id || ('drawing-' + (INST.length + 1));
     var PAGE = fig.getAttribute('data-mode') === 'page';
+    var SNAP = fig.hasAttribute('data-fv-snap');         // a hidden render for the still picture
+    var EMBED = !SNAP && isEmbedFig(fig);                // pasted into a page that is not FLOW_VIZ's own
+    var SNAPUI = {};
     var self = {};
     var S = {
       spec: ROOT, seg: null, flow: 0, step: -1, playing: false, run: 0, raf: null, timer: null,
       nodes: {}, edges: {}, nref: {}, eref: {}, lanes: [], seqRows: [], layer: {}, view: 'map', L: null
     };
     var R = {};
-    var u0 = uiDraw(ID);
+    var u0 = SNAP ? SNAPUI : uiDraw(ID);
     S.flow = Math.min(Math.max(0, +u0.flow || 0), Math.max(0, ROOT.flows.length - 1));
     S.view = u0.view === 'seq' || u0.view === 'spec' ? u0.view : 'map';
 
@@ -514,8 +583,8 @@
       return '<div class="box ' + RES[r].tone + ' fv-resbox"><p><b>' + RES[r].glyph + ' ' + esc(RES[r].word) + '.</b> ' + esc(RES[r].note) + '</p></div>';
     }
     function noteKey(key) { return ID + '/' + scope(key); }
-    function ui() { return uiDraw(ID); }
-    function persistUi(patch) { if (S.seg) return; var u = ui(); for (var k in patch) u[k] = patch[k]; save(); }
+    function ui() { return SNAP ? SNAPUI : uiDraw(ID); }
+    function persistUi(patch) { if (S.seg || SNAP) return; var u = ui(); for (var k in patch) u[k] = patch[k]; save(); }
 
     /* ── the DOM the agent never writes ──────────────────────────────────── */
     function build() {
@@ -588,6 +657,19 @@
       $$('button', R.navs)[0].addEventListener('click', function () { stepBy(-1); });
       $$('button', R.navs)[1].addEventListener('click', function () { stepBy(1); });
       R.print = h('ol', 'fv-print');
+      if (EMBED) {
+        /* no pill in a wiki page: the motion switch lives with the layers */
+        var mb = h('button', 'fv-motion', null, R.layers);
+        mb.type = 'button'; paintMotion(mb); mb.addEventListener('click', toggleMotion);
+      } else if (!SNAP) {
+        R.copyHtml = h('button', 'fv-btn fv-copyhtml', icon('copy') + 'Copy HTML', R.strip);
+        R.copyHtml.type = 'button';
+        R.copyHtml.title = 'Copy this drawing as HTML for a wiki page: interactive where scripts are allowed';
+        R.copyHtml.addEventListener('click', function (ev) {
+          var b = ev.currentTarget, html = embedHtml();
+          copyText(html, b, 'Copied ' + kb(html) + ' KB of HTML for a wiki page');
+        });
+      }
 
       fig.appendChild(R.head); fig.appendChild(R.strip); fig.appendChild(R.stage); fig.appendChild(R.print);
 
@@ -595,7 +677,7 @@
         if (DR && DR.owner === self) closeDrawer();
         else if (S.step >= 0 && !S.playing) rest();
       });
-      fig.addEventListener('pointerenter', function () { active = self; });
+      if (!EMBED) fig.addEventListener('pointerenter', function () { active = self; });   // an embed waits to be touched
       fig.addEventListener('focusin', function () { active = self; });
       /* on a report, leaving the drawing gives Space and the arrows back to the page */
       fig.addEventListener('pointerleave', function () {
@@ -1527,7 +1609,135 @@
       add(pre + 'zone labels crossed', zl.length ? zl.length + ' (' + zl.join('; ') + ')' : 0, '0', !zl.length);
     }
 
+    /* ── Copy HTML: this drawing as one paste-able, self-contained snippet ── */
+    function depthHtml(key) {
+      if (!DEPTH) return '';
+      var s0 = null;
+      $$('section[data-for]', DEPTH).some(function (x) { if (x.getAttribute('data-for') === key) { s0 = x; return true; } return false; });
+      if (!s0) return '';
+      var c = s0.cloneNode(true);
+      $$('button', c).forEach(function (b) { b.remove(); });   // a still page has nothing to press
+      return c.innerHTML;
+    }
+    function resWords(x) { var r = resultOf(x); return r ? ' · ' + RES[r].glyph + ' ' + esc(RES[r].word) : ''; }
+    function detailsHtml() {
+      var sp = ROOT, nodes = {}, out = ['<div class="fvx-details">'];
+      (sp.nodes || []).forEach(function (n) { nodes[n.id] = n; });
+      out.push('<p class="fvx-cap"><strong>' + esc(sp.title || sp.name || ID) + '</strong>' + (sp.lede ? ' ' + esc(sp.lede) : '') + '</p>');
+      (sp.nodes || []).forEach(function (n) {
+        if (n.ghost) return;
+        out.push('<details><summary><strong>' + esc(n.label || n.id) + '</strong> · ' + esc(KIND_NAME[n.kind] || 'Box') +
+          (n.tech ? ' · ' + esc(n.tech) : '') + resWords(n) + '</summary>');
+        if (n.peek) out.push('<p>' + esc(n.peek) + '</p>');
+        if (n.facts && n.facts.length) out.push('<ul>' + n.facts.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>');
+        out.push(depthHtml(n.id));
+        if (n.segment && sp.segments && sp.segments[n.segment]) {
+          out.push('<p><em>Inside: ' + esc(sp.segments[n.segment].title || n.segment) + '.</em> The live drawing opens it.</p>');
+        }
+        out.push('</details>');
+      });
+      (sp.edges || []).forEach(function (e) {
+        var d = depthHtml('edge:' + e.id);
+        if (!e.peek && !d) return;
+        out.push('<details><summary><strong>' + esc((nodes[e.from] || {}).label || e.from) + (e.both ? ' ⇄ ' : ' → ') +
+          esc((nodes[e.to] || {}).label || e.to) + '</strong>' + (e.label ? ' · ' + esc(e.label) : '') + (e.ms ? ' · ' + esc(e.ms) : '') +
+          resWords(e) + '</summary>' + (e.peek ? '<p>' + esc(e.peek) + '</p>' : '') + d + '</details>');
+      });
+      (sp.flows || []).forEach(function (fl) {
+        var o = flowOutcome(fl);
+        out.push('<details><summary><strong>' + esc(fl.label || 'Flow') + '</strong> · ' + (fl.steps || []).length + ' steps' +
+          (o ? ' · ' + RES[o].glyph + ' ' + esc(o === 'pass' ? 'every step passed' : o === 'fail' ? 'a step failed' : 'a command was rejected') : '') +
+          '</summary>' + (fl.summary ? '<p>' + esc(fl.summary) + '</p>' : '') + '<ol>' + (fl.steps || []).map(function (st) {
+            var r = resultOf(st);
+            return '<li>' + (r ? '<strong>' + RES[r].glyph + ' ' + esc(RES[r].step) + '</strong> — ' : '') + esc(st.say || '') + '</li>';
+          }).join('') + '</ol></details>');
+      });
+      out.push('</div>');
+      return out.join('\n');
+    }
+    /* The still picture: the root canvas rendered at rest in a hidden light-themed
+       copy, every look baked in as SVG attributes — sanitisers keep attributes far
+       more often than style="" — and the icons it uses copied into its own defs. */
+    var ATTRS = {
+      shape: [['fill', 'fill'], ['stroke', 'stroke'], ['strokeWidth', 'stroke-width'], ['strokeDasharray', 'stroke-dasharray'],
+              ['strokeLinecap', 'stroke-linecap'], ['strokeLinejoin', 'stroke-linejoin']],
+      text: [['fill', 'fill'], ['fontFamily', 'font-family'], ['fontSize', 'font-size'], ['fontWeight', 'font-weight'],
+             ['letterSpacing', 'letter-spacing'], ['textAnchor', 'text-anchor'], ['dominantBaseline', 'dominant-baseline']],
+      use: [['color', 'color']]
+    };
+    function snapshotSvg(css) {
+      var host = h('div', 'fvx', null, document.body);
+      host.setAttribute('data-theme', 'light'); host.setAttribute('data-fvx-snap', ''); host.setAttribute('aria-hidden', 'true');
+      host.style.cssText = 'position:absolute;left:-20000px;top:0;width:1400px;visibility:hidden;pointer-events:none';
+      var st = document.createElement('style'); st.textContent = css; host.appendChild(st);
+      var tf = h('figure', 'fv-drawing', null, host);
+      tf.setAttribute('data-fv-snap', '');
+      var sc = document.createElement('script'); sc.type = 'application/json'; sc.textContent = JSON.stringify(ROOT); tf.appendChild(sc);
+      Drawing(tf);
+      var svg = $('svg.fv-map', tf), bg = window.getComputedStyle($('.fv-stage', tf)).backgroundColor;
+      $$('.hit, .fx, .chiplbl, .seg, .tech', svg).forEach(function (x) { x.remove(); });
+      var els = $$('*', svg), looks = els.map(function (x) {
+        var cs = window.getComputedStyle(x), tag = x.tagName.toLowerCase(), set = [];
+        var list = tag === 'text' ? ATTRS.text : tag === 'use' ? ATTRS.use : /^(rect|circle|path|line|ellipse|polygon|polyline)$/.test(tag) ? ATTRS.shape : [];
+        list.forEach(function (p) {
+          var v = cs[p[0]];
+          if (!v || v === 'normal' || (p[1] === 'stroke-dasharray' && v === 'none') || (p[1] === 'dominant-baseline' && v === 'auto')) return;
+          if (/^stroke-/.test(p[1]) && cs.stroke === 'none') return;
+          set.push([p[1], v]);
+        });
+        if (cs.opacity !== '1') set.push(['opacity', cs.opacity]);
+        return { set: set, filter: cs.filter && cs.filter !== 'none' ? cs.filter : '' };
+      });
+      var used = {};
+      els.forEach(function (x, i) {
+        Array.prototype.slice.call(x.attributes).forEach(function (a) {
+          if (a.name === 'class' || a.name === 'style' || a.name === 'tabindex' || a.name === 'role' ||
+              /^(data-|aria-)/.test(a.name)) x.removeAttribute(a.name);
+        });
+        looks[i].set.forEach(function (p) { x.setAttribute(p[0], p[1]); });
+        if (looks[i].filter) x.setAttribute('style', 'filter:' + looks[i].filter);
+        if (x.tagName.toLowerCase() === 'use') {
+          var ref = (x.getAttribute('href') || '').replace(/^#/, '');
+          if (ref) { used[ref] = 1; x.setAttribute('href', '#fvxs-' + ID + '-' + ref); }
+        }
+      });
+      var vb = (svg.getAttribute('viewBox') || '0 0 1000 600').split(/\s+/);
+      var defs = '<defs>' + Object.keys(used).map(function (ref) {
+        var sy = document.getElementById(ref);
+        if (!sy) return '';
+        var c = sy.cloneNode(true); c.setAttribute('id', 'fvxs-' + ID + '-' + ref);
+        return c.outerHTML;
+      }).join('') + '</defs>';
+      var inner = svg.innerHTML;
+      host.remove();
+      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb.join(' ') + '" width="' + vb[2] + '" height="' + vb[3] +
+        '" role="img" aria-label="' + esc((ROOT.title || ROOT.name || ID) + '. ' + ROOT.nodes.length + ' boxes, ' +
+        ROOT.edges.length + ' connections.') + '" style="display:block;max-width:100%;height:auto">' + defs +
+        '<rect x="0" y="0" width="' + vb[2] + '" height="' + vb[3] + '" rx="18" fill="' + bg + '"/>' + inner + '</svg>';
+    }
+    function embedHtml() {
+      var css = embedCss(), ver = (window.FLOW && window.FLOW.version) || '', T = 'script';
+      var depth = DEPTH ? DEPTH.outerHTML : '<div class="fv-depth" hidden></div>';
+      var parts = [
+        '<!-- FLOW_VIZ drawing "' + String(ID).replace(/-{2,}/g, '-') + '" · v' + ver +
+          ' · interactive where scripts are allowed; the picture and details show where they are not -->',
+        '<div class="fvx" data-fvx="' + esc(ID) + '">',
+        '<style>' + css + '</style>',
+        spriteHtml(),
+        '<div class="fvx-static">', snapshotSvg(css), detailsHtml(), '</div>',
+        '<figure class="fv-drawing" data-embed>',
+        '<' + T + ' type="application/json">' + JSON.stringify(ROOT).replace(/<\//g, '<\\/') + '</' + T + '>',
+        depth,
+        '</figure>',
+        '<' + T + '>' + SRC + '</' + T + '>',
+        '</div>'];
+      /* no blank lines anywhere: a markdown wiki ends an HTML block at the first one */
+      return parts.join('\n').split(/\r?\n/).filter(function (l) { return l.trim() !== ''; }).join('\n');
+    }
+
     /* ── the instance API: what the page-level code may call ─────────────── */
+    self.embedded = EMBED;
+    self.embedHtml = embedHtml;
     self.id = ID;
     self.select = select;
     self.view = function () { return S.view; };
@@ -1555,37 +1765,52 @@
     renderAll();
     setView(S.view, true);
     fig._fvd = self;
+    if (EMBED) {
+      var wrap = fig.closest('.fvx');
+      if (wrap) Array.prototype.forEach.call(wrap.children, function (c) {
+        if (c.classList && c.classList.contains('fvx-static')) c.style.display = 'none';   // scripts ran: the live drawing takes over
+      });
+    }
     return self;
   }
 
   /* ═════════════════════════ mount ═══════════════════════════════════════ */
+  var hooked = { load: false, hydrate: false, audit: false };
   function mount() {
+    if (!FV && window.FLOWVIZ) FV = window.FLOWVIZ;
     $$('figure.fv-drawing').forEach(function (fig) {
-      if (fig._fvd) return;
+      if (fig._fvd || fig.hasAttribute('data-fv-snap')) return;
       var d = Drawing(fig);
       if (d) INST.push(d);
     });
+    applyStill(); paintEmbedTheme();
     if (!INST.length) return;
-    if (!motionIntoPill()) {
+    if (!motionIntoPill() && !hooked.load) {
+      hooked.load = true;
       window.addEventListener('load', function () {
-        if (motionIntoPill()) return;
+        if (motionIntoPill() || $('.fv-motion')) return;
         /* no pill on this page: the switch goes into the first drawing's own chrome */
         var host = $('.fv-drawing .fv-tools') || $('.fv-drawing .fv-layers');
-        if (!host || $('.fv-motion', host)) return;
+        if (!host) return;
         var b = h('button', host.classList.contains('fv-tools') ? 'fv-tbtn fv-motion' : 'fv-motion', null, host);
         b.type = 'button'; paintMotion(b); b.addEventListener('click', toggleMotion);
       });
     }
-    if (FV && FV.onHydrate) FV.onHydrate(function () {
-      document.documentElement.classList.toggle('still', !motionOn());
-      $$('.fv-motion').forEach(paintMotion);
-      INST.forEach(function (d) { d.refreshNotes(); });
-    });
-    if (FV && Array.isArray(FV.auditHooks)) {
+    if (FV && FV.onHydrate && !hooked.hydrate) {
+      hooked.hydrate = true;
+      FV.onHydrate(function () {
+        applyStill();
+        $$('.fv-motion').forEach(paintMotion);
+        INST.forEach(function (d) { d.refreshNotes(); });
+      });
+    }
+    if (FV && Array.isArray(FV.auditHooks) && !hooked.audit) {
+      hooked.audit = true;
       FV.auditHooks.push(function (add) { INST.forEach(function (d) { d.audit(add); }); });
     }
   }
-  document.documentElement.classList.toggle('still', !motionOn());
+  window.__fvDraw = { mount: mount, embedHtml: function (i) { var d = INST[i || 0]; return d ? d.embedHtml() : ''; } };
+  applyStill();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
   else mount();
 })();

@@ -92,6 +92,70 @@ def check_specs(src):
     return count
 
 
+# ── the embed stylesheet: everything a drawing needs, scoped to .fvx ──────────
+# A drawing copied into a wiki page carries this, so it looks right there and
+# cannot restyle the page around it: token blocks move from :root onto .fvx,
+# page-level rules are dropped, core components are prefixed with .fvx, and the
+# drawing's own rules (already namespaced fv-) are kept as they are.
+TOKEN_MAP = {':root': '.fvx', '[data-theme="dark"]': '.fvx[data-theme="dark"]',
+             '[data-kind="drawing"]': '.fvx', '[data-kind="drawing"][data-theme="dark"]': '.fvx[data-theme="dark"]'}
+CORE_OK = re.compile(r'^(p|ul|ol|li|b|strong|a|em|code|pre|table|thead|tbody|tr|th|td|h3|\.box|\.cmd|\.copy'
+                     r'|\.expect|details\.more|\.c|\.k|\.badge)(?![\w-])')
+
+
+def split_css(css):
+    css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+    items, i, n = [], 0, len(css)
+    while i < n:
+        j = css.find('{', i)
+        if j < 0:
+            break
+        depth, k = 1, j + 1
+        while k < n and depth:
+            depth += {'{': 1, '}': -1}.get(css[k], 0)
+            k += 1
+        items.append((css[i:j].strip(), css[j + 1:k - 1]))
+        i = k
+    return items
+
+
+def scope_rules(items, core):
+    out = []
+    for prelude, body in items:
+        if prelude.startswith(('@media', '@supports')):
+            inner = scope_rules(split_css(body), core)
+            if inner:
+                out.append(prelude + '{' + inner + '}')
+            continue
+        if prelude.startswith('@'):
+            if not core:
+                out.append(prelude + '{' + body + '}')
+            continue
+        sels = [x.strip() for x in prelude.split(',')]
+        if len(sels) == 1 and sels[0] in TOKEN_MAP:
+            out.append(TOKEN_MAP[sels[0]] + '{' + body + '}')
+            continue
+        if any(x.startswith('[data-kind="drawing"]') for x in sels):
+            continue
+        if core:
+            if all(CORE_OK.match(x) for x in sels):
+                out.append(','.join('.fvx ' + x for x in sels) + '{' + body + '}')
+            continue
+        out.append(','.join('.fvx ' + x if re.match(r'^\.(k|j)-', x) else x for x in sels) + '{' + body + '}')
+    return '\n'.join(out)
+
+
+def embed_css(flow_css, draw_css):
+    # the wrapper gets spacing; everything carrying .fvx (the drawer, toast and peek too) gets type and ink
+    head = ('.fvx[data-fvx]{display:block;margin:12px 0}\n'
+            '.fvx{font:14px/1.55 var(--f-body);color:var(--fg)}\n'
+            '.fvx,.fvx *{box-sizing:border-box}')
+    css = head + '\n' + scope_rules(split_css(flow_css), True) + '\n' + scope_rules(split_css(draw_css), False)
+    if re.search(r'</script', css, re.I):
+        die('the embed stylesheet contains "</script"')
+    return css
+
+
 def boot(doc, version, kind, built):
     flow = json.dumps({'doc': doc, 'version': version, 'kind': kind, 'built': built})
     return ('<script>window.FLOW=%s;\n'
@@ -153,8 +217,9 @@ def main():
     built = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     sha = git_sha()
     head = boot(doc, version, kind, built) + '\n<style>\n' + asset('flow.css') + '\n' + asset('draw.css') + '\n</style>'
-    js = (asset('icons.svg') + '\n<script>\n' + asset('flow.js') + '\n</script>\n<script>\n'
-          + asset('draw.js') + '\n</script>')
+    fcss, dcss = asset('flow.css'), asset('draw.css')
+    js = (asset('icons.svg') + '\n<script type="text/plain" id="fvEmbedCss">\n' + embed_css(fcss, dcss)
+          + '\n</script>\n<script>\n' + asset('flow.js') + '\n</script>\n<script>\n' + asset('draw.js') + '\n</script>')
     out = (src.replace(MARKERS[0], head)
               .replace(MARKERS[1], footer(doc, kind, version, built, sha))
               .replace(MARKERS[2], js))

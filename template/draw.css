@@ -486,6 +486,31 @@
 .fv-seq .msg.now.r-pass .line{stroke:var(--ok)} .fv-seq .msg.now.r-pass .head{fill:var(--ok)}
 .fv-seq .msg.now.error .line{stroke:var(--warn)}
 
+/* ── the embed: a drawing pasted into a wiki page ─────────────────────────────
+      .fvx-static is what shows where scripts are stripped: a still picture and
+      the details as plain disclosures. It reads without any CSS; this makes it neat. */
+/* the pasted wrapper is its own card, so its text reads on any host, light or dark */
+.fvx[data-fvx]{background:var(--bg);color:var(--fg);padding:14px 16px 16px;border-radius:calc(var(--r) + 6px)}
+/* the singletons carry .fvx for its tokens only — never the wrapper's spacing */
+.fv-drawer.fvx,.fv-scrim.fvx,.fv-toast.fvx{margin:0}
+.fvx-static{display:grid;gap:12px}
+.fvx-static>svg{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:calc(var(--r) + 4px)}
+.fvx-details{display:grid;gap:6px;font:14px/1.55 var(--f-body);color:var(--fg)}
+.fvx-details .fvx-cap{margin:0 0 4px;color:var(--dim)}
+.fvx-details .fvx-cap strong{color:var(--fg)}
+.fvx-details details{border:1px solid var(--line);border-radius:var(--r2);background:var(--panel);padding:0 12px}
+.fvx-details summary{cursor:pointer;list-style:none;padding:8px 0;font:500 13.5px/1.4 var(--f-ui);color:var(--dim)}
+.fvx-details summary strong{color:var(--fg);font-weight:650}
+.fvx-details summary::-webkit-details-marker{display:none}
+.fvx-details summary::before{content:"\25B8";display:inline-block;width:1.1em;color:var(--dim2);transition:transform .15s}
+.fvx-details details[open]>summary::before{transform:rotate(90deg)}
+.fvx-details details[open]>summary{border-bottom:1px solid var(--line);margin-bottom:8px}
+.fvx-details details>:last-child{margin-bottom:10px}
+.fvx-details p,.fvx-details ul,.fvx-details ol{margin:6px 0}
+.fv-copyhtml{margin-left:2px}
+/* motion off inside an embed is a class on the figure, never on the host's <html> */
+.fv-drawing.fv-still .edge .line,.fv-drawing.fv-still .stepno.now circle{animation:none!important}
+
 /* ── motion off: the system still reads, only the drift stops ─────────────── */
 .still .fv-drawing .edge .line,.still .fv-drawing .stepno.now circle{animation:none!important}
 @media (prefers-reduced-motion:reduce){
@@ -510,7 +535,7 @@
 
 /* ── print: a still picture and the steps it walks ────────────────────────── */
 @media print{
-  .fv-tools,.fv-views,.fv-layers,.fv-play,.fv-navs,.fv-dots,.fv-drawer,.fv-scrim,.fv-peek,.fv-key,.fv-toast,.fv-strip .fv-flow[aria-checked="false"]{display:none!important}
+  .fv-copyhtml,.fv-tools,.fv-views,.fv-layers,.fv-play,.fv-navs,.fv-dots,.fv-drawer,.fv-scrim,.fv-peek,.fv-key,.fv-toast,.fv-strip .fv-flow[aria-checked="false"]{display:none!important}
   .fv-hd-top{padding-right:0}
   .fv-stage{box-shadow:none;break-inside:avoid}
   /* the title, the lede and the canvas are one figure: never let a page break separate them */

@@ -316,6 +316,13 @@ The grid is the layout; you never write coordinates. `at: [col, row]`, zero-base
 | **A system as part of a report** | The report scaffold's spine already holds a drawing (≤9 boxes, no `data-mode`). Extra drawings go inside rows. |
 | **A system too big for 12 boxes** | Split it into segments. A standalone drawing may itself be a segment (`"kind": "segment"`) of one drawn elsewhere. |
 
+### Copy HTML
+
+Every drawing has a **Copy HTML** button the human uses to paste the drawing into a wiki page. You write
+nothing for it: the copied snippet carries its own scoped styles, runtime and a still fallback, so it is fully
+interactive where the wiki allows scripts and still shows the picture and every box's details where it does
+not. Write depth sections knowing they may be read there too.
+
 ### Depth
 
 `div.fv-depth > section[data-for="<key>"]` is layer 3 for one element, plain HTML with the report
