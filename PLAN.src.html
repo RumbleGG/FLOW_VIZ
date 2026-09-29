@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="flowviz-doc" content="flowviz-plan">
+<meta name="flowviz-relabel" content='[{"at":"2026-09-29T17:36:04.324Z","rows":{"r1":"a","r2":"b","r4":"c","r5":"d","r3":"e","r6":"f"},"steps":{"sv":"e1","cs":"e2","ap":"e3","ac":"e4","sc":"e5","rb":"e6"}}]'>
 <meta name="flowviz-kind" content="report">
 <title>FLOW_VIZ now draws systems as well as it writes reports</title>
 <!-- flowviz:head -->
@@ -92,9 +93,9 @@
   <p>The sidecar is the only state. It is keyed by ids that never change, so I can rewrite the report and
   your captures, ticks and notes re-attach on load.</p>
   <div class="cmd fig"><pre><code>{
-  "schema": 3, "doc": "flowviz-plan", "flowviz": "0.6.0",
+  "schema": 4, "doc": "flowviz-plan", "flowviz": "3.0.0",
   "savedAt": "2026-09-28T21:14:08Z",
-  "captures": { "ap": { "text": "result: clean", "exit": "0",
+  "captures": { "e3": { "text": "result: clean", "exit": "0",
                         "verdict": "pass", "at": "2026-09-28T21:13:57Z",
                         "runs": [ { "text": "result: 1 over", "verdict": "fail" } ] } },
   "notes": { "roundtrip/node:serve": { "text": "port 8787 was taken", "at": "..." } }
@@ -113,8 +114,8 @@
   4 MB, a doc that does not match the URL, and any path outside the served folder.</p>
 </section>
 <section data-for="captures">
-  <p>What I see when you say "look at step 4":</p>
-  <div class="cmd fig"><pre><code>step 3  ap  read  PASS  Audit this plan against its own standard, layout caps included.
+  <p>What I see when you say "look at e3":</p>
+  <div class="cmd fig"><pre><code>step e3    read   PASS      Audit this plan against its own standard, layout caps included.
   exit 0 · captured 14:13:57 PDT (2026-09-28T21:13:57Z)
   | result: clean
   run 1  14:09:02 PDT  fail
@@ -135,8 +136,8 @@
 <h2 class="sec">How it works</h2>
 
 <!-- ─────────── ROW 1 ─────────── -->
-<details class="row" data-row="r1" data-kind="context">
-<summary><span class="ord">1</span><span class="cl">Two deliverables share one toolkit, one token layer and one state file</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="a" data-kind="context">
+<summary><span class="ord">a</span><span class="cl">Two deliverables share one toolkit, one token layer and one state file</span><span class="rt">2 min</span></summary>
 <div class="in">
 
 <table>
@@ -190,8 +191,8 @@ into <code>~/Archive</code>. <code>flowviz results</code> starts it from the sid
 </details>
 
 <!-- ─────────── ROW 2 ─────────── -->
-<details class="row" data-row="r2" data-kind="context">
-<summary><span class="ord">2</span><span class="cl">A drawing is written as a spec and drawn by the runtime</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="b" data-kind="context">
+<summary><span class="ord">b</span><span class="cl">A drawing is written as a spec and drawn by the runtime</span><span class="rt">2 min</span></summary>
 <div class="in">
 
 <p>The agent writes a JSON spec — boxes placed on a grid, connections, and only when a walkthrough is
@@ -235,8 +236,8 @@ meaning.</p></div></details>
 </details>
 
 <!-- ─────────── ROW 3 ─────────── -->
-<details class="row" data-row="r4" data-kind="context">
-<summary><span class="ord">3</span><span class="cl">Everything you type lands in a sidecar that I read back</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="c" data-kind="context">
+<summary><span class="ord">c</span><span class="cl">Everything you type lands in a sidecar that I read back</span><span class="rt">2 min</span></summary>
 <div class="in">
 
 <p>Nothing you type is stored in the HTML. Ticks, pastes, exit codes, notes on steps and notes on drawing
@@ -261,8 +262,8 @@ current rules every time the page loads and every time I read them back.</p></di
 </details>
 
 <!-- ─────────── ROW 4 ─────────── -->
-<details class="row" data-row="r5" data-kind="context">
-<summary><span class="ord">4</span><span class="cl">The audit turns the standard into exit codes, layout included</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="d" data-kind="context">
+<summary><span class="ord">d</span><span class="cl">The audit turns the standard into exit codes, layout included</span><span class="rt">2 min</span></summary>
 <div class="in">
 
 <table>
@@ -293,8 +294,8 @@ alternative against real PowerShell, bash and Python error text, and names the w
 <h2 class="sec">Try it yourself</h2>
 
 <!-- ─────────── ROW 5 ─────────── -->
-<details class="row" data-row="r3" data-kind="test">
-<summary><span class="ord">5</span><span class="cl">This checklist is live: run it on this Mac and paste</span><span class="rt">5 min</span></summary>
+<details class="row" data-row="e" data-kind="test">
+<summary><span class="ord">e</span><span class="cl">This checklist is live: run it on this Mac and paste</span><span class="rt">5 min</span></summary>
 <div class="in">
 
 <p>Every command runs from any folder in Terminal (zsh or bash). Serve first, so your pastes reach disk;
@@ -307,7 +308,7 @@ then tell me "look at the plan" and I will read them back.</p>
   </div>
   <ol class="steps">
 
-    <li class="step" data-step="sv" data-risk="ro">
+    <li class="step" data-step="e1" data-risk="ro">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Serve this folder so your ticks and pastes reach the sidecar.</span></summary>
@@ -318,24 +319,24 @@ then tell me "look at the plan" and I will read them back.</p>
           <p class="expect"><b>Pass:</b> a <code>127.0.0.1:8787</code> address, and the pill turns green &nbsp;·&nbsp;
             <i>Fail:</i> <code>Address already in use</code></p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["sv"]</span></div>
-            <textarea data-cap="sv" data-pass="\b127\.0\.0\.1:8787\b" data-fail="\bAddress already in use\b"
+            <div class="cl">Paste output <span class="kp">captures["e1"]</span></div>
+            <textarea data-cap="e1" data-pass="\b127\.0\.0\.1:8787\b" data-fail="\bAddress already in use\b"
               placeholder="paste the first lines it prints"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="sv" placeholder="0"></span>
-              <span data-cnt="sv">empty</span><span data-at="sv"></span>
-              <span class="rn" data-run="sv"></span>
-              <button class="rr" data-rr="sv" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e1" placeholder="0"></span>
+              <span data-cnt="e1">empty</span><span data-at="e1"></span>
+              <span class="rn" data-run="e1"></span>
+              <button class="rr" data-rr="e1" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="sv" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e1" placeholder="note for the agent (optional)">
           </div>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="sv">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e1">—</span></span>
     </li>
 
-    <li class="step" data-step="cs" data-risk="ro">
+    <li class="step" data-step="e2" data-risk="ro">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Print the cheat sheet to prove the toolkit runs from its absolute path.</span></summary>
@@ -344,24 +345,24 @@ then tell me "look at the plan" and I will read them back.</p>
           <p class="expect"><b>Pass:</b> <code>FLOW_VIZ 0.6.0</code> and the two workflows &nbsp;·&nbsp;
             <i>Fail:</i> <code>No such file or directory</code></p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["cs"]</span></div>
-            <textarea data-cap="cs" data-pass="\bFLOW_VIZ 0\.6\.0\b" data-fail="\bNo such file or directory\b"
+            <div class="cl">Paste output <span class="kp">captures["e2"]</span></div>
+            <textarea data-cap="e2" data-pass="\bFLOW_VIZ 0\.6\.0\b" data-fail="\bNo such file or directory\b"
               placeholder="paste the first few lines"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="cs" placeholder="0"></span>
-              <span data-cnt="cs">empty</span><span data-at="cs"></span>
-              <span class="rn" data-run="cs"></span>
-              <button class="rr" data-rr="cs" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e2" placeholder="0"></span>
+              <span data-cnt="e2">empty</span><span data-at="e2"></span>
+              <span class="rn" data-run="e2"></span>
+              <button class="rr" data-rr="e2" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="cs" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e2" placeholder="note for the agent (optional)">
           </div>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="cs">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e2">—</span></span>
     </li>
 
-    <li class="step" data-step="ap" data-risk="ro">
+    <li class="step" data-step="e3" data-risk="ro">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Audit this plan against its own standard, layout caps included.</span></summary>
@@ -370,16 +371,16 @@ then tell me "look at the plan" and I will read them back.</p>
           <p class="expect"><b>Pass:</b> <code>result: clean</code> &nbsp;·&nbsp;
             <i>Fail:</i> <code>result: 1 over</code> or any failing check — the plan broke its own rules</p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["ap"]</span></div>
-            <textarea data-cap="ap" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
+            <div class="cl">Paste output <span class="kp">captures["e3"]</span></div>
+            <textarea data-cap="e3" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
               placeholder="paste the tail of the audit"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="ap" placeholder="0"></span>
-              <span data-cnt="ap">empty</span><span data-at="ap"></span>
-              <span class="rn" data-run="ap"></span>
-              <button class="rr" data-rr="ap" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e3" placeholder="0"></span>
+              <span data-cnt="e3">empty</span><span data-at="e3"></span>
+              <span class="rn" data-run="e3"></span>
+              <button class="rr" data-rr="e3" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="ap" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e3" placeholder="note for the agent (optional)">
           </div>
           <details class="more"><summary>why this step</summary>
           <div class="in"><p>The standard is only real if its own plan passes it. <code>--browser</code> runs
@@ -388,10 +389,10 @@ then tell me "look at the plan" and I will read them back.</p>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="ap">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e3">—</span></span>
     </li>
 
-    <li class="step" data-step="ac" data-risk="ro">
+    <li class="step" data-step="e4" data-risk="ro">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Audit the checkout drawing, which exercises every drawing cap.</span></summary>
@@ -399,16 +400,16 @@ then tell me "look at the plan" and I will read them back.</p>
           <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz audit --browser ~/Projects/FLOW_VIZ/examples/checkout/checkout.html | tail -n 12</code></pre></div>
           <p class="expect"><b>Pass:</b> <code>result: clean</code> &nbsp;·&nbsp; <i>Fail:</i> anything over</p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["ac"]</span></div>
-            <textarea data-cap="ac" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
+            <div class="cl">Paste output <span class="kp">captures["e4"]</span></div>
+            <textarea data-cap="e4" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
               placeholder="paste the tail of the audit"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="ac" placeholder="0"></span>
-              <span data-cnt="ac">empty</span><span data-at="ac"></span>
-              <span class="rn" data-run="ac"></span>
-              <button class="rr" data-rr="ac" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e4" placeholder="0"></span>
+              <span data-cnt="e4">empty</span><span data-at="e4"></span>
+              <span class="rn" data-run="e4"></span>
+              <button class="rr" data-rr="e4" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="ac" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e4" placeholder="note for the agent (optional)">
           </div>
           <details class="more"><summary>why this step</summary>
           <div class="in"><p>The first audit of the approved mockup failed on a real cap: a fact of 26
@@ -417,10 +418,10 @@ then tell me "look at the plan" and I will read them back.</p>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="ac">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e4">—</span></span>
     </li>
 
-    <li class="step" data-step="sc" data-risk="w" data-after="ac">
+    <li class="step" data-step="e5" data-risk="w" data-after="e4">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Scaffold a throwaway report and confirm the audit fails it on unfilled slots alone.</span></summary>
@@ -431,16 +432,16 @@ then tell me "look at the plan" and I will read them back.</p>
           <p class="expect"><b>Pass:</b> exactly one line, <code>FAIL  unfilled slots</code> &nbsp;·&nbsp;
             <i>Fail:</i> any <code>OVER</code>, or a second <code>FAIL</code></p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["sc"]</span></div>
-            <textarea data-cap="sc" data-pass="\bFAIL\s+unfilled slots\b" data-fail="\bOVER\b|\bFAIL\s+(?!unfilled)"
+            <div class="cl">Paste output <span class="kp">captures["e5"]</span></div>
+            <textarea data-cap="e5" data-pass="\bFAIL\s+unfilled slots\b" data-fail="\bOVER\b|\bFAIL\s+(?!unfilled)"
               placeholder="paste what grep printed"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="sc" placeholder="0"></span>
-              <span data-cnt="sc">empty</span><span data-at="sc"></span>
-              <span class="rn" data-run="sc"></span>
-              <button class="rr" data-rr="sc" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e5" placeholder="0"></span>
+              <span data-cnt="e5">empty</span><span data-at="e5"></span>
+              <span class="rn" data-run="e5"></span>
+              <button class="rr" data-rr="e5" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="sc" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e5" placeholder="note for the agent (optional)">
           </div>
           <details class="more"><summary>why this step</summary>
           <div class="in"><p>A checker that passes an empty scaffold measures length, not writing. The
@@ -449,10 +450,10 @@ then tell me "look at the plan" and I will read them back.</p>
         </div>
       </details>
       <span class="ctr"><span class="badge w">write</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="sc">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e5">—</span></span>
     </li>
 
-    <li class="step" data-step="rb" data-risk="ro" data-after="sv">
+    <li class="step" data-step="e6" data-risk="ro" data-after="e1">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Read back your own pastes exactly the way I will.</span></summary>
@@ -461,21 +462,21 @@ then tell me "look at the plan" and I will read them back.</p>
           <p class="expect"><b>Pass:</b> your earlier steps, each with a verdict &nbsp;·&nbsp;
             <i>Fail:</i> no sidecar — the page was not served when you pasted</p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["rb"]</span></div>
-            <textarea data-cap="rb" data-pass="\bcaptured\b" data-fail="\bno sidecar\b"
+            <div class="cl">Paste output <span class="kp">captures["e6"]</span></div>
+            <textarea data-cap="e6" data-pass="\bcaptured\b" data-fail="\bno sidecar\b"
               placeholder="paste the summary lines"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="rb" placeholder="0"></span>
-              <span data-cnt="rb">empty</span><span data-at="rb"></span>
-              <span class="rn" data-run="rb"></span>
-              <button class="rr" data-rr="rb" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="e6" placeholder="0"></span>
+              <span data-cnt="e6">empty</span><span data-at="e6"></span>
+              <span class="rn" data-run="e6"></span>
+              <button class="rr" data-rr="e6" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="rb" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="e6" placeholder="note for the agent (optional)">
           </div>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="rb">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e6">—</span></span>
     </li>
 
   </ol>
@@ -487,8 +488,8 @@ then tell me "look at the plan" and I will read them back.</p>
 <h2 class="sec">What changed</h2>
 
 <!-- ─────────── ROW 6 ─────────── -->
-<details class="row" data-row="r6" data-kind="record">
-<summary><span class="ord">6</span><span class="cl">FLOW_VIZ is its own public repository, and every agent can find it</span><span class="rt">1 min</span></summary>
+<details class="row" data-row="f" data-kind="record">
+<summary><span class="ord">f</span><span class="cl">FLOW_VIZ is its own public repository, and every agent can find it</span><span class="rt">1 min</span></summary>
 <div class="in">
 
 <p>You approved both changes on 2026-09-28, and I made them. This report no longer carries them as steps:

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="flowviz-doc" content="deploy">
+<meta name="flowviz-relabel" content='[{"at":"2026-09-29T17:36:34.236Z","rows":{"chg":"a","ship":"b","back":"c"},"steps":{"pre":"b1","push":"b2","health":"b3","smoke":"b4","rb":"c1","archive":"r1"}}]'>
 <meta name="flowviz-kind" content="report">
 <title>Notify v2.3 is ready for staging behind a one-command rollback</title>
 <!-- flowviz:head -->
@@ -21,7 +22,7 @@
 <section class="results" data-outcome="fail">
   <div class="top">
     <span class="k">Results</span>
-    <span class="chip bad"><span class="d"></span>Failed at step 4</span>
+    <span class="chip bad"><span class="d"></span>Failed at b4</span>
     <span class="meta">reviewed 2026-09-28 · 5 steps: 4 pass, 1 fail</span>
   </div>
 
@@ -76,7 +77,7 @@
     <span class="k">Archive</span>
     <div class="pb" data-pb="archive">
       <ol class="steps">
-        <li class="step" data-step="archive" data-risk="w" data-archive>
+        <li class="step" data-step="r1" data-risk="w" data-archive>
           <input type="checkbox" class="done">
           <details class="sd">
             <summary><span class="n"></span><span class="ds">Stop flowviz serve, then move this finished work into the archive.</span></summary>
@@ -87,16 +88,16 @@
               <p class="expect"><b>Pass:</b> the folder's new path under the archive &nbsp;·&nbsp;
                 <i>Fail:</i> <code>No such file or directory</code>, or <code>File exists</code></p>
               <div class="cap">
-                <div class="cl">Paste output <span class="kp">captures["archive"]</span></div>
-                <textarea data-cap="archive" data-pass="\bArchive/notify\-deploy\b" data-fail="\bNo such file or directory\b|\bFile exists\b|\bPermission denied\b"
+                <div class="cl">Paste output <span class="kp">captures["r1"]</span></div>
+                <textarea data-cap="r1" data-pass="\bArchive/notify\-deploy\b" data-fail="\bNo such file or directory\b|\bFile exists\b|\bPermission denied\b"
                   placeholder="paste what it printed"></textarea>
                 <div class="ft">
-                  <span>exit <input class="ec" data-ec="archive" placeholder="0"></span>
-                  <span data-cnt="archive">empty</span><span data-at="archive"></span>
-                  <span class="rn" data-run="archive"></span>
-                  <button class="rr" data-rr="archive" title="keep this attempt and clear the box">re-run</button>
+                  <span>exit <input class="ec" data-ec="r1" placeholder="0"></span>
+                  <span data-cnt="r1">empty</span><span data-at="r1"></span>
+                  <span class="rn" data-run="r1"></span>
+                  <button class="rr" data-rr="r1" title="keep this attempt and clear the box">re-run</button>
                 </div>
-                <input class="nt" data-note="archive" placeholder="note for the agent (optional)">
+                <input class="nt" data-note="r1" placeholder="note for the agent (optional)">
               </div>
               <details class="more"><summary>why archive it</summary>
               <div class="in"><p>The work is finished and its results are written down. Moving the folder keeps
@@ -105,7 +106,7 @@
             </div>
           </details>
           <span class="ctr"><span class="badge w">write</span>
-            <button class="copy">⧉</button><span class="vd" data-vd="archive">—</span></span>
+            <button class="copy">⧉</button><span class="vd" data-vd="r1">—</span></span>
         </li>
       </ol>
     </div>
@@ -212,8 +213,8 @@
 <h2 class="sec">What changes</h2>
 
 <!-- ─────────── ROW 1 ─────────── -->
-<details class="row" data-row="chg" data-kind="context">
-<summary><span class="ord">1</span><span class="cl">v2.3 moves retries into the worker and needs one new secret</span><span class="rt">1 min</span></summary>
+<details class="row" data-row="a" data-kind="context">
+<summary><span class="ord">a</span><span class="cl">v2.3 moves retries into the worker and needs one new secret</span><span class="rt">1 min</span></summary>
 <div class="in">
 <table>
 <thead><tr><th>Change</th><th>Why</th></tr></thead>
@@ -229,20 +230,20 @@
 <h2 class="sec">Ship it</h2>
 
 <!-- ─────────── ROW 2 ─────────── -->
-<details class="row" data-row="ship" data-kind="change">
-<summary><span class="ord">2</span><span class="cl">Four checked steps take staging from v2.2 to v2.3</span><span class="rt">6 min</span></summary>
+<details class="row" data-row="b" data-kind="change">
+<summary><span class="ord">b</span><span class="cl">Four checked steps take staging from v2.2 to v2.3</span><span class="rt">6 min</span></summary>
 <div class="in">
 
 <div class="box warn"><p>Run these from a shell with <code>kubectl</code> pointed at the staging cluster.</p></div>
 
-<div class="pb" data-pb="ship">
+<div class="pb" data-pb="b">
   <div class="hd">
     <span class="t">Roll out notify v2.3 to staging</span>
     <span class="prog">0 / 4 done</span>
   </div>
   <ol class="steps">
 
-    <li class="step" data-step="pre" data-risk="ro">
+    <li class="step" data-step="b1" data-risk="ro">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Confirm staging runs a healthy v2.2 before anything changes.</span></summary>
@@ -251,24 +252,24 @@
           <p class="expect"><b>Pass:</b> <code>"version":"v2.2.x"</code> and <code>"status":"ok"</code> &nbsp;·&nbsp;
             <i>Fail:</i> already v2.3, or <code>unhealthy</code></p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["pre"]</span></div>
-            <textarea data-cap="pre" data-pass="\bv2\.2\.\d+\b" data-fail="\bv2\.3\.\d+\b|\bunhealthy\b"
+            <div class="cl">Paste output <span class="kp">captures["b1"]</span></div>
+            <textarea data-cap="b1" data-emit="PREV=version\W+v([0-9]+\.[0-9]+\.[0-9]+)" data-pass="\bv2\.2\.\d+\b" data-fail="\bv2\.3\.\d+\b|\bunhealthy\b"
               placeholder="paste the JSON it prints"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="pre" placeholder="0"></span>
-              <span data-cnt="pre">empty</span><span data-at="pre"></span>
-              <span class="rn" data-run="pre"></span>
-              <button class="rr" data-rr="pre" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="b1" placeholder="0"></span>
+              <span data-cnt="b1">empty</span><span data-at="b1"></span>
+              <span class="rn" data-run="b1"></span>
+              <button class="rr" data-rr="b1" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="pre" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="b1" placeholder="note for the agent (optional)">
           </div>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="pre">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="b1">—</span></span>
     </li>
 
-    <li class="step" data-step="push" data-risk="w" data-after="pre">
+    <li class="step" data-step="b2" data-risk="w" data-after="b1">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Roll out v2.3 across the three pods and wait for all of them.</span></summary>
@@ -279,24 +280,24 @@
           <p class="expect"><b>Pass:</b> <code>successfully rolled out</code> &nbsp;·&nbsp;
             <i>Fail:</i> <code>exceeded its progress deadline</code></p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["push"]</span></div>
-            <textarea data-cap="push" data-pass="\bsuccessfully rolled out\b" data-fail="\bexceeded its progress deadline\b|\berror\b"
+            <div class="cl">Paste output <span class="kp">captures["b2"]</span></div>
+            <textarea data-cap="b2" data-pass="\bsuccessfully rolled out\b" data-fail="\bexceeded its progress deadline\b|\berror\b"
               placeholder="paste the rollout output"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="push" placeholder="0"></span>
-              <span data-cnt="push">empty</span><span data-at="push"></span>
-              <span class="rn" data-run="push"></span>
-              <button class="rr" data-rr="push" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="b2" placeholder="0"></span>
+              <span data-cnt="b2">empty</span><span data-at="b2"></span>
+              <span class="rn" data-run="b2"></span>
+              <button class="rr" data-rr="b2" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="push" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="b2" placeholder="note for the agent (optional)">
           </div>
         </div>
       </details>
       <span class="ctr"><span class="badge w">write</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="push">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="b2">—</span></span>
     </li>
 
-    <li class="step" data-step="health" data-risk="ro" data-after="push">
+    <li class="step" data-step="b3" data-risk="ro" data-after="b2">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Check the new pods report v2.3 and a configured provider client.</span></summary>
@@ -304,24 +305,24 @@
           <div class="cmd"><button class="copy">copy</button><pre><code>curl -s https://notify.staging.example.test/healthz</code></pre></div>
           <p class="expect"><b>Pass:</b> <code>"version":"v2.3.0"</code> &nbsp;·&nbsp; <i>Fail:</i> still v2.2, or <code>unhealthy</code></p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["health"]</span></div>
-            <textarea data-cap="health" data-pass="\bv2\.3\.0\b" data-fail="\bv2\.2\.\d+\b|\bunhealthy\b"
+            <div class="cl">Paste output <span class="kp">captures["b3"]</span></div>
+            <textarea data-cap="b3" data-pass="\bv2\.3\.0\b" data-fail="\bv2\.2\.\d+\b|\bunhealthy\b"
               placeholder="paste the JSON it prints"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="health" placeholder="0"></span>
-              <span data-cnt="health">empty</span><span data-at="health"></span>
-              <span class="rn" data-run="health"></span>
-              <button class="rr" data-rr="health" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="b3" placeholder="0"></span>
+              <span data-cnt="b3">empty</span><span data-at="b3"></span>
+              <span class="rn" data-run="b3"></span>
+              <button class="rr" data-rr="b3" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="health" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="b3" placeholder="note for the agent (optional)">
           </div>
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="health">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="b3">—</span></span>
     </li>
 
-    <li class="step" data-step="smoke" data-risk="ro" data-after="health">
+    <li class="step" data-step="b4" data-risk="ro" data-after="b3">
       <input type="checkbox" class="done">
       <details class="sd">
         <summary><span class="n"></span><span class="ds">Send one test email end to end and wait up to 30 seconds for delivery.</span></summary>
@@ -330,16 +331,16 @@
           <p class="expect"><b>Pass:</b> <code>"status":"delivered"</code> &nbsp;·&nbsp;
             <i>Fail:</i> <code>timeout</code>, <code>failed</code> or <code>rejected</code> — then run the rollback</p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["smoke"]</span></div>
-            <textarea data-cap="smoke" data-pass="\bdelivered\b" data-fail="\btimeout\b|\bfailed\b|\brejected\b"
+            <div class="cl">Paste output <span class="kp">captures["b4"]</span></div>
+            <textarea data-cap="b4" data-pass="\bdelivered\b" data-fail="\btimeout\b|\bfailed\b|\brejected\b"
               placeholder="paste the JSON it prints"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="smoke" placeholder="0"></span>
-              <span data-cnt="smoke">empty</span><span data-at="smoke"></span>
-              <span class="rn" data-run="smoke"></span>
-              <button class="rr" data-rr="smoke" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="b4" placeholder="0"></span>
+              <span data-cnt="b4">empty</span><span data-at="b4"></span>
+              <span class="rn" data-run="b4"></span>
+              <button class="rr" data-rr="b4" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="smoke" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="b4" placeholder="note for the agent (optional)">
           </div>
           <details class="more"><summary>why this step</summary>
           <div class="in"><p>Health checks prove the pods started; only a real send proves the worker can reach
@@ -347,7 +348,7 @@
         </div>
       </details>
       <span class="ctr"><span class="badge ro">read</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="smoke">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="b4">—</span></span>
     </li>
 
   </ol>
@@ -357,42 +358,47 @@
 </details>
 
 <!-- ─────────── ROW 3 ─────────── -->
-<details class="row" data-row="back" data-kind="rollback">
-<summary><span class="ord">3</span><span class="cl">One gated command puts v2.2 back within a minute</span><span class="rt">2 min</span></summary>
+<details class="row" data-row="c" data-kind="rollback">
+<summary><span class="ord">c</span><span class="cl">One gated command puts v2.2 back within a minute</span><span class="rt">2 min</span></summary>
 <div class="in">
 
-<div class="pb" data-pb="back">
+<div class="pb" data-pb="c">
   <div class="hd">
     <span class="t">Roll staging back to v2.2</span>
     <span class="prog">0 / 1 done</span>
   </div>
   <ol class="steps">
 
-    <li class="step" data-step="rb" data-risk="w" data-after="smoke">
+    <li class="step" data-step="c1" data-risk="w" data-after="b4">
       <input type="checkbox" class="done">
       <details class="sd">
-        <summary><span class="n"></span><span class="ds">Put v2.2 back if the smoke test failed, and wait for the pods.</span></summary>
+        <summary><span class="n"></span><span class="ds">Put back the exact version b1 saw if the smoke test failed, and wait for the pods.</span></summary>
         <div class="in">
           <label class="gate"><input type="checkbox" class="ack">
             I accept this replaces the notify pods in staging with v2.2 again.</label>
-          <div class="cmd"><button class="copy">copy</button><pre><code>kubectl -n staging rollout undo deploy/notify &amp;&amp; kubectl -n staging rollout status deploy/notify --timeout=120s</code></pre></div>
+          <div class="cmd"><button class="copy">copy</button><pre><code>IMG=registry.example.test/notify:{{b1.PREV}}; echo "rolling back to $IMG"; kubectl -n staging set image deploy/notify notify=$IMG &amp;&amp; kubectl -n staging rollout status deploy/notify --timeout=120s</code></pre></div>
           <p class="expect"><b>Pass:</b> <code>successfully rolled out</code> &nbsp;·&nbsp; <i>Fail:</i> any <code>error</code></p>
           <div class="cap">
-            <div class="cl">Paste output <span class="kp">captures["rb"]</span></div>
-            <textarea data-cap="rb" data-pass="\bsuccessfully rolled out\b" data-fail="\berror\b"
+            <div class="cl">Paste output <span class="kp">captures["c1"]</span></div>
+            <textarea data-cap="c1" data-pass="\bsuccessfully rolled out\b" data-fail="\berror\b"
               placeholder="paste the rollout output"></textarea>
             <div class="ft">
-              <span>exit <input class="ec" data-ec="rb" placeholder="0"></span>
-              <span data-cnt="rb">empty</span><span data-at="rb"></span>
-              <span class="rn" data-run="rb"></span>
-              <button class="rr" data-rr="rb" title="keep this attempt and clear the box">re-run</button>
+              <span>exit <input class="ec" data-ec="c1" placeholder="0"></span>
+              <span data-cnt="c1">empty</span><span data-at="c1"></span>
+              <span class="rn" data-run="c1"></span>
+              <button class="rr" data-rr="c1" title="keep this attempt and clear the box">re-run</button>
             </div>
-            <input class="nt" data-note="rb" placeholder="note for the agent (optional)">
+            <input class="nt" data-note="c1" placeholder="note for the agent (optional)">
           </div>
+          <details class="more"><summary>why pin the version</summary>
+          <div class="in"><p><code>rollout undo</code> returns to the previous ReplicaSet, which is v2.2 only if nothing
+          else rolled out in between. This command puts back the version <b>b1</b> printed before anything changed,
+          carried in by <code>{{b1.PREV}}</code>: its copy button refuses until b1's output is pasted, so the
+          command never reaches the console with a hole in it.</p></div></details>
         </div>
       </details>
       <span class="ctr"><span class="badge w">write</span>
-        <button class="copy">⧉</button><span class="vd" data-vd="rb">—</span></span>
+        <button class="copy">⧉</button><span class="vd" data-vd="c1">—</span></span>
     </li>
 
   </ol>

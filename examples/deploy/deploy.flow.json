@@ -1,8 +1,8 @@
 {
-  "schema": 3,
+  "schema": 4,
   "doc": "deploy",
-  "flowviz": "2.0.0",
-  "savedAt": "2026-09-28T20:41:12Z",
+  "flowviz": "3.0.0",
+  "savedAt": "2026-09-29T17:36:34.236Z",
   "ui": {
     "theme": "auto"
   },
@@ -10,29 +10,29 @@
   "checks": {},
   "open": {},
   "steps": {
-    "pre": {
+    "b1": {
       "done": true,
       "acked": false
     },
-    "push": {
+    "b2": {
       "done": true,
       "acked": true
     },
-    "health": {
+    "b3": {
       "done": true,
       "acked": false
     },
-    "smoke": {
+    "b4": {
       "done": true,
       "acked": false
     },
-    "rb": {
+    "c1": {
       "done": true,
       "acked": true
     }
   },
   "captures": {
-    "pre": {
+    "b1": {
       "text": "{\"status\":\"ok\",\"version\":\"v2.2.4\",\"provider\":\"reachable\"}",
       "exit": "0",
       "verdict": "pass",
@@ -40,7 +40,7 @@
       "note": "",
       "runs": []
     },
-    "push": {
+    "b2": {
       "text": "deployment.apps/notify image updated\nWaiting for deployment \"notify\" rollout to finish: 1 of 3 updated replicas are available...\nWaiting for deployment \"notify\" rollout to finish: 2 of 3 updated replicas are available...\ndeployment \"notify\" successfully rolled out",
       "exit": "0",
       "verdict": "pass",
@@ -48,7 +48,7 @@
       "note": "",
       "runs": []
     },
-    "health": {
+    "b3": {
       "text": "{\"status\":\"ok\",\"version\":\"v2.3.0\",\"provider\":\"configured\"}",
       "exit": "0",
       "verdict": "pass",
@@ -56,7 +56,7 @@
       "note": "",
       "runs": []
     },
-    "smoke": {
+    "b4": {
       "text": "{\"status\":\"failed\",\"reason\":\"timeout waiting for provider callback after 30s\",\"message_id\":\"m-8812\"}",
       "exit": "0",
       "verdict": "fail",
@@ -71,8 +71,8 @@
         }
       ]
     },
-    "rb": {
-      "text": "deployment.apps/notify rolled back\nWaiting for deployment \"notify\" rollout to finish: 2 of 3 updated replicas are available...\ndeployment \"notify\" successfully rolled out",
+    "c1": {
+      "text": "rolling back to registry.example.test/notify:2.2.4\ndeployment.apps/notify image updated\nWaiting for deployment \"notify\" rollout to finish: 2 of 3 updated replicas are available...\ndeployment \"notify\" successfully rolled out",
       "exit": "0",
       "verdict": "pass",
       "at": "2026-09-28T20:40:51Z",
@@ -80,5 +80,11 @@
       "runs": []
     }
   },
-  "notes": {}
+  "notes": {},
+  "relabel": "2026-09-29T17:36:34.236Z",
+  "emits": {
+    "b1": {
+      "PREV": "2.2.4"
+    }
+  }
 }

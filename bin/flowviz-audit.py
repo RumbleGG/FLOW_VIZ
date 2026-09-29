@@ -811,7 +811,123 @@ def page_checks(a, doc, tpl_pages, unfilled):
             for h in fragile(e.attrs.get(k) or ''):
                 frag.append('step %s %s: %s' % (e.attrs.get('data-cap'), k, h))
     a.check(S, 'cmd: fragile verdict regex', frag)
+    bad, dangling, order, paste = emit_checks(doc)
+    if bad or dangling or doc.first(lambda e: 'data-emit' in e.attrs):   # silent on a report with no emits
+        a.check(S, 'emit: regex', bad)
+        a.check(S, 'emit: dangling reference', dangling)
+    for x in order:
+        a.note(S, 'emit: ordering', x)
+    for x in paste:
+        a.note(S, 'PASTE_ placeholder', x)
+    if doc.first(lambda e: e.tag == 'details' and e.has('row')) or doc.first(lambda e: e.tag == 'li' and e.has('step')):
+        naming = naming_checks(doc)
+        a.check(S, 'section letters and step ids', naming)
+        if naming:
+            a.note(S, 'section letters and step ids', 'fix: flowviz relabel <NAME>.src.html moves every id, and what was pasted, onto the convention')
 
+
+
+# ── emits: a value printed by one step, resolved into a later step's command ──
+EMIT_SPLIT = re.compile(r';\s*(?=[A-Z][A-Z0-9_]*=)')
+EMIT_NAME = re.compile(r'^[A-Z][A-Z0-9_]*$')
+TOKEN = re.compile(r'(?<!\$)\{\{([A-Za-z0-9][\w-]*)\.([A-Z][A-Z0-9_]*)\}\}')
+NAMED_STEP = re.compile(r'^[a-z][0-9]+$')
+
+
+def parse_emits(attr):
+    """{NAME: compiled regex}, a list of problems, and every name declared (broken ones included),
+    from NAME=<regex>[; NAME=<regex>…]."""
+    pairs, errs, names = {}, [], set()
+    for part in (EMIT_SPLIT.split(attr.strip()) if attr and attr.strip() else []):
+        name, sep, src = part.partition('=')
+        name = name.strip()
+        if not sep or not EMIT_NAME.match(name):
+            errs.append('"%s" is not NAME=<regex>' % part.strip()[:40])
+            continue
+        if name in names:
+            errs.append('%s is declared twice' % name)
+            continue
+        names.add(name)
+        try:
+            rx = re.compile(src)
+        except re.error as e:
+            errs.append('%s: the regex does not compile (%s)' % (name, e))
+            continue
+        if rx.groups != 1:
+            errs.append('%s: the regex has %d capture groups; it needs exactly one' % (name, rx.groups))
+            continue
+        pairs[name] = rx
+    return pairs, errs, names
+
+
+def emit_checks(doc):
+    """(bad emits, dangling references, ordering warnings, placeholder warnings)."""
+    steps = {li.attrs['data-step']: li for li in doc.find(
+        lambda e: e.tag == 'li' and e.has('step') and 'data-step' in e.attrs)}
+    emits, bad = {}, []
+    for ta in doc.find(lambda e: e.tag == 'textarea' and 'data-emit' in e.attrs):
+        _, errs, names = parse_emits(ta.attrs.get('data-emit') or '')
+        bad += ['step %s: %s' % (ta.attrs.get('data-cap'), x) for x in errs]
+        emits[ta.attrs.get('data-cap')] = names     # a broken regex is reported once, as a regex
+
+    def before(sid):
+        seen, cur = set(), steps.get(sid)
+        while cur is not None and cur.attrs.get('data-after') and cur.attrs['data-after'] not in seen:
+            seen.add(cur.attrs['data-after'])
+            cur = steps.get(cur.attrs['data-after'])
+        return seen
+    dangling, order, paste = [], [], []
+    for c in doc.find(lambda e: e.has('cmd')):
+        pre = c.first(lambda e: e.tag == 'pre')
+        if pre is None:
+            continue
+        text = pre.raw()
+        li = c
+        while li is not None and not (li.tag == 'li' and li.has('step')):
+            li = li.parent
+        who = 'step %s' % li.attrs.get('data-step') if li is not None else 'a command block'
+        for m in TOKEN.finditer(text):
+            sid, name = m.group(1), m.group(2)
+            tok = '{{%s.%s}}' % (sid, name)
+            if sid not in steps:
+                dangling.append('%s: %s names no step %s' % (who, tok, sid))
+            elif name not in emits.get(sid, {}):
+                dangling.append('%s: %s — step %s declares no emit %s' % (who, tok, sid, name))
+            elif li is not None and sid != li.attrs.get('data-step') and sid not in before(li.attrs.get('data-step')):
+                order.append('%s uses %s but does not come after %s through data-after' % (who, tok, sid))
+        if not c.has('fig'):
+            for m in re.finditer(r'PASTE_[A-Z0-9_]+', text):
+                paste.append('%s: %s — use an emit from the producing step instead' % (who, m.group(0)))
+    uniq = lambda xs: list(dict.fromkeys(xs))
+    return uniq(bad), uniq(dangling), uniq(order), uniq(paste)
+
+
+def naming_checks(doc):
+    """Rows are lettered a, b, c… in order; a step is its row's letter plus its number: b1, b2…
+    Steps in a Results section are r1, r2…; a step anywhere else sits outside a section."""
+    problems, placed = [], set()
+    rows = doc.find(lambda e: e.tag == 'details' and e.has('row'))
+    for i, r in enumerate(rows):
+        want = chr(ord('a') + i)
+        summ = r.first(lambda e: e.tag == 'summary')
+        ordel = summ.first(cls('ord')) if summ else None
+        if r.attrs.get('data-row') != want:
+            problems.append('row %s should be lettered "%s" — rows are a, b, c… in order' % (r.attrs.get('data-row'), want))
+        if ordel is None or ordel.text() != want:
+            problems.append('row %s should show "%s" as its label' % (want, want))
+        for n, li in enumerate(r.find(lambda e: e.tag == 'li' and e.has('step')), 1):
+            placed.add(id(li))
+            if li.attrs.get('data-step') != '%s%d' % (want, n):
+                problems.append('step "%s" in row %s should be "%s%d"' % (li.attrs.get('data-step'), want, want, n))
+    for res in doc.find(lambda e: e.tag == 'section' and e.has('results')):
+        for n, li in enumerate(res.find(lambda e: e.tag == 'li' and e.has('step')), 1):
+            placed.add(id(li))
+            if li.attrs.get('data-step') != 'r%d' % n:
+                problems.append('Results step "%s" should be "r%d"' % (li.attrs.get('data-step'), n))
+    for li in doc.find(lambda e: e.tag == 'li' and e.has('step')):
+        if id(li) not in placed:
+            problems.append('step "%s" sits outside a lettered row or the Results section' % li.attrs.get('data-step'))
+    return problems
 
 # ── the browser ──────────────────────────────────────────────────────────────
 def chrome():

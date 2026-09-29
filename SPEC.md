@@ -73,20 +73,51 @@ the agent: `<h2 class="sec">Try it on this Mac</h2>` before the rows they introd
 
 The audit fails a label that does not match what the row holds, in either direction.
 
+### 1.2b Names: letters for rows, numbers for steps
+
+Rows are lettered **a, b, c…** in the order they appear; the letter is the row's `data-row` and the label
+in its `.ord`. A step's id is **its row's letter and its number in that row** — `b1`, `b2` … `bn` — and a
+Results section's steps are `r1`, `r2`…. Never a word (`push`), never two letters (`bb`, `bc`): a letter
+names a row and a number names a step, so "look at b3" means one thing on screen, in the sidecar and in the
+agent's read-back. The page shows a conforming id where the step's counter was; any other id keeps the
+counter, so an older report still reads as it did. The audit fails a report off the convention, and
+`flowviz relabel` moves one onto it (§6).
+
 ### 1.3 Checklist steps
 
-A playbook step is **a checkbox, a number, and one sentence.** That is all that is visible.
+A playbook step is **a checkbox, its id, and one sentence.** That is all that is visible.
 
 | Rule | Detail |
 |---|---|
 | Description | Exactly one sentence, ≤20 words, stating what the step *establishes* or *changes*. |
 | Command | Behind the disclosure. The `⧉` on the collapsed row copies it without opening anything, prompts stripped. |
 | Blast radius | `data-risk="ro"` or `data-risk="w"` on every step. A `w` step blurs its command until the acknowledgement is ticked, and `⧉` refuses to copy it — it opens the step and says *tick the gate*. |
+| Id | `<row letter><n>` (§1.2b), shown where the counter was. |
 | Prereqs | `data-after="<id>"` dims the step until that one is done or captured. |
+| Carried value | `data-emit` on the producer's textarea, `{{<step>.<NAME>}}` in a later command (§1.3a). |
 | Capture | Every step has a textarea, an exit-code field, a one-line note, and its sidecar key shown beside it. |
 | Verdict | `data-pass` / `data-fail` regexes flip the chip on paste. Every literal is **word-anchored** (`\bFull\b`, never `Full`). |
 | Re-run | Files the current capture into `runs[]` and clears the box. A second attempt never destroys the first. |
 | Injected, never written | The `Done ☐` button at the foot of every step, the second verdict chip beside it, the status pill, and every displayed time. `flow.js` adds them, so a rebuild gives old reports new affordances. |
+
+### 1.3a Emits — a value one step prints, used by a later step's command
+
+A later command often needs something an earlier step printed: a version, an id, a path. The human never
+carries it across by hand, and no command holds a `PASTE_…` placeholder for them to overwrite.
+
+| Part | Rule |
+|---|---|
+| Produce | `data-emit="NAME=<regex>[; NAME=<regex>…]"` on the step's `textarea`. `NAME` is `[A-Z][A-Z0-9_]*`; each regex has **exactly one** capture group. |
+| Value | group 1 of the **last** match in the current capture, trimmed. Derived on every paste, re-run and load — never from `runs[]` — and stored in the sidecar under `emits` as a cache: fixing a regex fixes the value, the way re-deriving fixes a verdict. |
+| Consume | `{{<step>.<NAME>}}` anywhere in a `.cmd pre`. A token right after `$` (`${{ … }}`) is someone else's syntax and is never touched. |
+| Render | `span.sub`: the value, titled *from step b1*, when it exists and is paste-safe; the literal token otherwise, so what you read is what copy sends. |
+| Copy | both `copy` and `⧉` send the resolved command. While a token has no value the copy is refused with *b1 has not run*; while its value is not paste-safe, with *b1.VER is not paste-safe*. Nothing unresolved reaches a clipboard. |
+| Paste-safe value | 1–120 printable ASCII characters, none of `` ` $ " ' \ ; \| & < > ( ) { } ``, so no newline and nothing long enough to wrap. |
+| Order | the producer is the consuming step itself or on its `data-after` chain; otherwise the audit warns that the order is not guaranteed. |
+
+`data-var` is for what only the human knows (a host name); an emit is for what an earlier step printed.
+Both persist with the state; only an emit has a source step, so only an emit can be checked for being
+wrong. Words and screens at rest are unchanged: commands sit behind the disclosure.
 
 **Time.** Stored as ISO-8601 UTC everywhere (sidecar, exports, snapshot names). Shown in
 `America/Los_Angeles`, labelled `PDT`/`PST`, with the ISO value on `title`. No report hand-formats a time.
@@ -340,9 +371,16 @@ Not caps — they measure the author, not the layout — and they block handover
 | spec: grid | a box outside the grid, two boxes in one cell, or a zone outside the grid |
 | spec: straight through a box | a straight connection that would pass through another box |
 | row kind matches its content | an action kind with nothing to run or tick, a read kind that holds steps, or a kind outside §1.2a |
+| section letters and step ids | a row not lettered in order or not showing its letter, a step not `<row letter><n>` in order, a Results step not `r<n>`, or a step outside every row and the Results section (§1.2b) |
+| emit: regex | a `data-emit` pair that is not `NAME=<regex>`, declares a name twice, does not compile, or has other than one capture group |
+| emit: dangling reference | a `{{<step>.<NAME>}}` whose step does not exist, or does not emit that name |
 
-One more is reported but does not block: **unused connection** — an edge no flow walks. It is still
-drawn; if it matters, walk it in a flow, and if it does not, delete it.
+`flowviz build` refuses the two emit failures too, so a token that can never resolve never ships.
+
+Reported, not blocking: **unused connection** — an edge no flow walks (it is still drawn; walk it in a flow
+or delete it); **emit: ordering** — a token whose producer is neither the step itself nor on its
+`data-after` chain; **PASTE_ placeholder** — a `PASTE_…` word in a command, which the human would have
+to overwrite: use an emit from the producing step instead.
 
 ---
 
@@ -380,25 +418,29 @@ Nothing a human types is stored in the HTML. It goes to `<doc>.flow.json` beside
 
 ```json
 {
-  "schema": 3, "doc": "checkout", "flowviz": "0.6.0", "savedAt": "2026-09-28T21:14:08Z",
+  "schema": 4, "doc": "checkout", "flowviz": "3.0.0", "savedAt": "2026-09-28T21:14:08Z",
   "ui": { "theme": "auto", "motion": true,
           "draw": { "checkout": { "flow": 0, "view": "map", "labels": false, "times": false, "key": false } } },
   "vars": { "host": "app-vm-01" },
   "checks": { "p1a": true },
-  "open": { "r2": true, "step:ps-3": true },
-  "steps": { "ps-3": { "done": true, "acked": false } },
-  "captures": { "ps-3": { "text": "Hash : 4F2C…", "exit": "0", "verdict": "pass",
+  "open": { "b": true, "step:b3": true },
+  "steps": { "b3": { "done": true, "acked": false } },
+  "captures": { "b3": { "text": "Hash : 4F2C…", "exit": "0", "verdict": "pass",
                           "at": "2026-09-28T21:13:57Z", "note": "share needed remapping first",
                           "runs": [ { "text": "Unexpected token '}'", "exit": "", "verdict": "error",
                                       "at": "2026-09-28T21:09:02Z" } ] } },
   "notes": { "checkout/node:order": { "text": "the cache is write-through, not cache-aside",
                                       "at": "2026-09-28T21:15:40Z" },
-             "checkout/order-outbox/node:relay": { "text": "…", "at": "…" } }
+             "checkout/order-outbox/node:relay": { "text": "…", "at": "…" } },
+  "emits": { "b1": { "VER": "12.149.3747.21500" } },
+  "relabel": "2026-09-29T17:32:04.988Z"
 }
 ```
 
-`notes` arrived in schema 3; `note` and `runs` in schema 2. Every addition defaults empty, so an older
-sidecar loads unchanged. Note keys are `<drawingId>/[<segmentId>/]<node|edge|step>:<id>`.
+`emits` arrived in schema 4, `notes` in 3, `note` and `runs` in 2. Every addition defaults empty, so an
+older sidecar loads unchanged and an older build reads a newer one, ignoring what it does not know. Note
+keys are `<drawingId>/[<segmentId>/]<node|edge|step>:<id>`. `emits` is a cache, re-derived from the
+captures on every load; `relabel` is present only once `flowviz relabel` has moved the ids.
 
 | Tier | When | Pill |
 |---|---|---|
@@ -410,9 +452,18 @@ On load both are read; the newer `savedAt` wins, then both are brought level. Th
 key level, so a sparse sidecar never deletes something held locally. The server copies the previous
 sidecar to `.flowviz/state-backup/<doc>.<ts>.json` the first time each doc is overwritten in a run.
 
-Every input is keyed by a **stable id** — the doc id, step ids, drawing ids, box, edge and step ids — so
-an agent may regenerate the HTML freely and the human's input re-attaches. Ids are part of the contract:
-**never renumber or rename one** once a human may have typed against it.
+Every input is keyed by a **stable id** — the doc id, row and step ids, drawing ids, box, edge and step
+ids — so an agent may regenerate the HTML freely and the human's input re-attaches. Ids are part of the
+contract: **never renumber or rename one** once a human may have typed against it.
+
+The one sanctioned move is **`flowviz relabel <report>.src.html`**, which puts a report on §1.2b. It
+rewrites every reference in the source (the step's capture, exit, counter, note and chip attributes,
+`data-after`, `captures["id"]` labels and `{{step.NAME}}` tokens), backs the sidecar up to
+`.flowviz/state-backup/`, and moves its `captures`, `steps`, `emits` and `open` keys. It also appends the
+move to `<meta name="flowviz-relabel">` in the source, so state a browser still holds from before is
+re-keyed the next time the page opens, and stamps `relabel` on the sidecar and on every later save: the
+server answers `409` to a tab still carrying the old ids instead of letting it write them back.
+`--dry-run` prints the moves and writes nothing.
 
 ---
 
@@ -423,8 +474,8 @@ an agent may regenerate the HTML freely and the human's input re-attaches. Ids a
 | Bump | Means |
 |---|---|
 | patch | CSS, wording, bug fix |
-| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML) |
-| major | a cap changes, or the card or spine shape changes (1.0.0 labelled every row; 2.0.0 made flows optional) |
+| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change) |
+| major | a cap changes, or the card or spine shape changes, or the audit starts failing reports it passed (1.0.0 labelled every row; 2.0.0 made flows optional; 3.0.0 named rows and steps by letter and number) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then
 rebuild — once FLOW_VIZ is its own repository) and **a deliverable's content**
@@ -447,6 +498,7 @@ $F audit --browser ~/work/sto/STO.html  # also the layout caps, via headless Chr
 $F serve ~/work/sto --open              # so what the human types reaches disk
 $F captures ~/work/sto/STO.html         # read back captures and notes
 $F results ~/work/sto/STO.src.html      # once it has run: start the Results section
+$F relabel ~/work/sto/STO.src.html      # an older report onto a, b, c and b1, b2, state included
 ```
 
 Authors edit `.src.html`. The built `.html` is one file: no asset paths, no network. Deliverables are

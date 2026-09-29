@@ -21,7 +21,7 @@ plain rebuild. Never fix a single deliverable's markup for something the runtime
 | `template/report.src.html` | report skeleton with scaffold markers | `flowviz new report` expands it |
 | `template/drawing.src.html` | drawing skeleton | `flowviz new drawing` fills it |
 | `bin/flowviz` | the one entry point; bare = cheat sheet | pure passthroughs |
-| `bin/flowviz-*.py` | new, build, audit, serve, captures | stdlib Python 3 only |
+| `bin/flowviz-*.py` | new, build, audit, serve, captures, results, relabel | stdlib Python 3 only |
 | `PLAN.src.html` → `PLAN.html` | the toolkit's own plan, written to the standard | must audit clean |
 | `examples/` | reference deliverables | rebuilt and audited with every change |
 
@@ -32,6 +32,7 @@ A `.src.html` is a full HTML document holding content only. It carries two metas
 ```html
 <meta name="flowviz-doc" content="checkout">      <!-- the doc id: sidecar name and state key. Never changes. -->
 <meta name="flowviz-kind" content="drawing">      <!-- report | drawing -->
+<meta name="flowviz-relabel" content='[…]'>       <!-- only after `flowviz relabel`: every id move, oldest first -->
 <!-- flowviz:head -->   in <head>: build puts the boot script and the inlined flow.css + draw.css here
 <!-- flowviz:foot -->   in <body>: build puts the provenance footer here
 <!-- flowviz:js -->     before </body>: build puts the icon sprite, flow.js and draw.js here
@@ -55,7 +56,7 @@ drawing without a template change, and a fix to any asset reaches everything on 
 ```js
 window.FLOWVIZ = {
   doc, version, kind,          // from window.FLOW
-  state,                       // the live state object, schema 3 (SPEC §6). Mutate, then save().
+  state,                       // the live state object, schema 4 (SPEC §6). Mutate, then save().
   save(),                      // debounced 700 ms: localStorage always, PUT to the sidecar when served
   onHydrate(fn),               // fn() after a sidecar load merged newer state into `state`
   auditHooks: [],              // push fn(add); add(label, actual, capText, ok) adds a ?audit=1 row
@@ -106,8 +107,17 @@ instance variable `--flow`, set on the figure — never `--acc`, which is the pa
 
 ## Rules that are easy to break
 
-- **Never rename an id** that a human may have typed against: doc ids, step ids, drawing ids, box, edge and
-  flow-step ids. Renaming silently orphans their captures and notes.
+- **Never rename an id** that a human may have typed against: doc ids, row and step ids, drawing ids, box,
+  edge and flow-step ids. Renaming silently orphans their captures and notes. `flowviz relabel` is the one
+  sanctioned move, and it is three pieces that must stay in step: the script rewrites the source and the
+  sidecar, `upgrade()` in `flow.js` re-keys state a browser still holds, and `flowviz serve` answers `409`
+  to a tab older than the sidecar's `relabel` stamp.
+- **An emit is parsed three times** — `rulesFor()` in `flow.js`, `parse_emits()` in `bin/flowviz-audit.py`
+  (which the build imports) and in `bin/flowviz-captures.py` — and the `{{step.NAME}}` token regex twice
+  (`flow.js`, the audit). Change them together.
+- **Row letters and step ids** (SPEC §1.2b) are checked by `naming_checks()` in the audit, written by
+  `flowviz new` and `flowviz results`, and displayed by `flow.js` only for ids of that shape, so an older
+  report keeps its counters until it is relabelled.
 - **The error tier exists twice** — `CMD_ERR` in `flow.js` and in `bin/flowviz-captures.py`. Change both.
 - **The unfilled-slot check compares against the templates.** Change a template's placeholder words and
   the audit follows automatically; keep every placeholder inside every cap, or a fresh scaffold fails on

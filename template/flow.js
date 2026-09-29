@@ -5,23 +5,26 @@
    A deliverable declares, before this script (the build writes it):
      window.FLOW = { doc:'api-500-rootcause', version:'0.6.0', kind:'report', built:'…' }
 
-   State shape (also the on-disk sidecar <doc>.flow.json), schema 3:
-     { schema:3, doc, flowviz, savedAt,
+   State shape (also the on-disk sidecar <doc>.flow.json), schema 4:
+     { schema:4, doc, flowviz, savedAt,
        ui:{theme:'auto'|'light'|'dark', motion, draw:{<drawingId>:{…}}},
        vars:{host:'app-vm-01'},          // data-var inputs
        checks:{'<id>':true},                 // label.chk checkboxes
        open:{'<rowid>':true},                // which rows were expanded
        steps:{'<id>':{done,acked}},
        captures:{'<id>':{text,exit,verdict,at,note,runs:[{text,exit,verdict,at}]}},
-       notes:{'<drawingId>/[<segment>/]<node|edge|step>:<id>':{text,at}} }
+       notes:{'<drawingId>/[<segment>/]<node|edge|step>:<id>':{text,at}},
+       emits:{'<stepId>':{'<NAME>':'<value>'}},        // derived, never typed
+       relabel:'<ISO time>' }    // the last flowviz relabel this state was moved through
 
    verdict is one of 'pass' | 'fail' | 'error' | 'saved' | null.
      error  the interpreter rejected the command — evidence about the playbook
      fail   the command ran and said no — evidence about the target
      saved  captured, matched neither regex (the chip reads "no match")
 
-   schema 1 and 2 load unchanged: note, runs (2) and notes (3) are additive
-   and default empty.
+   schema 1–3 load unchanged: note, runs (2), notes (3) and emits (4) are
+   additive and default empty. emits are re-derived from the captures on every
+   load, so a stored value is a cache, never a source.
 
    window.FLOWVIZ is the contract with draw.js (see CLAUDE.md): the live state,
    save(), onHydrate(fn), auditHooks, ptTime() and flash(). draw.js keeps its
@@ -38,9 +41,12 @@
   var served = /^https?:$/.test(location.protocol);
 
   var st = {
-    schema: 3, doc: DOC, flowviz: VER, savedAt: null,
-    ui: { theme: 'auto' }, vars: {}, checks: {}, open: {}, steps: {}, captures: {}, notes: {}
+    schema: 4, doc: DOC, flowviz: VER, savedAt: null,
+    ui: { theme: 'auto' }, vars: {}, checks: {}, open: {}, steps: {}, captures: {}, notes: {},
+    emits: {}
   };
+  var RELABEL = relabels();
+  if (RELABEL.length) st.relabel = RELABEL[RELABEL.length - 1].at;
 
   /* ── the contract with draw.js ─────────────────────────────────────────────
      Exported before anything can call a hook. `state` is the live object —
@@ -101,13 +107,48 @@
   var loadedFrom = 'nothing';
   try {
     var raw = localStorage.getItem(LSKEY);
-    if (raw) { merge(JSON.parse(raw)); loadedFrom = 'localStorage'; }
+    if (raw) { merge(upgrade(JSON.parse(raw))); loadedFrom = 'localStorage'; }
   } catch (e) {}
   applyTheme();
 
+  /* `flowviz relabel` moved this page's row and step ids and left each move in a
+     meta, oldest first. State saved before a move (a browser's own copy) is
+     re-keyed through every move it predates, in order. st carries the latest
+     stamp, so the server can refuse a tab that still has the old ids.         */
+  function relabels() {
+    try {
+      var m = document.querySelector('meta[name="flowviz-relabel"]');
+      return (m && JSON.parse(m.content)) || [];
+    } catch (e) { return []; }
+  }
+  function rekey(o, map) {
+    var out = {}, rest = [], has = Object.prototype.hasOwnProperty;
+    Object.keys(o).forEach(function (k) {
+      if (has.call(map, k)) out[map[k]] = o[k]; else rest.push(k);
+    });
+    // a key no step owns keeps its place, unless a moved key landed on it
+    rest.forEach(function (k) { out[has.call(out, k) ? k + '~before-relabel' : k] = o[k]; });
+    return out;
+  }
+  function upgrade(d) {
+    if (!d || typeof d !== 'object') return d;
+    RELABEL.forEach(function (r) {
+      if ((d.relabel || '') >= r.at) return;
+      var sm = r.steps || {}, om = {};
+      Object.keys(r.rows || {}).forEach(function (k) { om[k] = r.rows[k]; });
+      Object.keys(sm).forEach(function (k) { om['step:' + k] = 'step:' + sm[k]; });
+      ['captures', 'steps', 'emits'].forEach(function (k) {
+        if (d[k] && typeof d[k] === 'object') d[k] = rekey(d[k], sm);
+      });
+      if (d.open && typeof d.open === 'object') d.open = rekey(d.open, om);
+      d.relabel = r.at;
+    });
+    return d;
+  }
+
   function merge(d) {
     if (!d) return;
-    ['ui', 'vars', 'checks', 'open', 'steps', 'captures', 'notes'].forEach(function (k) {
+    ['ui', 'vars', 'checks', 'open', 'steps', 'captures', 'notes', 'emits'].forEach(function (k) {
       if (d[k] && typeof d[k] === 'object') st[k] = Object.assign(st[k] || {}, d[k]);
     });
     if (d.savedAt) st.savedAt = d.savedAt;
@@ -130,7 +171,7 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (d && (!st.savedAt || (d.savedAt || '') > st.savedAt)) {
-          live = false; merge(d); hydrate(); applyTheme(); live = true;
+          live = false; merge(upgrade(d)); hydrate(); applyTheme(); live = true;
           loadedFrom = 'sidecar';
           try { localStorage.setItem(LSKEY, JSON.stringify(st)); } catch (e) {}
           setPill('disk', 'loaded from disk');
@@ -162,7 +203,8 @@
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(st, null, 2)
       }).then(function (r) {
-        setPill(r.ok ? 'disk' : 'err', r.ok ? 'saved ' + ptTime(st.savedAt) : 'save rejected');
+        setPill(r.ok ? 'disk' : 'err', r.ok ? 'saved ' + ptTime(st.savedAt)
+          : r.status === 409 ? 'ids moved: reload' : 'save rejected');
         if (pill && r.ok) pill.title = 'last saved ' + st.savedAt + ' — stored as UTC, shown as Pacific';
       }).catch(function () { setPill('err', 'server down'); });
     }, 700);
@@ -218,15 +260,19 @@
   }
 
   /* ── copy ──────────────────────────────────────────────────────────────── */
-  function cmdTextFor(btn) {
-    if (btn.dataset.for) {
-      var el = document.getElementById(btn.dataset.for);
-      return el ? el.innerText : '';
-    }
+  // the element whose text a copy button sends: its data-for target, or the pre
+  // of its block — the collapsed-row ⧉ reaches the step's pre the same way
+  function copySource(btn) {
+    if (btn.dataset.for) return document.getElementById(btn.dataset.for);
     var scope = btn.closest('.cmd') || btn.closest('li.step') || btn.parentElement;
-    var pre = scope && scope.querySelector('pre');
-    return pre ? pre.innerText : '';
+    return (scope && scope.querySelector('pre')) || null;
   }
+  /* innerText is '' for anything inside a closed <details> — which is exactly
+     where the ⧉ on a collapsed step reaches — so fall back to textContent. In a
+     <pre> the two agree: whitespace is literal, and a resolved {{step.NAME}}
+     span holds its value either way. */
+  function textOf(el) { return el ? (el.innerText || el.textContent || '') : ''; }
+  function cmdTextFor(btn) { return textOf(copySource(btn)); }
   // strip leading prompts, drop pure-comment lines, keep continuations
   function cleanCmd(s) {
     return s.replace(/\r/g, '').split('\n')
@@ -256,11 +302,181 @@
       var sd = $('details.sd', li); if (sd) sd.open = true;
       flash(b, 'tick the gate'); return;
     }
-    var txt = cleanCmd(cmdTextFor(b));
+    /* a command that names another step's value copies only once that value is
+       real and paste-safe: a token must never reach a live console unresolved */
+    var src = copySource(b);
+    if (src) {
+      var pend = $('.sub.pending', src), unsafe = $('.sub.bad', src);
+      if (pend) { flash(b, subKey(pend).id + ' has not run'); return; }
+      if (unsafe) { flash(b, subKey(unsafe).key + ' is not paste-safe'); return; }
+    }
+    var txt = cleanCmd(textOf(src));
     if (!txt) return;
     navigator.clipboard.writeText(txt).then(function () { flash(b); },
       function () { flash(b, 'blocked'); });
   });
+
+  /* ── emits: a value one step prints, handed to a later step's command ──────
+     Producer: <textarea data-cap="b1" data-emit="VER=VERSION ([0-9][0-9.]+)">.
+     One or more NAME=<regex> pairs; each needs exactly one capture group, and
+     the value is group 1 of the LAST match, trimmed. Derived from the current
+     capture only — never runs[] — on every paste, on re-run, and on every load,
+     so fixing a regex fixes the value, the same way reverdict() fixes a verdict.
+     Consumer: {{b1.VER}} anywhere inside a .cmd pre, figures included. A bad
+     pair is skipped with a warning here; the audit and the build refuse it. */
+  var EMIT_SPLIT = /;\s*(?=[A-Z][A-Z0-9_]*=)/;
+  var EMIT_NAME = /^[A-Z][A-Z0-9_]*$/;
+  var emitRules = {};                    // step id -> [{name, re}], compiled once
+  function rulesFor(ta) {
+    var id = ta.dataset.cap;
+    if (emitRules[id]) return emitRules[id];
+    var out = [];
+    String(ta.dataset.emit || '').split(EMIT_SPLIT).forEach(function (pair) {
+      pair = pair.replace(/^\s+/, '');
+      if (!pair) return;
+      var eq = pair.indexOf('='), name = eq > 0 ? pair.slice(0, eq) : '', src = pair.slice(eq + 1);
+      if (!EMIT_NAME.test(name)) {
+        console.warn('[flowviz] data-emit on ' + id + ': "' + pair.slice(0, 40) + '" is not NAME=<regex> — skipped');
+        return;
+      }
+      var re, groups;
+      try {
+        re = new RegExp(src, 'g');
+        groups = new RegExp(src + '|').exec('').length - 1;
+      } catch (e) {
+        console.warn('[flowviz] data-emit on ' + id + ': ' + name + ' does not compile — skipped (' + e.message + ')');
+        return;
+      }
+      if (groups !== 1) {
+        console.warn('[flowviz] data-emit on ' + id + ': ' + name + ' has ' + groups +
+          ' capture groups, needs exactly one — skipped');
+        return;
+      }
+      out.push({ name: name, re: re });
+    });
+    return (emitRules[id] = out);
+  }
+  function sameMap(a, b) {
+    var ka = Object.keys(a || {}), kb = Object.keys(b || {});
+    return ka.length === kb.length && ka.every(function (k) {
+      return Object.prototype.hasOwnProperty.call(b, k) && a[k] === b[k];
+    });
+  }
+  // re-derive one step's values from its current capture; true if anything moved
+  function deriveEmits(ta) {
+    var id = ta.dataset.cap, text = (st.captures[id] || {}).text || '', next = {};
+    if (text.trim()) rulesFor(ta).forEach(function (r) {
+      var m, last = null;
+      r.re.lastIndex = 0;
+      while ((m = r.re.exec(text)) !== null) {
+        last = m;
+        if (m[0] === '') r.re.lastIndex++;          // an empty match must still advance
+      }
+      if (last && last[1] !== undefined) next[r.name] = String(last[1]).trim();
+    });
+    var moved = !sameMap(st.emits[id], next);
+    if (Object.keys(next).length) st.emits[id] = next; else delete st.emits[id];
+    return moved;
+  }
+  // every step, from the stored captures and the current rules; a step that no
+  // longer declares an emit loses whatever an older build stored for it
+  function rederiveEmits() {
+    var moved = false, owned = {};
+    $$('textarea[data-cap]').forEach(function (ta) {
+      owned[ta.dataset.cap] = 1;
+      if (deriveEmits(ta)) moved = true;
+    });
+    Object.keys(st.emits).forEach(function (id) {
+      if (!owned[id]) { delete st.emits[id]; moved = true; }
+    });
+    return moved;
+  }
+
+  /* Tokens become spans once, at init — text nodes only, existing markup left
+     alone. A token preceded by `$` is someone else's syntax (GitHub's ${{ … }})
+     and is never touched. The span then shows the value when it is real and
+     paste-safe, and the literal token otherwise, so what you read is what the
+     copy button will send. */
+  var TOKEN = /\{\{([A-Za-z0-9][\w-]*)\.([A-Z][A-Z0-9_]*)\}\}/g;
+  function wrapTokens(pre) {
+    var walk = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT, null), nodes = [], n;
+    while ((n = walk.nextNode())) nodes.push(n);
+    // plan every hit before splitting anything, so each `$` check reads the
+    // original text, including the tail of the previous text node
+    var plan = nodes.map(function (node, i) {
+      var hits = [], text = node.data, m;
+      if (node.parentNode && node.parentNode.closest && node.parentNode.closest('.sub')) return hits;
+      TOKEN.lastIndex = 0;
+      while ((m = TOKEN.exec(text)) !== null) {
+        var prev = m.index > 0 ? text.charAt(m.index - 1) : (i > 0 ? nodes[i - 1].data.slice(-1) : '');
+        if (prev !== '$') hits.push({ at: m.index, len: m[0].length, key: m[1] + '.' + m[2] });
+      }
+      return hits;
+    });
+    nodes.forEach(function (node, i) {
+      for (var k = plan[i].length - 1; k >= 0; k--) {     // from the end: offsets stay valid
+        var h = plan[i][k], tok = node.splitText(h.at);
+        tok.splitText(h.len);
+        var span = document.createElement('span');
+        span.className = 'sub pending';
+        span.setAttribute('data-sub', h.key);
+        span.textContent = '{{' + h.key + '}}';
+        tok.parentNode.replaceChild(span, tok);
+      }
+    });
+  }
+  function subKey(el) {
+    var key = el.getAttribute('data-sub') || '', dot = key.indexOf('.');
+    return { key: key, id: key.slice(0, dot), name: key.slice(dot + 1) };
+  }
+  /* Paste-safe: printable ASCII, 1–120 characters, and none of the characters a
+     shell would act on. A value that fails stays a token and refuses to copy —
+     a version string never needs a quote, a `$` or a parenthesis. */
+  var SAFE = /^[\x20-\x7E]{1,120}$/, UNSAFE = /[`$"'\\;|&<>(){}]/;
+  function pasteSafe(v) { return SAFE.test(v) && !UNSAFE.test(v); }
+  function paintSubs() {
+    $$('.cmd pre .sub[data-sub]').forEach(function (s) {
+      var k = subKey(s), vals = st.emits[k.id] || {};
+      var has = Object.prototype.hasOwnProperty.call(vals, k.name), v = has ? vals[k.name] : null;
+      var token = '{{' + k.key + '}}';
+      if (!has) {
+        s.className = 'sub pending'; s.textContent = token; s.title = 'waiting for step ' + k.id;
+      } else if (pasteSafe(v)) {
+        s.className = 'sub ok'; s.textContent = v; s.title = 'from step ' + k.id;
+      } else {
+        s.className = 'sub bad'; s.textContent = token; s.title = k.key + ' is not paste-safe';
+      }
+    });
+  }
+  $$('.cmd pre').forEach(wrapTokens);
+
+  /* ── labels: rows are lettered, steps are letter + number ─────────────────
+     A row whose id is one letter shows that letter; a step whose id is a letter
+     and a number (b1) shows its id instead of the counter, so "look at b3" means
+     the same thing on screen, in the sidecar and in the agent's read-back.
+     Other ids keep the counter, so an older report looks as it did.        */
+  $$('details.row').forEach(function (d) {
+    if (!/^[a-z]$/.test(d.dataset.row || '')) return;
+    var o = $('summary .ord', d); if (o) o.textContent = d.dataset.row;
+  });
+  $$('li.step').forEach(function (li) {
+    var id = li.dataset.step || '';
+    if (!/^[a-z][0-9]+$/.test(id)) return;
+    var n = $('.sd>summary .n', li);
+    if (n) { n.textContent = id; li.classList.add('named'); }
+  });
+  // the label a human sees for each step: its id when named, else the counter
+  // (which counts only unnamed steps, per playbook, exactly as the CSS does)
+  function stepLabels() {
+    var out = {};
+    $$('ol.steps').forEach(function (ol) {
+      var c = 0;
+      $$('li.step', ol).forEach(function (li) {
+        out[li.dataset.step] = li.classList.contains('named') ? li.dataset.step : String(++c);
+      });
+    });
+    return out;
+  }
 
   /* ── rows ──────────────────────────────────────────────────────────────── */
   $$('details.row').forEach(function (d) {
@@ -521,7 +737,9 @@
       r.text = ta.value;
       r.at = ta.value.trim() ? new Date().toISOString() : null;
       r.verdict = verdictOf(ta, ta.value);
+      deriveEmits(ta);
       paintCapture(id);
+      paintSubs();
       /* repaint every step, not just this playbook's progress: a capture is what
          releases a `data-after` step, and it should light up on the paste */
       repaintAll();
@@ -544,9 +762,10 @@
       r.text = ''; r.exit = ''; r.verdict = null; r.at = null;
       var ta = $('textarea[data-cap="' + id + '"]'); if (ta) { ta.value = ''; ta.focus(); }
       var ec = $('input[data-ec="' + id + '"]'); if (ec) ec.value = '';
+      if (ta) deriveEmits(ta); else delete st.emits[id];
       var li = $('li.step[data-step="' + id + '"]');
       if (li) setDone(li, false, false); else { step(id).done = false; }
-      paintCapture(id); repaintAll(); save();
+      paintCapture(id); paintSubs(); repaintAll(); save();
       flash(b, 'run ' + (r.runs.length + 1));
     });
   });
@@ -564,10 +783,12 @@
   if (ac) ac.addEventListener('click', function () {
     var out = { doc: DOC, flowviz: VER, at: new Date().toISOString(),
                 vars: st.vars, captures: {}, done: [] };
+    var labels = stepLabels();
     Object.keys(st.captures).forEach(function (k) {
       var r = st.captures[k];
       if ((r.text || '').trim()) {
         out.captures[k] = { text: r.text, exit: r.exit, verdict: r.verdict, at: r.at };
+        if (labels[k]) out.captures[k].step = labels[k];
         if (r.note) out.captures[k].note = r.note;
         if (r.runs && r.runs.length) out.captures[k].priorRuns = r.runs.length;
       }
@@ -575,6 +796,11 @@
     Object.keys(st.steps).forEach(function (k) { if (st.steps[k].done) out.done.push(k); });
     var notes = notesForExport(), nn = Object.keys(notes).length;
     if (nn) out.notes = notes;
+    var emits = {};
+    Object.keys(st.emits || {}).forEach(function (k) {
+      if (Object.keys(st.emits[k] || {}).length) emits[k] = st.emits[k];
+    });
+    if (Object.keys(emits).length) out.emits = emits;
     var n = Object.keys(out.captures).length;
     navigator.clipboard.writeText('```json\n' + JSON.stringify(out, null, 2) + '\n```')
       .then(function () {
@@ -624,7 +850,7 @@
       var r = peek(id);
       var vd = (VD_LABEL[r.verdict] || 'not captured').toUpperCase();
       line(bar);
-      line('step ' + n + ' · ' + id + ' · ' + (risk === 'w' ? 'WRITE' : 'read') + ' · ' + vd);
+      line('step ' + (n === id ? id : n + ' · ' + id) + ' · ' + (risk === 'w' ? 'WRITE' : 'read') + ' · ' + vd);
       line(bar);
       line(sentence);
       if (cmd) {
@@ -635,6 +861,8 @@
       if ((r.text || '').trim()) {
         line('captured   ' + (r.at || '—') + '   exit ' + (r.exit === '' ? '—' : r.exit) +
              '   ' + r.text.split('\n').length + ' lines, ' + r.text.length + ' chars');
+        var em = st.emits[id] || {}, en = Object.keys(em);
+        if (en.length) line('emits      ' + en.map(function (k) { return k + '=' + em[k]; }).join('  '));
         L.push(MK + jobs.length + MKE);
         jobs.push(r.text);
         line('output');
@@ -653,7 +881,7 @@
       line('');
     }
 
-    var seen = {};
+    var seen = {}, labels = stepLabels();
     $$('.pb').forEach(function (pb) {
       var t = $('.hd .t', pb), p = $('.hd .prog', pb);
       line('PLAYBOOK   ' + (t ? t.innerText.trim() : '(untitled)') +
@@ -662,8 +890,8 @@
       $$('li.step', pb).forEach(function (li, i) {
         var id = li.dataset.step; seen[id] = 1;
         var ds = $('.ds', li), pre = $('.cmd pre', li);
-        emitCapture(id, i + 1, ds ? ds.innerText.trim() : '', li.dataset.risk,
-                    pre ? pre.innerText.trim() : '');
+        emitCapture(id, labels[id] || String(i + 1), textOf(ds).trim(), li.dataset.risk,
+                    textOf(pre).trim());
       });
     });
     var loose = Object.keys(st.captures).filter(function (k) {
@@ -743,6 +971,8 @@
       if (ta && reverdict(ta, r)) moved++;
       paintCapture(k);
     });
+    if (rederiveEmits()) moved++;
+    paintSubs();
     if (moved) save();
     $$('textarea[data-cap]').forEach(function (ta) { paintCapture(ta.dataset.cap); });
     repaintAll();

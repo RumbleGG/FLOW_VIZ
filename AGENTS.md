@@ -31,6 +31,7 @@ $F audit --browser ~/work/sto/STO.html    # 4. fix every OVER and FAIL
 $F serve ~/work/sto --open                # 5. hand over, served
 $F captures ~/work/sto/STO.html           # later: what they pasted, and every note they left
 $F results ~/work/sto/STO.src.html        # once they have run it all: start the Results section
+$F relabel ~/work/sto/STO.src.html        # an older report onto a, b, c and b1, b2: what was pasted moves too
 ```
 
 The deliverable lives in **the folder the work is in**; this repository is only the toolkit. Nothing is
@@ -74,8 +75,10 @@ yours to make. Nothing is ever deleted to fit — it moves down a layer:
 ### Every row says what it is for
 
 Group the rows under section headers — `<h2 class="sec">Try it on this Mac</h2>` — and give every row a
-`data-kind`. **You do not write the label**: the page draws it from the attribute, the same way in every
-report, and the audit fails a label that does not match what the row holds.
+`data-kind`. **You do not write the kind's label**: the page draws it from the attribute, the same way in
+every report, and the audit fails a label that does not match what the row holds. **Rows are lettered a,
+b, c… in the order they appear**: the letter is both the row's `data-row` and its `.ord`, and the
+scaffold writes both.
 
 | `data-kind` | The reader sees | Use for | Must hold |
 |---|---|---|---|
@@ -90,20 +93,25 @@ report, and the audit fails a label that does not match what the row holds.
 
 ```html
 <h2 class="sec">Fix it</h2>
-<details class="row" data-row="fx" data-kind="change">
-<summary><span class="ord">4</span><span class="cl">Switching the app pool to full trust clears the 500</span><span class="rt">5 min</span></summary>
+<details class="row" data-row="d" data-kind="change">
+<summary><span class="ord">d</span><span class="cl">Switching the app pool to full trust clears the 500</span><span class="rt">5 min</span></summary>
 ```
 
 ### Checklist steps — the playbook
 
-A command the human must run is never a bare `<pre>`. It is a step: checkbox, number, one sentence,
+A command the human must run is never a bare `<pre>`. It is a step: checkbox, id, one sentence,
 blast-radius badge, copy button, verdict chip. The command, the expected result and the paste box sit
-behind the disclosure, so a nine-step playbook reads as nine sentences. The scaffold writes both shapes;
-**rename its `s1…sN` to mnemonic ids now** (`p6`, `ev2`, `rb1`) — ids are the join key for what the human
-pastes, and renaming one later silently orphans their output.
+behind the disclosure, so a nine-step playbook reads as nine sentences.
+
+**A step's id is its row's letter and its number in that row: `d1`, `d2` … `dn`.** Never a word
+(`push`), never two letters (`bb`, `bc`): letters name rows, numbers name steps, so "look at d3" means one
+thing on the screen, in the sidecar and in your read-back. A Results section's steps are `r1`, `r2`…. The
+scaffold writes these ids and the page shows them where a bare number would be; the audit fails any
+other. Ids are the join key for what the human pastes, so **never change one after handover** — to move
+an older report onto this convention, `flowviz relabel` moves what was pasted along with the ids.
 
 ```html
-<li class="step" data-step="p6" data-risk="ro" data-after="p5">
+<li class="step" data-step="d2" data-risk="ro" data-after="d1">
   <input type="checkbox" class="done">
   <details class="sd">
     <summary><span class="n"></span><span class="ds">One sentence, ≤20 words, what this establishes.</span></summary>
@@ -111,25 +119,31 @@ pastes, and renaming one later silently orphans their output.
       <div class="cmd"><button class="copy">copy</button><pre><code>the command</code></pre></div>
       <p class="expect"><b>Pass:</b> what good looks like &nbsp;·&nbsp; <i>Fail:</i> what bad looks like</p>
       <div class="cap">
-        <div class="cl">Paste output <span class="kp">captures["p6"]</span></div>
-        <textarea data-cap="p6" data-pass="\bFull\b" data-fail="\bMedium\b|\bMinimal\b"
+        <div class="cl">Paste output <span class="kp">captures["d2"]</span></div>
+        <textarea data-cap="d2" data-pass="\bFull\b" data-fail="\bMedium\b|\bMinimal\b"
           placeholder="paste the terminal output here — it saves as you type"></textarea>
         <div class="ft">
-          <span>exit <input class="ec" data-ec="p6" placeholder="0"></span>
-          <span data-cnt="p6">empty</span><span data-at="p6"></span>
-          <span class="rn" data-run="p6"></span>
-          <button class="rr" data-rr="p6" title="keep this attempt and clear the box">re-run</button>
+          <span>exit <input class="ec" data-ec="d2" placeholder="0"></span>
+          <span data-cnt="d2">empty</span><span data-at="d2"></span>
+          <span class="rn" data-run="d2"></span>
+          <button class="rr" data-rr="d2" title="keep this attempt and clear the box">re-run</button>
         </div>
-        <input class="nt" data-note="p6" placeholder="note for the agent (optional)">
+        <input class="nt" data-note="d2" placeholder="note for the agent (optional)">
       </div>
       <details class="more"><summary>why this step</summary>
       <div class="in"><p>Traps, fallbacks, <code>file:line</code> citations — as long as it needs.</p></div></details>
     </div>
   </details>
   <span class="ctr"><span class="badge ro">read</span>
-    <button class="copy">⧉</button><span class="vd" data-vd="p6">—</span></span>
+    <button class="copy">⧉</button><span class="vd" data-vd="d2">—</span></span>
 </li>
 ```
+
+Steps sit in a **playbook**, one per action row: `<div class="pb">` with a header `div.hd` — the title
+`span.t` (what running it achieves), an optional target `span.tgt` holding a `data-var` input, and
+`span.prog`, which the page counts — then `<ol class="steps">`. The scaffold puts every step in its last
+row; to spread them across rows, copy the whole `div.pb` into each action row and number the steps from 1
+in their new row, before anyone pastes.
 
 A **write** step differs in three places: `data-risk="w"`, `<span class="badge w">write</span>`, and an
 acknowledgement gate as the first child of `div.in` —
@@ -162,11 +176,36 @@ syntax errors lines away from the cause.
 - **Name the interpreter** when it matters; **echo every derived value** and how many matched.
 - **Parse-check every block** before handover: `bash -n`, `python3 -m py_compile`,
   `[System.Management.Automation.Language.Parser]::ParseFile`.
+- **A value carried in from an earlier step obeys the same rules.** `{{d1.VER}}` (below) resolves only to
+  1–120 printable ASCII characters with no quote, `$`, backslash, backtick, `;` `|` `&` `<` `>` or
+  bracket; anything else, or no value yet, and copy refuses. Never write a `PASTE_…` placeholder for the
+  human to overwrite — the audit warns on one.
 
 The audit enforces the first four and the anchoring rule. The rest need an interpreter per language,
 which the toolkit refuses to install: **they are yours**, and so is a pass condition that the command's
 real output can actually falsify. Something **shown, not run** — a JSON sample, a tree, a log — is
 `<div class="cmd fig">`: dashed, no copy button, exempt. Never use it to smuggle a command past the audit.
+
+### A value one step prints, used by a later command
+
+When a later command needs something an earlier step printed — a version, an id, a path — don't make the
+human carry it across. Declare it on the producing step's paste box and name it in the later command:
+
+```html
+<textarea data-cap="d1" data-emit="VER=VERSION ([0-9][0-9.]+)" data-pass="…" data-fail="…"></textarea>
+…
+<pre><code>gh workflow run deploy.yml -f build-version="{{d1.VER}}"</code></pre>
+```
+
+- `data-emit` is one or more `NAME=<regex>` pairs, `;`-separated. Each regex has **exactly one** capture
+  group; the value is that group from the **last** match in what was pasted, trimmed. It is re-derived on
+  every paste and every load, and stored in the sidecar under `emits` beside the capture.
+- `{{d1.VER}}` works in any later command. Until `d1` is pasted it shows as written and **copy refuses**
+  with *d1 has not run*; afterwards the value appears in place, titled *from step d1*, and copy sends the
+  resolved command. `${{ … }}` is someone else's syntax and is left alone.
+- The producing step must come first on the consumer's `data-after` chain (or be the step itself); the
+  audit warns when it is not, and **fails** a token whose step does not exist or declares no such name.
+- `data-var` is for what only the human knows (a host name). An emit is for what an earlier step printed.
 
 ### When they have run it: Results
 
@@ -183,7 +222,7 @@ as the plan that was tested.
 3. **Mark the diagram**: `"result": "pass"` on the boxes and connections the run proved, `"fail"` where the
    target said no, `"error"` where a command never ran. Green, a red ✕, an amber ⚠ — no flows needed, and
    the marks must agree with the outcome.
-4. Keep the **archive step**: one gated write step that moves the finished folder into the workspace's
+4. Keep the **archive step** (`r1`): one gated write step that moves the finished folder into the workspace's
    archive (`~/Archive` when it exists; `--archive-to` for another). Suggest it in your reply too; never
    move anything yourself.
 5. Rebuild, `audit --browser`, hand it back. The worked example is `examples/deploy/`.
@@ -201,6 +240,7 @@ All exist in the stylesheet. Use the class; never write CSS.
 | Table | plain `<table><thead><tr><th>` |
 | Plain checkbox | `<label class="chk"><input type="checkbox" data-ck="id"><span>…</span></label>` |
 | Fill-in variable | `<input data-var="host" placeholder="app-vm-01">` — persists with the state |
+| Value from an earlier step | `data-emit="VER=VERSION ([0-9.]+)"` on the step's `textarea`, `{{d1.VER}}` in a later command |
 
 ---
 
@@ -334,9 +374,10 @@ section is required; the drawer always shows the peek, facts, the steps a box ta
 
 ## Reading what the human left
 
-When they say "I ran it", "look at step 4" or "I left notes", run `flowviz captures <file>.html`. It reads
+When they say "I ran it", "look at b4" or "I left notes", run `flowviz captures <file>.html`. It reads
 the sidecar `<doc>.flow.json` — **never the HTML, which holds no state** — and prints each capture joined
-to its step sentence and blast radius, verdicts **re-derived from the current rules**, superseded runs
+to its step sentence and blast radius, verdicts **re-derived from the current rules**, every value it
+emitted (`d1 -> VER=12.149.3747.21500`), superseded runs
 oldest first (a step showing `pass` may have failed twice first, and the earlier text is usually the
 diagnosis), then every note left on a drawing, keyed `<drawing>/[<segment>/]node|edge|step:<id>`.
 
@@ -356,8 +397,8 @@ or to press **Copy captures for agent** and paste the block to you.
 3. **Don't hard-code a colour, font or radius.** Tokens only; box colours come from `kind`. Check light
    **and** dark — both are designed.
 4. **Don't open anything at load**: at most one report row, no drawer, no layer.
-5. **Don't rename an id** after handover — doc, step, drawing, box, connection or flow step. It orphans
-   what the human typed.
+5. **Don't rename an id** after handover — doc, row, step, drawing, box, connection or flow step. It
+   orphans what the human typed. (`flowviz relabel` is the one safe move: it takes the state with it.)
 6. **Don't write a second sentence** into a step, a `say` or a peek. It goes one layer down.
 7. **Don't use a CDN, web font or remote image.** Deliverables render offline and in print.
 8. **Don't skip the audit**, and don't raise a cap to pass it. Split the report; make a segment.
@@ -370,6 +411,7 @@ or to press **Copy captures for agent** and paste the block to you.
 ```
 ~/Projects/FLOW_VIZ/PLAN.html                         a report with a drawing spine and a live checklist
 ~/Projects/FLOW_VIZ/examples/checkout/checkout.html   a drawing: 10 boxes, 3 flows, a failure path, one segment
+~/Projects/FLOW_VIZ/examples/deploy/DEPLOY.html       a report after its run: Results on top, a value b1 printed used by c1
 ```
 
 Open each with `?audit=1` to see the caps measured on the page itself.

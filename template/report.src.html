@@ -127,10 +127,14 @@
 <!-- row:end -->
 
 <!-- ══════════════ PLAYBOOK SHAPES ══════════════
-     A step is a checkbox, a number and ONE sentence (≤20 words). Ids are the join
-     key for the human's pasted output: rename the scaffold's s1…sN to mnemonic ids
-     now, and never renumber one after a human may have pasted.
-     data-pass / data-fail: anchor every literal (\bFull\b, never Full). -->
+     A step is a checkbox, its id and ONE sentence (≤20 words). Rows are lettered
+     a, b, c… and a step's id is its row's letter plus its number — b1, b2… — never a
+     word, never two letters. Ids are the join key for the human's pasted output:
+     never change one after a human may have pasted (flowviz relabel moves the
+     sidecar with them if you must). data-pass / data-fail: anchor every literal
+     (\bFull\b, never Full). A value a step prints that a later command needs:
+     data-emit="VER=VERSION ([0-9][0-9.]+)" on this step's textarea, {{b1.VER}} in
+     the later command — never a PASTE_ placeholder. -->
 <!-- pb:begin -->
 <div class="pb" data-pb="playbook">
   <div class="hd">

@@ -7,7 +7,9 @@ It makes two things:
 
 - **Reports** — a claim, the shape of the argument in six rows or fewer, evidence one click down, and a
   checklist playbook: every command you have to run is a step with a copy button, a blast-radius badge and
-  a box to paste its output into. What you paste comes back to the agent, attributed to the step.
+  a box to paste its output into. What you paste comes back to the agent, attributed to the step. Rows are
+  lettered and steps numbered within them — `b1`, `b2` — so "look at b3" is never ambiguous, and a value
+  one step prints can flow into a later step's command without being retyped.
 - **Drawings** — a system, or one segment of it, on a grid. The selected flow moves (dashes for calls, dots
   for events) so you see where data goes; hover for a one-line peek, click for everything, press
   **Walk through** to watch a request travel step by step. Boxes can open into their own drawing.
@@ -43,7 +45,7 @@ CLAUDE.md       for agents changing the toolkit itself
 VERSION         stamped into every deliverable's footer
 CHANGELOG.md    why each version changed
 PLAN.src.html   the toolkit's plan, as a report  →  PLAN.html
-bin/            flowviz (cheat sheet + dispatcher), new, build, audit, serve, captures, results
+bin/            flowviz (cheat sheet + dispatcher), new, build, audit, serve, captures, results, relabel
 template/       flow.css flow.js (core, reports) · draw.css draw.js icons.svg (drawings) · scaffolds
 examples/       checkout/: the approved drawing, with flows · deploy/: a report closed with Results
 mockups/        the first hand-made mockup of the drawing look, kept for reference

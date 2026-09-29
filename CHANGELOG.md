@@ -3,6 +3,35 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.0.0 — 2026-09-29 · letters for rows, numbers for steps, and values that carry
+
+**Names.** Rows are lettered a, b, c… in order, and a step's id is its row's letter and its number in that
+row: `b1`, `b2` … `bn`; a Results section's steps are `r1`, `r2`…. The page shows the id where the counter
+was, so "look at b3" names one step on screen, in the sidecar and in the agent's read-back. Mnemonic ids
+(`push`, `bb`) are retired: **the audit now fails a report off the convention**, which is why this is a
+major version. `flowviz new` and `flowviz results` write conforming ids.
+
+**`flowviz relabel`** moves an existing report onto the convention without losing what was pasted. It
+rewrites every reference in the source, backs the sidecar up and re-keys its captures, ticks, emits and open
+rows, and records the move in a `flowviz-relabel` meta, so state a browser still holds is re-keyed the next
+time the page opens. A tab left open from before the move is refused (`409`, pill *ids moved: reload*)
+instead of writing the old ids back. PLAN and the deploy example were moved with it.
+
+**Emits.** A value one step prints now reaches a later step's command without being retyped:
+`data-emit="VER=VERSION ([0-9][0-9.]+)"` on the producing step's paste box, `{{b1.VER}}` in the later
+command. The value is the capture group of the last match, re-derived on every paste and load and cached in
+the sidecar under `emits` (schema 4). Until it exists the token shows as written and copy refuses — *b1 has
+not run* — and a value that is not paste-safe is refused the same way, so nothing unresolved reaches a
+console. The build and the audit fail a token that cannot resolve and a regex without exactly one capture
+group; the audit warns when the producer is not on the consumer's `data-after` chain, and on any `PASTE_`
+placeholder left in a command. `flowviz captures` prints each value beside its capture
+(`b1 -> PREV=2.2.4`). A report with no `data-emit` renders, copies and saves as before. In the deploy
+example, the rollback now pins the exact version `b1` printed instead of trusting `rollout undo`.
+
+Fixed on the way: the collapsed row's ⧉ copied nothing, and the agent export dropped a closed step's
+command and sentence, because Chrome reports no `innerText` inside a closed `<details>`. Both now read the
+text directly.
+
 ## 2.1.0 — 2026-09-28 · Copy HTML
 
 Every drawing gains a **Copy HTML** button for pasting it into a wiki page. The snippet carries its own

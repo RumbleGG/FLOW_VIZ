@@ -238,6 +238,34 @@ def _is_step(e):
     return e.tag == 'li' and e.has_class('step') and 'data-step' in e.attrs
 
 
+_EMIT_SPLIT = re.compile(r';\s*(?=[A-Z][A-Z0-9_]*=)')
+_NAMED = re.compile(r'^[a-z][0-9]+$')
+
+
+def parse_emits(attr):
+    """{NAME: regex} from data-emit's NAME=<regex>[; NAME=<regex>…]; a bad pair is skipped (the audit fails it)."""
+    out = {}
+    for part in (_EMIT_SPLIT.split(attr.strip()) if attr and attr.strip() else []):
+        name, sep, src = part.partition('=')
+        try:
+            rx = re.compile(src)
+        except re.error:
+            continue
+        if sep and re.match(r'^[A-Z][A-Z0-9_]*$', name.strip()) and rx.groups == 1:
+            out[name.strip()] = rx
+    return out
+
+
+def derive_emits(text, emit_rx):
+    """The last match's group, per name — exactly what the page stores."""
+    got = {}
+    for name, rx in emit_rx.items():
+        ms = list(rx.finditer(text or ''))
+        if ms and ms[-1].group(1) is not None:
+            got[name] = ms[-1].group(1).strip()
+    return got
+
+
 def build_step(li, n, playbook=None):
     sid = li.attrs.get('data-step')
     risk = li.attrs.get('data-risk')
@@ -252,11 +280,13 @@ def build_step(li, n, playbook=None):
     ta = li.first(lambda e: e.tag == 'textarea' and 'data-cap' in e.attrs)
     pass_pattern = ta.attrs.get('data-pass') if ta is not None else None
     fail_pattern = ta.attrs.get('data-fail') if ta is not None else None
+    emit_rx = parse_emits(ta.attrs.get('data-emit') if ta is not None else '')
     pass_rx, pass_warn = compile_rule(pass_pattern)
     fail_rx, fail_warn = compile_rule(fail_pattern)
     warnings = ['step %s: %s' % (sid, w) for w in (pass_warn, fail_warn) if w]
     return {
         'id': sid, 'n': n, 'risk': risk, 'sentence': sentence, 'command': command, 'playbook': playbook,
+        'emit_rx': emit_rx,
         'pass_rx': pass_rx, 'fail_rx': fail_rx, 'warnings': warnings,
     }
 
@@ -267,8 +297,14 @@ def extract_steps(root):
     for pb in root.find(cls('pb')):
         local = [e for e in pb.walk() if _is_step(e)]
         head = pb.first(lambda e: e.has_class('t') and e.parent is not None and e.parent.has_class('hd'))
+        title = head.text() if head is not None else None
+        up = pb.parent
+        while title is None and up is not None:     # the Results section's archive step has no header
+            if up.tag == 'section' and up.has_class('results'):
+                title = 'Results'
+            up = up.parent
         for i, li in enumerate(local):
-            steps.append(build_step(li, i + 1, head.text() if head is not None else None))
+            steps.append(build_step(li, i + 1, title))
             counted.add(li.attrs.get('data-step'))
     # a li.step outside any div.pb is unusual, but don't silently drop its capture
     for li in root.walk():
@@ -278,7 +314,7 @@ def extract_steps(root):
     return steps
 
 
-def step_capture_record(step, captures):
+def step_capture_record(step, captures, stored_emits=None):
     cap = captures.get(step['id']) if step['id'] else None
     has_capture = isinstance(cap, dict)
     if not has_capture:
@@ -300,6 +336,8 @@ def step_capture_record(step, captures):
         'note': cap.get('note') or '', 'verdict_stored': normalize_stored_verdict(cap.get('verdict')),
         'verdict': derived,
         'runs': runs_out, 'has_capture': has_capture,
+        'emits': derive_emits(text, step.get('emit_rx') or {}),
+        'emits_stored': dict((stored_emits or {}).get(step['id']) or {}),
     }
 
 
@@ -421,9 +459,12 @@ def render_lines(text, limit, show_all, prefix):
 
 def print_step_block(step, rec, show_all, out):
     risk_disp = 'WRITE' if step['risk'] == 'w' else 'read'
-    n_disp = step['n'] if step['n'] is not None else '·'
     shown = {'none': '—', 'no match': 'NO MATCH'}.get(rec['verdict'], str(rec['verdict']).upper())
-    out.append('step %s  %-4s %-5s  %-8s  %s' % (n_disp, step['id'], risk_disp, shown, step['sentence']))
+    if _NAMED.match(step['id'] or ''):
+        out.append('step %-5s %-5s  %-8s  %s' % (step['id'], risk_disp, shown, step['sentence']))
+    else:
+        n_disp = step['n'] if step['n'] is not None else '·'
+        out.append('step %s  %-4s %-5s  %-8s  %s' % (n_disp, step['id'], risk_disp, shown, step['sentence']))
     has_text = bool((rec['text'] or '').strip())
     if has_text and rec['verdict_stored'] != rec['verdict']:
         out.append('  stored %s → now %s' % (rec['verdict_stored'], rec['verdict']))
@@ -436,6 +477,13 @@ def print_step_block(step, rec, show_all, out):
             out.append('  exit %s · captured %s (%s)' % (exit_disp, local, iso))
         else:
             out.append('  exit %s · captured —' % exit_disp)
+    for name, val in rec['emits'].items():
+        was = rec['emits_stored'].get(name)
+        out.append('  %s -> %s=%s%s' % (step['id'], name, val,
+                   '' if was in (None, val) else '   (stored %s, re-derived from the capture)' % was))
+    for name in rec['emits_stored']:
+        if name not in rec['emits']:
+            out.append('  %s -> %s no longer matches the capture (stored %s)' % (step['id'], name, rec['emits_stored'][name]))
     if rec['note']:
         out.append('  note: %s' % rec['note'])
     out.extend(render_lines(rec['text'], 40, show_all, '  | '))
@@ -488,9 +536,12 @@ def build_json(doc, sidecar_path, sidecar, records, orphan_ids, captures, notes_
             capture_obj = {'text': rec['text'], 'exit': rec['exit'], 'at': rec['at'],
                             'note': rec['note'], 'verdict_stored': rec['verdict_stored'],
                             'verdict': rec['verdict']}
-        steps_json.append({'id': step['id'], 'n': step['n'], 'risk': step['risk'],
-                            'sentence': step['sentence'], 'command': step['command'],
-                            'capture': capture_obj, 'runs': rec['runs']})
+        entry = {'id': step['id'], 'n': step['n'], 'risk': step['risk'],
+                 'sentence': step['sentence'], 'command': step['command'],
+                 'capture': capture_obj, 'runs': rec['runs']}
+        if step.get('emit_rx') or rec['emits_stored']:     # only a step that emits says so
+            entry.update(emits=rec['emits'], emits_stored=rec['emits_stored'])
+        steps_json.append(entry)
     orphaned_json = []
     for oid in orphan_ids:
         cap = captures.get(oid) or {}
@@ -570,7 +621,7 @@ def main(argv=None):
     specs, spec_warnings = extract_drawing_specs(root)
     notes_list = build_notes_list(sidecar.get('notes') or {}, specs)
 
-    records = [(s, step_capture_record(s, captures)) for s in steps]
+    records = [(s, step_capture_record(s, captures, sidecar.get('emits') or {})) for s in steps]
     summary, any_error = summarize(records)
     summary['notes'] = len(notes_list)
 

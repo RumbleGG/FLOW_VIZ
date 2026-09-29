@@ -294,6 +294,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         sidecar_path = os.path.join(target_dir, doc + '.flow.json')
         key = (target_dir, doc)
         with self.server.fv_lock:
+            # a tab opened before `flowviz relabel` still holds the old ids: saving it would put them back
+            if os.path.exists(sidecar_path):
+                try:
+                    moved_at = json.load(open(sidecar_path, encoding='utf-8')).get('relabel') or ''
+                except (OSError, ValueError, AttributeError):
+                    moved_at = ''
+                if moved_at and str(data.get('relabel') or '') < moved_at:
+                    print('PUT refused %s: this tab predates flowviz relabel %s; reload it'
+                          % (os.path.relpath(sidecar_path, root).replace(os.sep, '/'), moved_at), flush=True)
+                    self.send_error(409, 'the ids moved (flowviz relabel %s): reload the page' % moved_at)
+                    return
             need_backup_check = key not in self.server.fv_backed_up
             if need_backup_check and os.path.exists(sidecar_path):
                 backup_dir = os.path.join(target_dir, '.flowviz', 'state-backup')

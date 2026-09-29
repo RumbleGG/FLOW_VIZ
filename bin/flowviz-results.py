@@ -93,18 +93,20 @@ def main():
 
     def first(verdict):
         return next(((s, r) for s, r in rows if r['verdict'] == verdict), None)
+    def label(s):   # a step is named by its id (b4); an older report's ids fall back to its counter
+        return s['id'] if re.match(r'^[a-z][0-9]+$', s['id'] or '') else 'step %s' % s['n']
     hit = first('error')
     if hit:
-        outcome, chip, chip_text = 'blocked', 'warn', 'Blocked at step %s' % hit[0]['n']
+        outcome, chip, chip_text = 'blocked', 'warn', 'Blocked at %s' % label(hit[0])
     elif first('fail'):
         hit = first('fail')
-        outcome, chip, chip_text = 'fail', 'bad', 'Failed at step %s' % hit[0]['n']
+        outcome, chip, chip_text = 'fail', 'bad', 'Failed at %s' % label(hit[0])
     elif count['pass'] and not count['no match'] and not count['none']:
         outcome, chip, chip_text = 'pass', 'ok', 'Passed %d of %d steps' % (count['pass'], count['pass'])
     else:
         hit = first('no match') or first('none')
         outcome, chip = 'inconclusive', 'warn'
-        chip_text = ('No match at step %s' % hit[0]['n']) if hit and hit[1]['verdict'] == 'no match' \
+        chip_text = ('No match at %s' % label(hit[0])) if hit and hit[1]['verdict'] == 'no match' \
             else '%d step%s not run' % (count['none'], '' if count['none'] == 1 else 's')
     words = {'pass': 'pass', 'fail': 'fail', 'error': 'error', 'no match': 'no match', 'none': 'not run',
              'skipped': 'rollback not needed'}
@@ -164,7 +166,7 @@ def main():
     print('results section added to %s' % a.src)
     print('  outcome  %s — %s (%s)' % (outcome, chip_text, counts))
     if hit:
-        print('  at       step %s  %s  %s' % (hit[0]['n'], hit[0]['id'], hit[0]['sentence']))
+        print('  at       %s  %s' % (label(hit[0]), hit[0]['sentence']))
     print('  archive  %s' % cmd)
     print('next: check the outcome, then write the claim, the summary and the next actions, and mark the')
     print('diagram — "result": "pass" | "fail" | "error" on the box or connection where it passed or failed.')

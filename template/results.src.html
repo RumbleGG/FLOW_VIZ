@@ -51,9 +51,9 @@
 
   <div class="archive">
     <span class="k">Archive</span>
-    <div class="pb" data-pb="archive">
+    <div class="pb" data-pb="results">
       <ol class="steps">
-        <li class="step" data-step="archive" data-risk="w" data-archive>
+        <li class="step" data-step="r1" data-risk="w" data-archive>
           <input type="checkbox" class="done">
           <details class="sd">
             <summary><span class="n"></span><span class="ds">Stop flowviz serve, then move this finished work into the archive.</span></summary>
@@ -64,16 +64,16 @@
               <p class="expect"><b>Pass:</b> the folder's new path under the archive &nbsp;·&nbsp;
                 <i>Fail:</i> <code>No such file or directory</code>, or <code>File exists</code></p>
               <div class="cap">
-                <div class="cl">Paste output <span class="kp">captures["archive"]</span></div>
-                <textarea data-cap="archive" data-pass="{{ARCHIVE_PASS}}" data-fail="\bNo such file or directory\b|\bFile exists\b|\bPermission denied\b"
+                <div class="cl">Paste output <span class="kp">captures["r1"]</span></div>
+                <textarea data-cap="r1" data-pass="{{ARCHIVE_PASS}}" data-fail="\bNo such file or directory\b|\bFile exists\b|\bPermission denied\b"
                   placeholder="paste what it printed"></textarea>
                 <div class="ft">
-                  <span>exit <input class="ec" data-ec="archive" placeholder="0"></span>
-                  <span data-cnt="archive">empty</span><span data-at="archive"></span>
-                  <span class="rn" data-run="archive"></span>
-                  <button class="rr" data-rr="archive" title="keep this attempt and clear the box">re-run</button>
+                  <span>exit <input class="ec" data-ec="r1" placeholder="0"></span>
+                  <span data-cnt="r1">empty</span><span data-at="r1"></span>
+                  <span class="rn" data-run="r1"></span>
+                  <button class="rr" data-rr="r1" title="keep this attempt and clear the box">re-run</button>
                 </div>
-                <input class="nt" data-note="archive" placeholder="note for the agent (optional)">
+                <input class="nt" data-note="r1" placeholder="note for the agent (optional)">
               </div>
               <details class="more"><summary>why archive it</summary>
               <div class="in"><p>The work is finished and its results are written down. Moving the folder keeps
@@ -82,7 +82,7 @@
             </div>
           </details>
           <span class="ctr"><span class="badge w">write</span>
-            <button class="copy">⧉</button><span class="vd" data-vd="archive">—</span></span>
+            <button class="copy">⧉</button><span class="vd" data-vd="r1">—</span></span>
         </li>
       </ol>
     </div>

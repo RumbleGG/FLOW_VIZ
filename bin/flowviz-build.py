@@ -156,6 +156,19 @@ def embed_css(flow_css, draw_css):
     return css
 
 
+def check_emits(src):
+    """A bad emit, or a {{step.NAME}} token that nothing emits, never ships: the same checks the
+    audit runs, taken from it so the two can never disagree."""
+    import importlib.util
+    sys.dont_write_bytecode = True
+    spec = importlib.util.spec_from_file_location('fvaudit', os.path.join(ROOT, 'bin', 'flowviz-audit.py'))
+    audit = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(audit)
+    bad, dangling, _, _ = audit.emit_checks(audit.parse(src))
+    if bad or dangling:
+        die('emits do not resolve — nothing was written:\n  ' + '\n  '.join(bad + dangling))
+
+
 def boot(doc, version, kind, built):
     flow = json.dumps({'doc': doc, 'version': version, 'kind': kind, 'built': built})
     return ('<script>window.FLOW=%s;\n'
@@ -213,6 +226,7 @@ def main():
     if not re.match(r'^[A-Za-z0-9][A-Za-z0-9._-]*$', doc):
         die('the doc id "%s" must match [A-Za-z0-9][A-Za-z0-9._-]*' % doc)
     drawings = check_specs(src)
+    check_emits(src)
 
     built = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     sha = git_sha()

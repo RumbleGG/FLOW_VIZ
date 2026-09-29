@@ -5,7 +5,7 @@ import sys
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(BIN)
-COMMANDS = ('new', 'build', 'audit', 'serve', 'captures', 'results')
+COMMANDS = ('new', 'build', 'audit', 'serve', 'captures', 'results', 'relabel')
 
 
 def version():
@@ -22,7 +22,8 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
 
   REPORT   a claim, the shape of the argument, evidence, a checklist the human runs and pastes into
     1  $F new report "<claim with a verb>" --dir <work folder> --rows 4 --steps 5
-    2  write every slot. Rename step ids s1..sN to mnemonic ids now, before anyone pastes.
+    2  write every slot. Keep the scaffold's ids: rows a, b, c...; a step is its row's letter + number
+       (b1, b2 ... bn), never a word, never two letters.
     3  $F build <dir>/<NAME>.src.html
     4  $F audit --browser <dir>/<NAME>.html     fix every OVER and FAIL; split, never raise a cap
     5  parse-check every command yourself: bash -n · python3 -m py_compile · Parser::ParseFile
@@ -52,9 +53,13 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
 
   PASTE-SAFE COMMANDS   no leading comment · ASCII only · nothing spans a line break · no blank lines
                         anchor every verdict literal: \bFull\b, never Full
+                        a value an earlier step printed: data-emit="VER=VERSION ([0-9.]+)" on its textarea,
+                        {{{{b1.VER}}}} in the later command (copy refuses until it resolves) · never PASTE_...
   STATE    <doc>.flow.json beside the html. Ids are join keys: never rename one after handover.
+           $F relabel <NAME>.src.html moves an older report onto a / b1 naming, pasted state included.
   EXAMPLES ~/Projects/FLOW_VIZ/PLAN.html (a report with a drawing spine)
            ~/Projects/FLOW_VIZ/examples/checkout/checkout.html (a drawing with 3 flows and a segment)
+           ~/Projects/FLOW_VIZ/examples/deploy/DEPLOY.html (a report after its run, with a carried value)
 '''
 
 

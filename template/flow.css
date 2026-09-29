@@ -255,6 +255,14 @@ td code{font-size:12px}
 .cmd{position:relative;background:var(--sunk);border:1px solid var(--line);
   border-radius:var(--r2);padding:11px 14px}
 .cmd .copy{position:absolute;top:6px;right:6px}
+/* {{b1.VER}} — a value from an earlier step's capture, resolved in place.
+   ok: the value, ready to copy. pending: the token, waiting for its step.
+   bad: the token, because the value would not survive a paste. One line,
+   monospace, so the command reads exactly as it will be copied. */
+.cmd pre .sub{font:inherit;white-space:pre;border-radius:3px;padding:0 2px}
+.cmd pre .sub.ok{color:var(--ok);background:var(--okbg);border-bottom:1px solid var(--ok)}
+.cmd pre .sub.pending{color:var(--warn);background:var(--warnbg);border-bottom:1px dashed var(--warn)}
+.cmd pre .sub.bad{color:var(--bad);background:var(--badbg);border-bottom:1px solid var(--bad)}
 /* .cmd.fig — a figure, not a command: a JSON sample, a tree, a log excerpt.
    Dashed, so "you run this" and "you read this" do not look identical, and
    exempt from the paste-safety checks in flowviz-audit.py. */
@@ -294,6 +302,10 @@ li.step>.sd>summary{cursor:pointer;list-style:none;outline:none;display:flex;gap
 li.step>.sd>summary .n::before{counter-increment:stp;content:counter(stp);
   font:700 12px var(--f-ui);color:var(--acc)}
 li.step>.sd>summary .n{min-width:1.2em;flex:none}
+/* a named step (b1) shows its id where the counter was, styled as the counter
+   was, and does not count: an unnamed step beside it keeps its own number */
+li.step.named>.sd>summary .n::before{content:none}
+li.step.named>.sd>summary .n{min-width:1.9em;font:700 12px var(--f-ui);color:var(--acc)}
 li.step>.sd>summary .ds{flex:1;line-height:1.45;font-size:.97em}
 li.step.done>.sd>summary .ds{color:var(--dim2);text-decoration:line-through}
 li.step>.sd .in{padding:10px 0 6px 0;margin-left:2.1em;border-top:1px dotted var(--line);

@@ -111,17 +111,19 @@ def report(a, title, doc):
     row, pb, sec = block(t, 'row'), block(t, 'pb'), block(t, 'sec')
     ro, w = block(t, 'step-ro'), block(t, 'step-w')
 
+    # rows are lettered a, b, c…; a step is its row's letter plus its number (the playbook is the last row)
+    letter = chr(ord('a') + a.rows - 1)
     steps = []
     for i in range(1, a.steps + 1):
         shape = w if (i == a.steps and a.steps >= 2) else ro
-        after = ' data-after="s%d"' % (i - 1) if i > 1 else ''
-        steps.append(shape.replace('{{STEP_ID}}', 's%d' % i).replace('{{AFTER}}', after))
+        after = ' data-after="%s%d"' % (letter, i - 1) if i > 1 else ''
+        steps.append(shape.replace('{{STEP_ID}}', '%s%d' % (letter, i)).replace('{{AFTER}}', after))
     playbook = pb.replace('<!-- steps -->\n', ''.join(steps)) if steps else ''
 
     rows = []
     for i in range(1, a.rows + 1):
         runs = bool(steps) and i == a.rows
-        r = row.replace('{{ROW_ID}}', 'r%d' % i).replace('{{ROW_N}}', str(i))
+        r = row.replace('{{ROW_ID}}', chr(ord('a') + i - 1)).replace('{{ROW_N}}', chr(ord('a') + i - 1))
         r = r.replace('{{ROW_KIND}}', 'test' if runs else 'context')
         r = r.replace('<!-- playbook -->\n', playbook if runs else '')
         # a header opens the rows, and another opens the playbook when it has company
