@@ -1,0 +1,34 @@
+{
+  "schema": 5,
+  "doc": "deploy-proto",
+  "flowviz": "3.0.0",
+  "savedAt": "2026-10-01T20:45:00.000Z",
+  "ui": { "theme": "auto" },
+  "vars": {},
+  "checks": {},
+  "open": {},
+  "steps": {
+    "b1": { "done": true, "acked": false },
+    "b2": { "done": true, "acked": true },
+    "b3": { "done": true, "acked": false },
+    "b3a": { "done": true, "acked": false },
+    "b4": { "done": false, "acked": false }
+  },
+  "captures": {
+    "b1": { "text": "{\"status\":\"ok\",\"version\":\"v2.2.4\",\"provider\":\"reachable\"}", "exit": "0", "verdict": "pass", "at": "2026-10-01T20:31:05Z", "note": "", "runs": [] },
+    "b2": { "text": "deployment.apps/notify image updated\nWaiting for deployment \"notify\" rollout to finish: 1 of 3 updated replicas are available...\nWaiting for deployment \"notify\" rollout to finish: 2 of 3 updated replicas are available...\ndeployment \"notify\" successfully rolled out", "exit": "0", "verdict": "pass", "at": "2026-10-01T20:33:48Z", "note": "", "runs": [] },
+    "b3": { "text": "{\"status\":\"ok\",\"version\":\"v2.3.0\",\"provider\":\"configured\"}", "exit": "0", "verdict": "pass", "at": "2026-10-01T20:34:30Z", "note": "", "runs": [] },
+    "b4": { "text": "{\"status\":\"failed\",\"reason\":\"timeout waiting for provider callback after 30s\",\"message_id\":\"m-8812\"}", "exit": "0", "verdict": "fail", "at": "2026-10-01T20:37:19Z", "note": "provider dashboard shows no inbound request from the new pods", "runs": [] },
+    "b3a": { "text": "0", "exit": "1", "verdict": "saved", "at": "2026-10-01T20:39:40Z", "note": "the new egress range is not on the list, which is why b4 timed out", "runs": [] }
+  },
+  "notes": {},
+  "emits": { "b1": { "PREV": "2.2.4" } },
+  "added": {
+    "b3a": { "after": "b3", "text": "Check the provider allowlist includes the new pods' egress range.", "cmd": "curl -s https://provider.example.test/v1/allowlist | grep -c 10.40.2.", "risk": "ro", "at": "2026-10-01T20:39:02Z" }
+  },
+  "todos": {
+    "t1": { "text": "Ask the provider to allowlist 10.40.2.0/24, then re-run b4", "kind": "do", "ref": "b4", "at": "2026-10-01T20:40:15Z", "done": false },
+    "t2": { "text": "Add a step that checks kubectl points at staging before b2", "kind": "add", "ref": "b1", "at": "2026-10-01T20:41:02Z", "done": false },
+    "t3": { "text": "Tell #notify-oncall the staging rollout is paused", "kind": "do", "ref": null, "at": "2026-10-01T20:42:30Z", "done": true, "doneAt": "2026-10-01T20:44:30Z" }
+  }
+}

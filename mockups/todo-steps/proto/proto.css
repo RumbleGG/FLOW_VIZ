@@ -1,0 +1,304 @@
+/* ===========================================================================
+   FLOW_VIZ — proto.css · PROTOTYPE LAYER for to-dos and added steps
+   Not part of template/. build.sh injects it after flow.css and draw.css.
+
+   One idea carries the look: violet (--mag) is human ink. flow.css already
+   uses it for the sidecar key on every paste box, so everything typed into
+   the page after handover — an added step, a to-do — wears the same ink, and
+   is dashed where the agent's work is solid. Journal light reads it as pencil
+   in the margin of a notebook; traditional dark as a violet outline.
+   Tokens only, like every FLOW_VIZ stylesheet.
+   =========================================================================== */
+
+/* ── an added step: an insertion in the playbook ──────────────────────────
+   Same grid as li.step. A dashed violet rule on the left and a faint violet
+   ground; a proofreader's caret sits in the gap above it, where it went in. */
+.fv-added{position:relative;background:var(--magbg);border-left:2px dashed var(--mag);
+  padding-left:13px!important}
+.fv-added::before{content:"\2038";position:absolute;left:3px;top:-11px;
+  font:700 17px/1 var(--f-body);color:var(--mag);pointer-events:none}
+.fv-added .n{color:var(--mag)!important}
+.fv-tag{display:inline-block;font:700 9.5px/1.5 var(--f-ui);letter-spacing:.55px;text-transform:uppercase;
+  color:var(--mag);border:1px dashed var(--mag);border-radius:3px;padding:0 5px;margin-left:8px;
+  white-space:nowrap;vertical-align:1px}
+.fv-own{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;
+  font:12px/1.5 var(--f-ui);color:var(--mag)}
+.fv-own b{color:var(--mag)}
+.fv-nocmd{font:12.5px/1.5 var(--f-ui);color:var(--dim);margin:0 0 6px}
+.fv-lnk{background:none;border:none;padding:0 2px;font:12px var(--f-ui);color:var(--mag);
+  cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+.fv-lnk:hover{color:var(--fg)}
+.fv-lnk.fv-sure{color:var(--bad);text-decoration-style:solid}
+.fv-acts2{margin-left:auto;display:inline-flex;gap:10px}
+
+/* an added step has no pass rule until it is folded: its chip says captured, in human ink */
+.fv-added .vd.saved{color:var(--mag)}
+.fv-added .vd.vdf.saved{border-color:var(--mag);background:var(--magbg)}
+
+/* ── the insert line: hover the seam between two steps ──────────────────── */
+li.fv-gap{list-style:none;position:relative;height:0;margin:0;padding:0;border:0}
+.fv-ins{position:absolute;left:15px;right:15px;top:-9px;height:18px;z-index:3;display:flex;
+  align-items:center;justify-content:center;background:none;border:none;padding:0;cursor:pointer;
+  opacity:0;transition:opacity .12s}
+.fv-ins::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1.5px dashed var(--mag)}
+.fv-ins span{position:relative;font:600 11px/1 var(--f-ui);color:var(--mag);background:var(--paper);
+  border:1px solid var(--mag);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.fv-ins span i{font-style:normal;font-family:var(--f-mono);margin-left:5px;opacity:.8}
+.fv-ins:hover,.fv-ins:focus-visible,.fv-ins.fv-pose{opacity:1}
+.fv-ins:focus-visible span{outline:2px solid var(--mag);outline-offset:2px}
+
+/* ── the end of a playbook: one more step after the last ───────────────── */
+li.fv-end{list-style:none;margin:0;padding:6px 15px 7px;border-top:1px solid var(--line)}
+.fv-endbtn{background:none;border:none;padding:2px 0;cursor:pointer;font:600 12px var(--f-ui);
+  color:var(--mag);opacity:.75}
+.fv-endbtn:hover,.fv-endbtn:focus-visible{opacity:1}
+.fv-endbtn i{font-style:normal;font-family:var(--f-mono);margin-left:6px;opacity:.75}
+
+/* ── the step foot: + step after, + to-do, beside Done ─────────────────── */
+.fin .fv-foot{margin-right:auto;display:inline-flex;gap:6px}
+.fv-fb{background:none;border:1px dashed var(--line2);border-radius:var(--r2);cursor:pointer;
+  font:600 11px var(--f-ui);color:var(--mag);padding:4px 9px;line-height:1}
+.fv-fb:hover,.fv-fb:focus-visible{border-color:var(--mag);background:var(--magbg)}
+
+/* ── after a red chip: was a step missing? ─────────────────────────────── */
+.fv-miss{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:7px 11px;
+  border:1px dashed var(--mag);border-radius:var(--r2);background:var(--magbg);
+  font:12.5px/1.45 var(--f-ui);color:var(--mag)}
+.fv-miss[hidden]{display:none}
+.fv-miss .fv-fb{margin-left:auto;border-style:solid;border-color:var(--mag);background:var(--paper)}
+
+/* ── the composer: one sentence, read or write, an optional command ────── */
+.fv-compose{list-style:none;margin:0;padding:12px 15px 13px;background:var(--paper);
+  border-top:1px solid var(--mag);border-bottom:1px solid var(--mag);border-left:3px solid var(--mag)}
+.fv-ch{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font:700 11px var(--f-ui);
+  letter-spacing:.7px;text-transform:uppercase;color:var(--mag);margin-bottom:8px}
+.fv-ch .fv-nid{font:700 12px var(--f-mono);text-transform:none;letter-spacing:0;color:var(--mag);
+  background:var(--magbg);border:1px dashed var(--mag);border-radius:3px;padding:0 6px}
+.fv-ch .fv-car{font:700 16px/1 var(--f-body);letter-spacing:0}
+.fv-ch .fv-hint,.fv-lab span{text-transform:none;letter-spacing:0;font-weight:400}
+/* an id inside an uppercase micro-label stays exactly as it is typed */
+.fv-lc{text-transform:none;letter-spacing:0;font-family:var(--f-mono)}
+.fv-in{width:100%;background:var(--sunk);color:var(--fg);border:1px solid var(--line);
+  border-radius:var(--r2);padding:7px 10px;font:15px/1.4 var(--f-body)}
+.fv-in.mono,.fv-in[data-mono]{font:12.5px/1.55 var(--f-mono)}
+textarea.fv-in{resize:vertical;min-height:38px}
+.fv-in:focus{outline:none;border-color:var(--mag)}
+.fv-in::placeholder{color:var(--dim2);opacity:.75}
+.fv-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
+.fv-lab{font:700 10px var(--f-ui);letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);
+  margin:11px 0 4px;display:block}
+/* meters: the audit's own rules, shown while typing — never a hard stop */
+.fv-m{display:inline-flex;align-items:center;gap:4px;font:600 10.5px/1.6 var(--f-ui);
+  border:1px solid var(--line);border-radius:999px;padding:0 8px;color:var(--dim);background:var(--panel2)}
+.fv-m.ok{color:var(--ok);border-color:var(--ok);background:var(--okbg)}
+.fv-m.warn{color:var(--warn);border-color:var(--warn);background:var(--warnbg)}
+.fv-m button{background:none;border:none;padding:0 0 0 4px;font:700 10.5px var(--f-ui);
+  color:inherit;cursor:pointer;text-decoration:underline}
+.fv-seg{display:inline-flex;border:1px solid var(--line2);border-radius:var(--r2);overflow:hidden}
+.fv-seg button{background:var(--panel2);border:none;border-right:1px solid var(--line2);cursor:pointer;
+  font:600 11.5px var(--f-ui);color:var(--dim);padding:4px 11px}
+.fv-seg button:last-child{border-right:none}
+.fv-seg button[aria-pressed="true"]{background:var(--magbg);color:var(--mag)}
+.fv-seg button[aria-pressed="true"].w{background:var(--badbg);color:var(--bad)}
+.fv-hint{font:11.5px var(--f-ui);color:var(--dim2)}
+.fv-btns{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:11px}
+.fv-bp{background:var(--mag);color:var(--paper);border:1px solid var(--mag);border-radius:var(--r2);
+  font:700 12px var(--f-ui);padding:6px 13px;cursor:pointer}
+.fv-bp:disabled{opacity:.4;cursor:default}
+.fv-bp:not(:disabled):hover{filter:brightness(1.08)}
+.fv-bg{background:var(--panel2);color:var(--dim);border:1px solid var(--line);border-radius:var(--r2);
+  font:12px var(--f-ui);padding:5px 12px;cursor:pointer}
+.fv-bg:hover{color:var(--fg);border-color:var(--mag)}
+.fv-btns .fv-hint{margin-left:auto}
+
+/* ── markers at rest: where the human added something ─────────────────── */
+.fv-rm{flex:none;font:600 10px/1.6 var(--f-ui);letter-spacing:.3px;color:var(--mag);
+  border:1px dashed var(--mag);border-radius:999px;padding:0 7px;white-space:nowrap}
+.fv-tdm{display:inline-block;margin-left:8px;font:600 10px/1.6 var(--f-ui);color:var(--mag);
+  background:var(--magbg);border:1px solid var(--mag);border-radius:999px;padding:0 7px;
+  white-space:nowrap;cursor:pointer;vertical-align:1px}
+
+/* ── the to-do section: one line at rest, everything one click down ────── */
+.fv-todo{margin:26px 0 0;border:1px solid var(--line2);border-left:3px solid var(--mag);
+  border-radius:var(--r);background:var(--panel)}
+.fv-todo>details>summary,.fvm-sumrow{display:flex;align-items:center;gap:12px;padding:12px 17px;cursor:pointer;
+  list-style:none;outline:none}
+.fv-todo>details[open]>summary,.fvm-sumrow{border-bottom:1px solid var(--line)}
+.fv-k{font:700 10.5px/1.3 var(--f-ui);letter-spacing:1.15px;text-transform:uppercase;color:var(--mag);flex:none}
+.fv-cnt{font:12px var(--f-ui);color:var(--dim);flex:none}
+.fv-cnt b{color:var(--mag)}
+.fv-peek{flex:1;min-width:0;font:13px var(--f-body);color:var(--dim2);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.fv-todo>details[open] .fv-peek{visibility:hidden}
+.fv-add{flex:none;margin-left:auto;background:var(--paper);border:1px solid var(--mag);color:var(--mag);
+  border-radius:999px;font:700 11px var(--f-ui);padding:3px 11px;cursor:pointer}
+.fv-add:hover{background:var(--magbg)}
+.fv-body{padding:4px 0 12px}
+.fv-grp{display:flex;align-items:center;gap:8px;font:700 10px/1.3 var(--f-ui);letter-spacing:.9px;
+  text-transform:uppercase;color:var(--dim2);padding:12px 17px 4px}
+.fv-grp::after{content:"";flex:1;height:1px;background:var(--line)}
+.fv-grp em{font-style:normal;color:var(--mag)}
+ul.fv-tl{list-style:none;margin:0;padding:0}
+li.fv-ti{display:grid;grid-template-columns:18px 30px 1fr auto;gap:0 9px;align-items:baseline;
+  margin:0;padding:6px 17px}
+li.fv-ti:hover{background:var(--panel2)}
+li.fv-ti>input{margin:0;transform:translateY(2px);cursor:pointer;accent-color:var(--mag)}
+.fv-id{font:700 11.5px var(--f-mono);color:var(--mag)}
+.fv-tx{font-size:.97em;line-height:1.45;min-width:0}
+li.fv-ti.done .fv-tx{color:var(--dim2);text-decoration:line-through}
+.fv-meta{display:flex;align-items:center;gap:8px;font:11px var(--f-ui);color:var(--dim2);white-space:nowrap}
+.fv-anc{font:11px var(--f-mono);color:var(--acc);background:var(--accbg);border:1px solid var(--line);
+  border-radius:3px;padding:0 6px;cursor:pointer}
+.fv-anc:hover{border-color:var(--acc)}
+.fv-became{font:11px var(--f-mono);color:var(--mag);border:1px dashed var(--mag);border-radius:3px;
+  padding:0 6px;cursor:pointer;background:none}
+.fv-acts{display:inline-flex;gap:8px;opacity:0;transition:opacity .1s}
+li.fv-ti:hover .fv-acts,li.fv-ti:focus-within .fv-acts{opacity:1}
+.fv-edit{width:100%}
+.fv-new{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;
+  margin:12px 17px 2px;padding-top:12px;border-top:1px dashed var(--line)}
+.fv-new select{background:var(--sunk);color:var(--fg);border:1px solid var(--line);border-radius:var(--r2);
+  font:12px var(--f-ui);padding:5px 6px}
+.fv-rb{margin:12px 17px 0}
+.fv-rb .cmd.fig pre{white-space:pre;font-size:11.5px}
+.fv-rb .fv-btns{margin-top:8px}
+.fv-empty{padding:10px 17px 2px;font:12.5px var(--f-ui);color:var(--dim2)}
+
+/* ── the pill: + to-do, with the open count ────────────────────────────── */
+.pill #fvTodoBtn{color:var(--mag)}
+.fv-pc{display:inline-block;min-width:1.5em;text-align:center;font-weight:700;background:var(--magbg);
+  border-radius:9px;padding:0 5px;margin-left:4px}
+
+/* ── quick capture: a to-do without losing your place ──────────────────── */
+.fv-quick{position:fixed;top:50px;right:14px;z-index:61;width:min(390px,calc(100vw - 28px));
+  background:var(--paper);border:1px solid var(--line2);border-top:3px solid var(--mag);
+  border-radius:var(--r);box-shadow:var(--sh-pop);padding:12px 14px 11px}
+.fv-quick[hidden]{display:none}
+.fv-qh{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.fv-qh .fv-k{margin-right:auto}
+.fv-qa{display:inline-flex;align-items:center;gap:5px;font:11px var(--f-mono);color:var(--acc);
+  background:var(--accbg);border:1px solid var(--line);border-radius:3px;padding:0 3px 0 6px}
+.fv-qa button{background:none;border:none;color:var(--dim2);cursor:pointer;font:12px var(--f-ui);padding:0 3px}
+.fv-qf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
+.fv-qf .fv-hint{margin-left:auto}
+.fv-qf a{color:var(--mag)}
+
+/* ── toast and the prototype tag ───────────────────────────────────────── */
+.fv-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:62;
+  background:var(--fg);color:var(--paper);font:600 12px var(--f-ui);border-radius:999px;padding:7px 15px;
+  box-shadow:var(--sh-pop);opacity:0;transition:opacity .18s;pointer-events:none}
+.fv-toast.on{opacity:1}
+.fv-proto{position:fixed;right:14px;bottom:12px;z-index:59;display:flex;align-items:center;gap:8px;
+  font:11px var(--f-ui);color:var(--dim);background:var(--panel2);border:1px dashed var(--mag);
+  border-radius:20px;padding:4px 6px 4px 11px;box-shadow:var(--sh)}
+.fv-proto b{color:var(--mag);letter-spacing:.6px;text-transform:uppercase;font-size:10px}
+.fv-proto button{background:none;border:1px solid transparent;color:var(--mag);font:11px var(--f-ui);
+  cursor:pointer;padding:1px 5px;border-radius:4px}
+.fv-proto button:hover{border-color:var(--line2)}
+
+/* poses: fixed views for headless screenshots (?pose=steps|compose|todo), prototype only */
+html.fv-posing .card,html.fv-posing .spine,html.fv-posing .ctl,html.fv-posing h2.sec,
+html.fv-posing details.row:not(.fv-keep),html.fv-posing .foot,html.fv-posing .fv-proto{display:none}
+html.fv-posing .fv-todo{margin-top:8px}
+
+@keyframes fvflash{0%{box-shadow:0 0 0 3px var(--mag)}100%{box-shadow:0 0 0 3px transparent}}
+.fv-flash{animation:fvflash 1.4s ease-out both}
+
+/* ── static mockups inside the proposal: the same look, never live ─────── */
+.fvm{border:1px solid var(--line2);border-radius:var(--r);background:var(--panel);margin:14px 0;
+  overflow:hidden;font-size:15px}
+.fvm>.hd{display:flex;align-items:center;gap:11px;padding:9px 15px;border-bottom:1px solid var(--line);
+  background:var(--panel2);font:600 13px var(--f-ui)}
+.fvm>.hd .prog{margin-left:auto;font:11.5px var(--f-mono);color:var(--dim);font-weight:400}
+.fvm>.hd .prog .f{color:var(--bad)}
+.fvm-step{display:grid;grid-template-columns:20px 1fr auto;gap:0 11px;align-items:start;padding:9px 15px;
+  border-bottom:1px solid var(--line)}
+.fvm-step>input{margin:4px 0 0}
+.fvm-step .sm{display:flex;gap:9px;align-items:baseline}
+.fvm-step .n{font:700 12px var(--f-ui);color:var(--acc);min-width:1.9em;flex:none}
+.fvm-step .ds{flex:1;line-height:1.45;font-size:.97em}
+.fvm-step.done .ds{color:var(--dim2);text-decoration:line-through}
+.fvm-step .ctr{display:flex;align-items:center;gap:7px;padding-top:2px}
+.fvm-step .bd{grid-column:2/4;margin:8px 0 2px 2.1em;padding-top:8px;border-top:1px dotted var(--line)}
+.fvm .fv-ins{opacity:1}
+.fvm-gap{position:relative;height:0;z-index:3}
+.fvm-pill{display:inline-flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);
+  border-radius:20px;padding:4px 8px 4px 11px;font:11.5px var(--f-ui);color:var(--dim)}
+.fvm-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.fvm-pill .sep{width:1px;height:13px;background:var(--line)}
+.fvm-pill .b{color:var(--acc)}
+.fvm-pill .t{color:var(--mag)}
+.fvm .fv-quick{position:relative;top:auto;right:auto;width:auto;box-shadow:var(--sh)}
+.fvm-fake{background:var(--sunk);border:1px solid var(--mag);border-radius:var(--r2);padding:7px 10px;
+  font:15px/1.4 var(--f-body);color:var(--fg)}
+.fvm-fake.mono{font:12.5px/1.55 var(--f-mono);border-color:var(--line)}
+.fvm-fake .caret{display:inline-block;width:1.5px;height:1.05em;background:var(--mag);vertical-align:-2px;margin-left:1px}
+.fvm-fake mark{background:var(--warnbg);color:var(--warn);border-bottom:1.5px solid var(--warn);padding:0 1px}
+.fvm-opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+.fvm-opt{border:1px solid var(--line);border-radius:var(--r);background:var(--paper);padding:12px 13px 10px;
+  display:flex;flex-direction:column;gap:8px;min-width:0}
+.fvm-opt.rec{border-color:var(--mag);box-shadow:0 0 0 1px var(--mag)}
+.fvm-opt h4{margin:0;font:700 12.5px var(--f-ui);color:var(--fg);display:flex;align-items:center;gap:7px}
+.fvm-opt h4 .L{font:700 11px var(--f-mono);color:var(--mag)}
+.fvm-opt h4 .rb{margin-left:auto;font:700 9.5px var(--f-ui);letter-spacing:.6px;text-transform:uppercase;
+  color:var(--paper);background:var(--mag);border-radius:3px;padding:1px 6px}
+.fvm-opt p{margin:0;font:12.5px/1.5 var(--f-ui);color:var(--dim)}
+.fvm-opt p b{color:var(--fg)}
+.fvm-mini{border:1px solid var(--line);border-radius:var(--r2);background:var(--panel);padding:8px;
+  font:12px/1.4 var(--f-ui);color:var(--dim);min-height:96px;position:relative;overflow:hidden}
+.fvm-mini .ln{height:7px;border-radius:4px;background:var(--line);margin:6px 0}
+.fvm-mini .ln.s{width:62%} .fvm-mini .ln.m{width:80%}
+.fvm-mini .tray{position:absolute;top:0;right:0;bottom:0;width:46%;background:var(--paper);
+  border-left:3px solid var(--mag);padding:7px 8px;box-shadow:var(--sh-pop)}
+.fvm-mini .it{display:flex;gap:5px;align-items:center;font:10.5px var(--f-ui);color:var(--fg);margin:4px 0;
+  white-space:nowrap;overflow:hidden}
+.fvm-mini .it i{font-style:normal;font:700 10px var(--f-mono);color:var(--mag)}
+.fvm-mini .sec{border:1px solid var(--line2);border-left:3px solid var(--mag);border-radius:3px;
+  background:var(--paper);padding:5px 7px;margin-top:8px}
+.fvm-mini .chipm{display:inline-block;font:600 9.5px var(--f-ui);color:var(--mag);background:var(--magbg);
+  border:1px solid var(--mag);border-radius:999px;padding:0 6px;margin-left:4px}
+.fvm-mini .stp{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line);padding:4px 0;
+  font:11px var(--f-ui);color:var(--fg)}
+.fvm-mini .stp b{color:var(--acc);font-size:10.5px}
+.fvm-mini .k2{font:700 9px var(--f-ui);letter-spacing:.9px;text-transform:uppercase;color:var(--mag)}
+.fvm-cap{font:11.5px var(--f-ui);color:var(--dim2);text-align:center;margin:-6px 0 14px}
+.fvm-fin{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:10px;padding-top:9px;
+  border-top:1px dotted var(--line)}
+.fvm-fin .fv-foot{margin-right:auto;display:inline-flex;gap:6px}
+.fvm-fd{display:inline-flex;align-items:center;gap:8px;font:600 11.5px var(--f-ui);letter-spacing:.55px;
+  text-transform:uppercase;color:var(--dim);background:var(--panel2);border:1px solid var(--line);
+  border-radius:var(--r2);padding:5px 12px;line-height:1}
+.fvm-end{padding:6px 15px 7px}
+.fvm-pad{padding:10px 12px}
+.fvm-tr{display:flex;justify-content:flex-end}
+.fvm .fv-todo{margin:10px 0 0}
+.fvm .fv-quick{margin:8px 0 0 auto;max-width:390px}
+.fvm-step .fv-tdm{align-self:center}
+.fvm-life{overflow-x:auto}
+.fvm-life svg{display:block;min-width:760px;width:100%;height:auto}
+
+@media (max-width:700px){
+  .fvm-opts{grid-template-columns:1fr}
+  li.fv-ti{grid-template-columns:18px 30px 1fr}
+  li.fv-ti .fv-meta{grid-column:3;flex-wrap:wrap;white-space:normal}
+  .fv-acts{opacity:1}
+  .fv-new{grid-template-columns:1fr 1fr}
+  .fv-new .fv-in{grid-column:1/3}
+  /* the foot gets its own line above the verdict and Done, so nothing overlaps */
+  li.step .in .fin{flex-wrap:wrap}
+  .fin .fv-foot{flex:1 0 100%;margin:0 0 4px}
+}
+@media (prefers-reduced-motion:reduce){
+  .fv-flash{animation:none;outline:2px solid var(--mag)}
+  .fv-ins,.fv-acts,.fv-toast{transition:none}
+}
+@media print{
+  /* paper keeps the work, not the controls: added steps print dashed in place,
+     the to-do list prints open (flow.js opens every details), checkboxes stay
+     so an open to-do can be ticked in pen */
+  li.fv-gap,li.fv-end,.fv-foot,.fv-miss,.fv-compose,.fv-acts,.fv-acts2,.fv-add,.fv-quick,.fv-proto,
+  .fv-toast,.fv-new,.fv-rb,.pill #fvTodoBtn{display:none!important}
+  .fv-added,li.fv-ti,.fv-todo{break-inside:avoid}
+  .fv-todo{background:var(--print-bg)}
+  .fv-peek{display:none}
+}

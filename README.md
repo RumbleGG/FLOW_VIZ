@@ -20,8 +20,9 @@ Three ideas carry it:
    words at rest, boxes per canvas, one sentence per step — and `flowviz audit` exits 1 when one is broken.
 2. **Depth moves down a layer; it is never deleted.** The card and the canvas are tight; rows and the drawer
    are unlimited.
-3. **The page is an input device.** Ticks, pasted output and notes on boxes save to `<doc>.flow.json` beside
-   the page when it is served, and `flowviz captures` reads them back for the agent.
+3. **The page is an input device.** Ticks, pasted output, notes on boxes, steps the human found missing and
+   to-dos they remembered mid-run save to `<doc>.flow.json` beside the page when it is served, and
+   `flowviz captures` reads them back for the agent; `flowviz fold` writes added steps into the source.
 
 ## Quick start
 
@@ -45,10 +46,11 @@ CLAUDE.md       for agents changing the toolkit itself
 VERSION         stamped into every deliverable's footer
 CHANGELOG.md    why each version changed
 PLAN.src.html   the toolkit's plan, as a report  →  PLAN.html
-bin/            flowviz (cheat sheet + dispatcher), new, build, audit, serve, captures, results, relabel
+bin/            flowviz (cheat sheet + dispatcher), new, build, audit, serve, captures, fold, results, relabel
 template/       flow.css flow.js (core, reports) · draw.css draw.js icons.svg (drawings) · scaffolds
 examples/       checkout/: the approved drawing, with flows · deploy/: a report closed with Results
-mockups/        the first hand-made mockup of the drawing look, kept for reference
+mockups/        approved mockups, kept for reference: the drawing look (checkout-system.html), and
+                to-dos and added steps (todo-steps/: the proposal, and the prototype it was tried on)
 ```
 
 Deliverables are written into the folder the work is in, never into this one. Stdlib Python 3 and a browser

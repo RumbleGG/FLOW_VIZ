@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 2.1.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 3.1.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -14,7 +14,7 @@ FLOW_VIZ has **two deliverables and one toolkit**:
 
 Both are one self-contained HTML file. Both put depth **exactly one gesture away** — never zero, never
 three. Both are input devices: what the human types lands in a sidecar the agent reads back with a
-command. A report may carry a drawing as its spine diagram; that is the same component, smaller.
+command — output pasted into a step, a note on a box, a step they found missing, a to-do. A report may carry a drawing as its spine diagram; that is the same component, smaller.
 
 ---
 
@@ -83,6 +83,11 @@ agent's read-back. The page shows a conforming id where the step's counter was; 
 counter, so an older report still reads as it did. The audit fails a report off the convention, and
 `flowviz relabel` moves one onto it (§6).
 
+A step the human adds in the page (§1.3b) is named for the step it follows plus the next free letter:
+after `b3` it is `b3a`, then `b3b`; before a row's first step its anchor is `b0`, so `b0a`. No number moves,
+so every id the human has already typed against stays put. Once `flowviz fold` writes it into the source it
+keeps that id, and the convention accepts it there: a row reads `b1 b2 b3 b3a b4`.
+
 ### 1.3 Checklist steps
 
 A playbook step is **a checkbox, its id, and one sentence.** That is all that is visible.
@@ -119,6 +124,28 @@ carries it across by hand, and no command holds a `PASTE_…` placeholder for th
 Both persist with the state; only an emit has a source step, so only an emit can be checked for being
 wrong. Words and screens at rest are unchanged: commands sit behind the disclosure.
 
+### 1.3b What the human adds: steps and to-dos
+
+Mid-run the human finds a step missing, or remembers something the write-up should say, or something to
+do once it is over. They write it into the page, where it belongs, and it reaches the agent with everything
+else. Both are drawn by `flow.js` from state; neither is ever in a report's markup, and the agent writes
+nothing to enable them.
+
+| Part | Rule |
+|---|---|
+| Add a step | four ways in, one composer: a line on every seam between steps (on hover), **+ step after** at each step's foot, the prompt under a `fail` or `error` chip (*Was a step missing before b4?*), and **+ Add a step** at the end of a playbook. Not in the Results section. |
+| The composer | one sentence, read or write, an optional command. It shows the audit's rules as meters while typing — 20 words, one sentence, ASCII, one line, no leading comment, with a **fix** for smart quotes — and refuses nothing: the agent tidies the step when it folds it. |
+| An added step | the template's step, drawn in place in violet (human ink) and dashed: checkbox, gate if it writes, command, paste box, Done. Its output, tick and note use the ordinary keys (`captures.b3a`, `steps.b3a`). With no `data-pass` or `data-fail` its chip reads `captured`, never `no match`. It can be edited, or removed. |
+| To-dos | one section at the end, one line at rest. Two kinds in the words used mid-run: **add to write-up** (something the write-up is missing; **make it a step** opens the composer at its anchor and closes the to-do as `→ b1a`) and **do after** (a task once the run is over; a candidate for Next). Ids `t1`, `t2`…, each optionally tied to a step. |
+| Capture without losing your place | `t` anywhere outside a text field, or **+ to-do** in the pill (with the open count), opens a small form tied to the step you were last in; the page does not move. |
+| At rest | a violet count on the row (`+1 added · 2 to-do`) and on the step a to-do is tied to. |
+| Removing | writes a tombstone (`gone`), never a delete: the load merge is a union, so a deleted key would come back from the other store. A removed id is never handed out again. |
+| Caps | none apply: this is the human's writing, not the agent's budget. The audit leaves added steps, the markers and the to-do section out of every measure. |
+
+The agent reads both back with `flowviz captures` (an added step prints in place, marked `+`; to-dos follow
+the playbooks), then decides what each becomes: a step folded into the source with `flowviz fold`, a
+reworded step, or a next action. An open **do after** to-do is offered as Next by `flowviz results`.
+
 **Time.** Stored as ISO-8601 UTC everywhere (sidecar, exports, snapshot names). Shown in
 `America/Los_Angeles`, labelled `PDT`/`PST`, with the ISO value on `title`. No report hand-formats a time.
 
@@ -132,6 +159,7 @@ Tested in this order; the earlier a tier, the less it presumes.
 | `fail` | `fail`, `--bad` | the command ran and the target said no | the system under test |
 | `pass` | `pass`, `--ok` | `data-pass` matched and nothing above did | nothing |
 | `saved` | `no match`, `--dim` | captured, matched neither regex | the step's pass condition |
+| `saved`, no rule | `captured` | captured by a step with no `data-pass` or `data-fail` — one added in the page, until it is folded | nothing: there is no rule to miss |
 | `null` | `—` | nothing pasted yet | — |
 
 The `error` tier is deliberately narrow — these signatures and nothing else:
@@ -191,7 +219,8 @@ A rollback step that was never needed counts as "not needed", not as missing.
 
 **Save evidence** writes one plain-text turnover record: every step in DOM order with id, blast radius,
 verdict, sentence, command, capture, SHA-256 of the capture (secure context only), exit code, time,
-note and superseded runs — and every note left on a drawing. **Print** is a mode of the one stylesheet:
+note and superseded runs — a step added in the page marked as such — then every note left on a drawing
+and every to-do. **Print** is a mode of the one stylesheet:
 `flow.js` forces light, opens every `<details>`, grows every textarea on `beforeprint`, and restores all
 three after. Print CSS carries pagination only.
 
@@ -371,7 +400,7 @@ Not caps — they measure the author, not the layout — and they block handover
 | spec: grid | a box outside the grid, two boxes in one cell, or a zone outside the grid |
 | spec: straight through a box | a straight connection that would pass through another box |
 | row kind matches its content | an action kind with nothing to run or tick, a read kind that holds steps, or a kind outside §1.2a |
-| section letters and step ids | a row not lettered in order or not showing its letter, a step not `<row letter><n>` in order, a Results step not `r<n>`, or a step outside every row and the Results section (§1.2b) |
+| section letters and step ids | a row not lettered in order or not showing its letter, a step not `<row letter><n>` in order (or, folded in from the page, the step before it plus the next letter), a Results step not `r<n>`, or a step outside every row and the Results section (§1.2b) |
 | emit: regex | a `data-emit` pair that is not `NAME=<regex>`, declares a name twice, does not compile, or has other than one capture group |
 | emit: dangling reference | a `{{<step>.<NAME>}}` whose step does not exist, or does not emit that name |
 
@@ -380,7 +409,8 @@ Not caps — they measure the author, not the layout — and they block handover
 Reported, not blocking: **unused connection** — an edge no flow walks (it is still drawn; walk it in a flow
 or delete it); **emit: ordering** — a token whose producer is neither the step itself nor on its
 `data-after` chain; **PASTE_ placeholder** — a `PASTE_…` word in a command, which the human would have
-to overwrite: use an emit from the producing step instead.
+to overwrite: use an emit from the producing step instead; **steps added in the page** and **open to-dos**
+— read from the sidecar beside the page, when there is one: fold, reword or carry them (§1.3b).
 
 ---
 
@@ -418,7 +448,7 @@ Nothing a human types is stored in the HTML. It goes to `<doc>.flow.json` beside
 
 ```json
 {
-  "schema": 4, "doc": "checkout", "flowviz": "3.0.0", "savedAt": "2026-09-28T21:14:08Z",
+  "schema": 5, "doc": "checkout", "flowviz": "3.1.0", "savedAt": "2026-09-28T21:14:08Z",
   "ui": { "theme": "auto", "motion": true,
           "draw": { "checkout": { "flow": 0, "view": "map", "labels": false, "times": false, "key": false } } },
   "vars": { "host": "app-vm-01" },
@@ -433,12 +463,23 @@ Nothing a human types is stored in the HTML. It goes to `<doc>.flow.json` beside
                                       "at": "2026-09-28T21:15:40Z" },
              "checkout/order-outbox/node:relay": { "text": "…", "at": "…" } },
   "emits": { "b1": { "VER": "12.149.3747.21500" } },
+  "added": { "b3a": { "after": "b3", "text": "Check the allowlist includes the new egress range.",
+                      "cmd": "curl -s https://provider.example.test/v1/allowlist", "risk": "ro",
+                      "at": "2026-09-28T21:12:02Z", "folded": "2026-09-28T22:02:11Z" },
+             "b2a": { "after": "b2", "text": "…", "at": "…", "gone": "2026-09-28T21:11:30Z" } },
+  "todos": { "t1": { "text": "Ask the provider to allowlist the new range", "kind": "do", "ref": "b4",
+                     "at": "2026-09-28T21:13:15Z", "done": false },
+             "t2": { "text": "Check the kube context before b2", "kind": "add", "ref": "b1",
+                     "at": "…", "done": true, "doneAt": "…", "became": "b1a" } },
   "relabel": "2026-09-29T17:32:04.988Z"
 }
 ```
 
-`emits` arrived in schema 4, `notes` in 3, `note` and `runs` in 2. Every addition defaults empty, so an
-older sidecar loads unchanged and an older build reads a newer one, ignoring what it does not know. Note
+`added` and `todos` arrived in schema 5, `emits` in 4, `notes` in 3, `note` and `runs` in 2. Every addition
+defaults empty, so an older sidecar loads unchanged. A build keeps any key it does not know rather than
+dropping it, and `flowviz serve` carries over any top-level key a save leaves out, so a page built before a
+key existed can never erase it from disk. A removed step or to-do keeps its key with `gone` set: the merge
+is a union, and only a tombstone survives it. Note
 keys are `<drawingId>/[<segmentId>/]<node|edge|step>:<id>`. `emits` is a cache, re-derived from the
 captures on every load; `relabel` is present only once `flowviz relabel` has moved the ids.
 
@@ -459,7 +500,8 @@ contract: **never renumber or rename one** once a human may have typed against i
 The one sanctioned move is **`flowviz relabel <report>.src.html`**, which puts a report on §1.2b. It
 rewrites every reference in the source (the step's capture, exit, counter, note and chip attributes,
 `data-after`, `captures["id"]` labels and `{{step.NAME}}` tokens), backs the sidecar up to
-`.flowviz/state-backup/`, and moves its `captures`, `steps`, `emits` and `open` keys. It also appends the
+`.flowviz/state-backup/`, and moves its `captures`, `steps`, `emits`, `open` and `added` keys — a step added
+in the page moves with the step it hangs off (`b3a` with `b3`) — and every to-do's `ref` and `became`. It also appends the
 move to `<meta name="flowviz-relabel">` in the source, so state a browser still holds from before is
 re-keyed the next time the page opens, and stamps `relabel` on the sidecar and on every later save: the
 server answers `409` to a tab still carrying the old ids instead of letting it write them back.
@@ -474,7 +516,7 @@ server answers `409` to a tab still carrying the old ids instead of letting it w
 | Bump | Means |
 |---|---|
 | patch | CSS, wording, bug fix |
-| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change) |
+| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page) |
 | major | a cap changes, or the card or spine shape changes, or the audit starts failing reports it passed (1.0.0 labelled every row; 2.0.0 made flows optional; 3.0.0 named rows and steps by letter and number) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then
@@ -496,7 +538,8 @@ $F build ~/work/sto/STO.src.html        # inline css + js + icons, stamp, snapsh
 $F audit ~/work/sto/STO.html            # every static cap + author checks; exit 1 on any OVER/FAIL
 $F audit --browser ~/work/sto/STO.html  # also the layout caps, via headless Chrome
 $F serve ~/work/sto --open              # so what the human types reaches disk
-$F captures ~/work/sto/STO.html         # read back captures and notes
+$F captures ~/work/sto/STO.html         # read back captures, notes, added steps and to-dos
+$F fold ~/work/sto/STO.src.html         # steps the human added, into the source under the same ids
 $F results ~/work/sto/STO.src.html      # once it has run: start the Results section
 $F relabel ~/work/sto/STO.src.html      # an older report onto a, b, c and b1, b2, state included
 ```

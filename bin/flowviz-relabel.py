@@ -31,6 +31,7 @@ ORD = re.compile(r'<span\b[^>]*\bclass="[^"]*\bord\b[^"]*"[^>]*>([^<]*)</span>')
 CAPTURES = re.compile(r'captures\[(["\'])([^"\'\]]+)\1\]')
 TOKEN = re.compile(r'(?<!\$)\{\{([A-Za-z0-9][\w-]*)\.([A-Z][A-Z0-9_]*)\}\}')
 META = re.compile(r'<meta\s+name="flowviz-relabel"\s+content=(?:\'([^\']*)\'|"([^"]*)")\s*/?>\n?')
+INSERTED = re.compile(r'^[a-z][0-9]+[a-z]$')
 
 
 def die(msg, code=1):
@@ -70,7 +71,14 @@ def plan(doc):
     for i, r in enumerate(doc.find(lambda e: e.tag == 'details' and e.has('row'))):
         letter = chr(ord('a') + i)
         rows.append((r.attrs.get('data-row'), letter))
-        for n, li in enumerate(r.find(is_step), 1):
+        n, sub = 0, ''
+        for li in r.find(is_step):
+            # a step folded in from the page sits between two numbers and keeps that place: b3a
+            if INSERTED.match(li.attrs.get('data-step') or ''):
+                sub = chr(ord(sub) + 1) if sub else 'a'
+                put(li, '%s%d%s' % (letter, n, sub))
+                continue
+            n, sub = n + 1, ''
             put(li, '%s%d' % (letter, n))
     for res in doc.find(lambda e: e.tag == 'section' and e.has('results')):
         for n, li in enumerate(res.find(is_step), 1):
@@ -246,15 +254,29 @@ def main():
         except ValueError as e:
             die('%s is not valid JSON (%s); nothing was written.' % (sidecar, e))
         smap = dict(steps)
+        # a step added in the page and not yet folded hangs off its anchor: b3a moves with b3
+        for aid in (data.get('added') or {}):
+            m = INSERTED.match(aid) and re.match(r'^([a-z][0-9]+)([a-z])$', aid)
+            if m and m.group(1) in smap and aid not in smap:
+                smap[aid] = smap[m.group(1)] + m.group(2)
         omap = {o: n for o, n in rows if o}
-        omap.update({'step:' + o: 'step:' + n for o, n in steps.items()})
-        for key, keymap in (('captures', smap), ('steps', smap), ('emits', smap), ('open', omap)):
+        omap.update({'step:' + o: 'step:' + n for o, n in smap.items()})
+        for t in (data.get('todos') or {}).values():
+            if isinstance(t, dict):
+                for f in ('ref', 'became'):
+                    if t.get(f) in smap:
+                        t[f] = smap[t[f]]
+        if isinstance(data.get('added'), dict):
+            for a_ in data['added'].values():
+                if isinstance(a_, dict) and a_.get('after') in steps:
+                    a_['after'] = steps[a_['after']]
+        for key, keymap in (('captures', smap), ('steps', smap), ('emits', smap), ('open', omap), ('added', smap)):
             d = data.get(key)
             if isinstance(d, dict) and d:
                 n = sum(1 for k in d if k in keymap and keymap[k] != k)
                 data[key] = remap(d, keymap, clashes, key)
                 if n:
-                    counts.append('%d %s' % (n, {'steps': 'ticks', 'open': 'open'}.get(key, key)))
+                    counts.append('%d %s' % (n, {'steps': 'ticks', 'open': 'open', 'added': 'added steps'}.get(key, key)))
         data['savedAt'] = at
         data['relabel'] = at
 

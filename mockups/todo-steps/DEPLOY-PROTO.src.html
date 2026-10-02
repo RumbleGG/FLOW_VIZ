@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="flowviz-doc" content="deploy-proto">
+<meta name="flowviz-kind" content="report">
+<title>Notify v2.3 is ready for staging behind a one-command rollback</title>
+<!-- flowviz:head -->
+</head>
+<body>
+
+<!-- ══════════════ LAYER 1 — THE CARD ══════════════
+     PROTOTYPE COPY of examples/deploy, caught mid-run: b4 has just failed. Nothing here
+     differs from the example except the doc id; the to-do section, the added step and
+     every + control come from proto/proto.js, injected by build.sh after flowviz build. -->
+<div class="card">
+  <div class="top">
+    <span class="chip"><span class="d"></span>Ready to run</span>
+    <span class="meta">staging · 2026-09-28 · notify v2.2 to v2.3</span>
+  </div>
+
+  <h1>Notify v2.3 is ready for staging behind a one-command rollback</h1>
+
+  <div class="slot">
+    <span class="k">Verdict</span>
+    <div class="v" data-slot="verdict">v2.3 moves email retries from the API into the worker and adds one
+    secret. The rollout is four checked steps, and if the end-to-end smoke test fails, one gated command puts
+    v2.2 back within a minute.</div>
+  </div>
+
+  <div class="slot wh">
+    <span class="k">So what</span>
+    <div class="v" data-slot="sowhat">Run the steps in order, paste each output, and stop at the first red
+    chip: the rollback is written and waiting.</div>
+  </div>
+
+  <div class="vitals">
+    <div><div class="n">4</div><div class="l">steps to ship</div></div>
+    <div><div class="n">1</div><div class="l">rollback step</div></div>
+    <div><div class="n">3</div><div class="l">pods</div></div>
+    <div><div class="n">30 s</div><div class="l">smoke timeout</div></div>
+  </div>
+
+  <div class="next">
+    <span class="k">Next</span>
+    <ol>
+      <li>Serve this folder and open the page from it <span class="badge ro">read-only</span></li>
+      <li>Run the four steps under Ship it, pasting each output <span class="badge w">write</span></li>
+      <li>Run the rollback only if the smoke test fails <span class="badge w">write</span></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══════════════ LAYER 2 — THE SPINE ══════════════ -->
+<div class="spine">
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "spine",
+  "name": "Notify on staging",
+  "title": "A notification crosses four boxes before anyone receives it",
+  "lede": "The smoke test sends one real email through the API, the worker and the provider.",
+  "grid": { "cols": 4, "rows": 2 },
+  "zones": [
+    { "id": "cluster", "label": "Staging cluster", "cols": [1, 2], "rows": [0, 1], "tone": "svc" },
+    { "id": "ext", "label": "External", "cols": [3, 3], "rows": [0, 0], "tone": "ext" }
+  ],
+  "nodes": [
+    { "id": "smoke", "label": "Smoke test", "kind": "client", "icon": "terminal", "at": [0, 0], "tech": "curl, from a laptop",
+      "peek": "One real request, sent the way a customer's app would send it.", "facts": ["30 s timeout"] },
+    { "id": "api", "label": "Notify API", "kind": "service", "icon": "api", "at": [1, 0], "tech": "HTTP · 2 pods",
+      "peek": "Accepts the send request and hands it to the worker without waiting for delivery.", "facts": ["p99 40 ms"] },
+    { "id": "worker", "label": "Notify worker", "kind": "service", "icon": "worker", "at": [2, 0], "tech": "v2.3.0 · 3 pods",
+      "peek": "New in v2.3: it owns retries, so a slow provider no longer holds up the API.", "facts": ["3 retries", "new secret"] },
+    { "id": "queue", "label": "Retry queue", "kind": "stream", "icon": "queue", "at": [2, 1], "tech": "Redis streams",
+      "peek": "Holds a message between attempts, with its next retry time.", "facts": ["backoff 2 s, 8 s"] },
+    { "id": "provider", "label": "Email provider", "kind": "external", "icon": "mail", "at": [3, 0], "tech": "third party",
+      "peek": "Delivers the email and calls back to confirm. It only accepts calls from allowlisted IPs.", "facts": ["IP allowlist"] }
+  ],
+  "edges": [
+    { "id": "smoke-api", "from": "smoke", "to": "api", "mode": "sync", "label": "HTTPS",
+      "peek": "POST /test-send with a throwaway address." },
+    { "id": "api-worker", "from": "api", "to": "worker", "mode": "sync", "label": "HTTP",
+      "peek": "Internal call; the API answers once the worker has the job." },
+    { "id": "worker-queue", "from": "worker", "to": "queue", "mode": "async", "both": true, "label": "retries",
+      "peek": "A failed attempt goes to the queue and comes back after its backoff." },
+    { "id": "worker-provider", "from": "worker", "to": "provider", "mode": "sync", "label": "HTTPS", "ms": "p99 1.2 s",
+      "peek": "Send, then wait for the provider's delivery callback." }
+  ],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="worker">
+  <p>v2.3 moves retries out of the API. The API used to retry inline, which held a request open for up to
+  eleven seconds when the provider was slow. Now the worker retries from a queue and the API answers at once.</p>
+</section>
+</div>
+</figure>
+</div>
+
+<div class="ctl">
+  <button id="flowExpand">Expand all</button>
+  <button id="flowCollapse">Collapse all</button>
+  <button id="flowAgentCopy">Copy captures for agent</button>
+  <button id="flowEvidence">Save evidence</button>
+  <span class="hint">nothing is open at load, by design</span>
+</div>
+
+<h2 class="sec">What changes</h2>
+
+<!-- ─────────── ROW 1 ─────────── -->
+<details class="row" data-row="a" data-kind="context">
+<summary><span class="ord">a</span><span class="cl">v2.3 moves retries into the worker and needs one new secret</span><span class="rt">1 min</span></summary>
+<div class="in">
+<table>
+<thead><tr><th>Change</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Retries move from the API to the worker</td><td>a slow provider no longer holds API requests open</td></tr>
+<tr><td>New secret <code>NOTIFY_PROVIDER_TOKEN</code></td><td>the worker now calls the provider itself</td></tr>
+<tr><td>Worker image <code>notify:2.3.0</code></td><td>replaces <code>notify:2.2.4</code></td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<h2 class="sec">Ship it</h2>
+
+<!-- ─────────── ROW 2 ─────────── -->
+<details class="row" data-row="b" data-kind="change">
+<summary><span class="ord">b</span><span class="cl">Four checked steps take staging from v2.2 to v2.3</span><span class="rt">6 min</span></summary>
+<div class="in">
+
+<div class="box warn"><p>Run these from a shell with <code>kubectl</code> pointed at the staging cluster.</p></div>
+
+<div class="pb" data-pb="b">
+  <div class="hd">
+    <span class="t">Roll out notify v2.3 to staging</span>
+    <span class="prog">0 / 4 done</span>
+  </div>
+  <ol class="steps">
+
+    <li class="step" data-step="b1" data-risk="ro">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Confirm staging runs a healthy v2.2 before anything changes.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>curl -s https://notify.staging.example.test/healthz</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>"version":"v2.2.x"</code> and <code>"status":"ok"</code> &nbsp;·&nbsp;
+            <i>Fail:</i> already v2.3, or <code>unhealthy</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["b1"]</span></div>
+            <textarea data-cap="b1" data-emit="PREV=version\W+v([0-9]+\.[0-9]+\.[0-9]+)" data-pass="\bv2\.2\.\d+\b" data-fail="\bv2\.3\.\d+\b|\bunhealthy\b"
+              placeholder="paste the JSON it prints"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="b1" placeholder="0"></span>
+              <span data-cnt="b1">empty</span><span data-at="b1"></span>
+              <span class="rn" data-run="b1"></span>
+              <button class="rr" data-rr="b1" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="b1" placeholder="note for the agent (optional)">
+          </div>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="b1">—</span></span>
+    </li>
+
+    <li class="step" data-step="b2" data-risk="w" data-after="b1">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Roll out v2.3 across the three pods and wait for all of them.</span></summary>
+        <div class="in">
+          <label class="gate"><input type="checkbox" class="ack">
+            I accept this replaces the running notify pods in staging.</label>
+          <div class="cmd"><button class="copy">copy</button><pre><code>kubectl -n staging set image deploy/notify notify=registry.example.test/notify:2.3.0 &amp;&amp; kubectl -n staging rollout status deploy/notify --timeout=120s</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>successfully rolled out</code> &nbsp;·&nbsp;
+            <i>Fail:</i> <code>exceeded its progress deadline</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["b2"]</span></div>
+            <textarea data-cap="b2" data-pass="\bsuccessfully rolled out\b" data-fail="\bexceeded its progress deadline\b|\berror\b"
+              placeholder="paste the rollout output"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="b2" placeholder="0"></span>
+              <span data-cnt="b2">empty</span><span data-at="b2"></span>
+              <span class="rn" data-run="b2"></span>
+              <button class="rr" data-rr="b2" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="b2" placeholder="note for the agent (optional)">
+          </div>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge w">write</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="b2">—</span></span>
+    </li>
+
+    <li class="step" data-step="b3" data-risk="ro" data-after="b2">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Check the new pods report v2.3 and a configured provider client.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>curl -s https://notify.staging.example.test/healthz</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>"version":"v2.3.0"</code> &nbsp;·&nbsp; <i>Fail:</i> still v2.2, or <code>unhealthy</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["b3"]</span></div>
+            <textarea data-cap="b3" data-pass="\bv2\.3\.0\b" data-fail="\bv2\.2\.\d+\b|\bunhealthy\b"
+              placeholder="paste the JSON it prints"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="b3" placeholder="0"></span>
+              <span data-cnt="b3">empty</span><span data-at="b3"></span>
+              <span class="rn" data-run="b3"></span>
+              <button class="rr" data-rr="b3" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="b3" placeholder="note for the agent (optional)">
+          </div>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="b3">—</span></span>
+    </li>
+
+    <li class="step" data-step="b4" data-risk="ro" data-after="b3">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Send one test email end to end and wait up to 30 seconds for delivery.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>curl -s -X POST https://notify.staging.example.test/test-send -d to=smoke@example.test --max-time 35</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>"status":"delivered"</code> &nbsp;·&nbsp;
+            <i>Fail:</i> <code>timeout</code>, <code>failed</code> or <code>rejected</code> — then run the rollback</p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["b4"]</span></div>
+            <textarea data-cap="b4" data-pass="\bdelivered\b" data-fail="\btimeout\b|\bfailed\b|\brejected\b"
+              placeholder="paste the JSON it prints"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="b4" placeholder="0"></span>
+              <span data-cnt="b4">empty</span><span data-at="b4"></span>
+              <span class="rn" data-run="b4"></span>
+              <button class="rr" data-rr="b4" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="b4" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>Health checks prove the pods started; only a real send proves the worker can reach
+          the provider with the new secret, from the new pods' addresses.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="b4">—</span></span>
+    </li>
+
+  </ol>
+</div>
+
+</div>
+</details>
+
+<!-- ─────────── ROW 3 ─────────── -->
+<details class="row" data-row="c" data-kind="rollback">
+<summary><span class="ord">c</span><span class="cl">One gated command puts v2.2 back within a minute</span><span class="rt">2 min</span></summary>
+<div class="in">
+
+<div class="pb" data-pb="c">
+  <div class="hd">
+    <span class="t">Roll staging back to v2.2</span>
+    <span class="prog">0 / 1 done</span>
+  </div>
+  <ol class="steps">
+
+    <li class="step" data-step="c1" data-risk="w" data-after="b4">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Put back the exact version b1 saw if the smoke test failed, and wait for the pods.</span></summary>
+        <div class="in">
+          <label class="gate"><input type="checkbox" class="ack">
+            I accept this replaces the notify pods in staging with v2.2 again.</label>
+          <div class="cmd"><button class="copy">copy</button><pre><code>IMG=registry.example.test/notify:{{b1.PREV}}; echo "rolling back to $IMG"; kubectl -n staging set image deploy/notify notify=$IMG &amp;&amp; kubectl -n staging rollout status deploy/notify --timeout=120s</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>successfully rolled out</code> &nbsp;·&nbsp; <i>Fail:</i> any <code>error</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["c1"]</span></div>
+            <textarea data-cap="c1" data-pass="\bsuccessfully rolled out\b" data-fail="\berror\b"
+              placeholder="paste the rollout output"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="c1" placeholder="0"></span>
+              <span data-cnt="c1">empty</span><span data-at="c1"></span>
+              <span class="rn" data-run="c1"></span>
+              <button class="rr" data-rr="c1" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="c1" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why pin the version</summary>
+          <div class="in"><p><code>rollout undo</code> returns to the previous ReplicaSet, which is v2.2 only if nothing
+          else rolled out in between. This command puts back the version <b>b1</b> printed before anything changed,
+          carried in by <code>{{b1.PREV}}</code>: its copy button refuses until b1's output is pasted, so the
+          command never reaches the console with a hole in it.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge w">write</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="c1">—</span></span>
+    </li>
+
+  </ol>
+</div>
+
+</div>
+</details>
+
+<!-- flowviz:foot -->
+<!-- flowviz:js -->
+</body>
+</html>

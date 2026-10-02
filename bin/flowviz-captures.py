@@ -2,7 +2,8 @@
 """flowviz-captures — read back what a human pasted into a report's steps and left
 as notes on a drawing, straight from the sidecar (SPEC.md §1.3, §1.4, §2.4, §6).
 Every verdict is re-derived from the current rules, never trusted from storage.
-stdlib only.
+Steps the human added in the page print in place, marked +, and their to-dos
+follow the playbooks (SPEC.md §1.3b). stdlib only.
 
 Usage: flowviz-captures.py <deliverable>.html [--json] [--step ID] [--all]
 """
@@ -286,9 +287,77 @@ def build_step(li, n, playbook=None):
     warnings = ['step %s: %s' % (sid, w) for w in (pass_warn, fail_warn) if w]
     return {
         'id': sid, 'n': n, 'risk': risk, 'sentence': sentence, 'command': command, 'playbook': playbook,
-        'emit_rx': emit_rx,
+        'emit_rx': emit_rx, 'pass_pattern': pass_pattern, 'fail_pattern': fail_pattern,
         'pass_rx': pass_rx, 'fail_rx': fail_rx, 'warnings': warnings,
     }
+
+
+# ── what the human added in the page (SPEC.md §1.3b) ────────────────────────
+# added: {b3a: {after, text, cmd, risk, at, folded?, gone?}} · todos: {t1: {text, kind, ref, at, done, …}}
+# A step added after b3 is b3a, then b3b; before a row's first step its anchor is b0. Once `flowviz fold`
+# has written it into the source, the HTML holds it and it prints as an ordinary step.
+
+def _live(d):
+    return {k: v for k, v in (d or {}).items() if isinstance(v, dict) and not v.get('gone')}
+
+
+def place_added(steps, added, in_html):
+    """The page's steps with every live added step not in the HTML put where the page draws it: after
+    the last step sharing its anchor (b3, b3a…) that sorts before it, or before the row's first step."""
+    out, warnings = list(steps), []
+    for aid in sorted(k for k in _live(added) if k not in in_html):
+        a = added[aid]
+        base = str(a.get('after') or '')
+        if re.match(r'^[a-z]0$', base):
+            at = next((i for i, s in enumerate(out) if s['id'] == base[0] + '1'), None)
+            pos, pb = (at, out[at]['playbook']) if at is not None else (None, None)
+        else:
+            idx = [i for i, s in enumerate(out) if s['id'] and (s['id'] == base or (
+                re.match(r'^[a-z][0-9]+[a-z]$', s['id']) and s['id'][:-1] == base and s['id'] < aid))]
+            pos, pb = (idx[-1] + 1, out[idx[-1]]['playbook']) if idx else (None, None)
+        step = {'id': aid, 'n': None, 'risk': a.get('risk') or 'ro', 'sentence': a.get('text') or '',
+                'command': a.get('cmd') or '', 'playbook': pb, 'emit_rx': {}, 'pass_pattern': None,
+                'fail_pattern': None, 'pass_rx': None, 'fail_rx': None, 'warnings': [], 'added': a}
+        if pos is None:
+            warnings.append('%s was added after %s, which this file no longer has' % (aid, base or '(nothing)'))
+            out.append(step)
+        else:
+            out.insert(pos, step)
+    return out, warnings
+
+
+def todo_rows(todos):
+    live = _live(todos)
+    key = lambda k: (1 if live[k].get('done') else 0, int(k[1:]) if k[1:].isdigit() else 0)
+    return [dict(live[k], id=k) for k in sorted(live, key=key)]
+
+
+def print_todos_block(todos, out):
+    rows = todo_rows(todos)
+    if not rows:
+        return
+    opened = sum(1 for t in rows if not t.get('done'))
+    out.append('')
+    out.append('to-dos  %d open · %d done' % (opened, len(rows) - opened))
+    for t in rows:
+        local, _ = fmt_time(t.get('doneAt') if t.get('done') else t.get('at'))
+        out.append('  %-4s %s  %-4s %-10s %s%s%s' % (
+            t['id'], '[x]' if t.get('done') else '[ ]', 'do' if t.get('kind') == 'do' else 'add',
+            ('after ' + t['ref']) if t.get('ref') else '', t.get('text') or '',
+            ('  -> became ' + t['became']) if t.get('became') else '',
+            ('   ' + ('done ' if t.get('done') else '') + local) if local else ''))
+
+
+def print_removed_block(removed, captures, out):
+    if not removed:
+        return
+    out.append('')
+    out.append('removed in the page (their ids are never reused)')
+    for rid, a in removed:
+        local, _ = fmt_time(a.get('gone'))
+        text = ((captures.get(rid) or {}).get('text') or '').strip()
+        out.append('  %-5s %s%s%s' % (rid, a.get('text') or '', ('   removed ' + local) if local else '',
+                                      '   (its capture is kept: %d chars)' % len(text) if text else ''))
 
 
 def extract_steps(root):
@@ -319,8 +388,12 @@ def step_capture_record(step, captures, stored_emits=None):
     has_capture = isinstance(cap, dict)
     if not has_capture:
         cap = {}
+    # a step with no data-pass and no data-fail — one typed into the page, until it is folded — has
+    # no rule to miss: what it holds is "captured", never "no match"
+    norule = step['pass_rx'] is None and step['fail_rx'] is None and not step.get('pass_pattern') and not step.get('fail_pattern')
+    plain = lambda v: 'captured' if norule and v == 'no match' else v
     text = cap.get('text') or ''
-    derived = derive_verdict(text, step['pass_rx'], step['fail_rx'])
+    derived = plain(derive_verdict(text, step['pass_rx'], step['fail_rx']))
     runs_out = []
     for run in (cap.get('runs') or []):
         if not isinstance(run, dict):
@@ -328,12 +401,12 @@ def step_capture_record(step, captures, stored_emits=None):
         rtext = run.get('text') or ''
         runs_out.append({
             'text': rtext, 'exit': run.get('exit', ''), 'at': run.get('at'),
-            'verdict_stored': normalize_stored_verdict(run.get('verdict')),
-            'verdict': derive_verdict(rtext, step['pass_rx'], step['fail_rx']),
+            'verdict_stored': plain(normalize_stored_verdict(run.get('verdict'))),
+            'verdict': plain(derive_verdict(rtext, step['pass_rx'], step['fail_rx'])),
         })
     return {
         'text': text, 'exit': cap.get('exit', ''), 'at': cap.get('at'),
-        'note': cap.get('note') or '', 'verdict_stored': normalize_stored_verdict(cap.get('verdict')),
+        'note': cap.get('note') or '', 'verdict_stored': plain(normalize_stored_verdict(cap.get('verdict'))),
         'verdict': derived,
         'runs': runs_out, 'has_capture': has_capture,
         'emits': derive_emits(text, step.get('emit_rx') or {}),
@@ -417,7 +490,7 @@ def build_notes_list(sidecar_notes, specs):
 # ── summary ───────────────────────────────────────────────────────────────
 
 def summarize(records):
-    counts = {'pass': 0, 'fail': 0, 'error': 0, 'no match': 0}
+    counts = {'pass': 0, 'fail': 0, 'error': 0, 'no match': 0, 'captured': 0}
     captured_n = 0
     any_error = False
     for _step, rec in records:
@@ -431,14 +504,22 @@ def summarize(records):
         if any(r['verdict'] == 'error' for r in rec['runs']):
             any_error = True
     summary = {'captured': captured_n, 'pass': counts['pass'], 'fail': counts['fail'],
-               'error': counts['error'], 'no_match': counts['no match'], 'notes': 0}
+               'error': counts['error'], 'no_match': counts['no match'], 'no_rule': counts['captured'],
+               'notes': 0, 'added': 0, 'todos_open': 0}
     return summary, any_error
 
 
 def summary_line(summary):
-    return ('%d captured · pass %d · fail %d · error %d · no match %d · %d note%s'
+    line = ('%d captured · pass %d · fail %d · error %d · no match %d · %d note%s'
             % (summary['captured'], summary['pass'], summary['fail'], summary['error'],
                summary['no_match'], summary['notes'], '' if summary['notes'] == 1 else 's'))
+    if summary.get('no_rule'):
+        line = line.replace(' · %d note' % summary['notes'], ' · no rule %d · %d note' % (summary['no_rule'], summary['notes']), 1)
+    if summary.get('added'):
+        line += ' · %d added in the page' % summary['added']
+    if summary.get('todos_open'):
+        line += ' · %d open to-do%s' % (summary['todos_open'], '' if summary['todos_open'] == 1 else 's')
+    return line
 
 
 CONCLUDE_NOTHING = ('error = the interpreter rejected the command, so the target was never asked '
@@ -457,17 +538,30 @@ def render_lines(text, limit, show_all, prefix):
     return [prefix + l for l in lines]
 
 
-def print_step_block(step, rec, show_all, out):
+def print_step_block(step, rec, show_all, out, folded=None):
     risk_disp = 'WRITE' if step['risk'] == 'w' else 'read'
     shown = {'none': '—', 'no match': 'NO MATCH'}.get(rec['verdict'], str(rec['verdict']).upper())
-    if _NAMED.match(step['id'] or ''):
+    if step.get('added'):
+        a = step['added']
+        out.append('+    %-5s %-5s  %-8s  %s' % (step['id'], risk_disp, shown, step['sentence']))
+        local, _ = fmt_time(a.get('at'))
+        out.append('  added %s in the page, %s · not in the source yet' % (
+            local or '—', 'before the first step' if re.match(r'^[a-z]0$', str(a.get('after') or '')) else 'after %s' % a.get('after')))
+        if step['command']:
+            out.append('  $ %s' % step['command'])
+    elif _NAMED.match(step['id'] or '') or re.match(r'^[a-z][0-9]+[a-z]$', step['id'] or ''):
         out.append('step %-5s %-5s  %-8s  %s' % (step['id'], risk_disp, shown, step['sentence']))
+        if folded:
+            local, _ = fmt_time(folded.get('at'))
+            out.append('  folded in from the page (added %s)' % (local or '—'))
     else:
         n_disp = step['n'] if step['n'] is not None else '·'
         out.append('step %s  %-4s %-5s  %-8s  %s' % (n_disp, step['id'], risk_disp, shown, step['sentence']))
     has_text = bool((rec['text'] or '').strip())
     if has_text and rec['verdict_stored'] != rec['verdict']:
-        out.append('  stored %s → now %s' % (rec['verdict_stored'], rec['verdict']))
+        # pasted before the fold gave the step a rule: it was captured then, not a miss
+        was = 'captured' if folded and rec['verdict_stored'] == 'no match' else rec['verdict_stored']
+        out.append('  stored %s → now %s' % (was, rec['verdict']))
     for w in step['warnings']:
         out.append('  warning: %s' % w)
     if rec['at'] or has_text:
@@ -528,7 +622,8 @@ def print_notes_block(notes_list, show_all, out):
 
 # ── JSON assembly ─────────────────────────────────────────────────────────
 
-def build_json(doc, sidecar_path, sidecar, records, orphan_ids, captures, notes_list, summary):
+def build_json(doc, sidecar_path, sidecar, records, orphan_ids, captures, notes_list, summary,
+               todos=None, removed=None):
     steps_json = []
     for step, rec in records:
         capture_obj = None
@@ -541,6 +636,8 @@ def build_json(doc, sidecar_path, sidecar, records, orphan_ids, captures, notes_
                  'capture': capture_obj, 'runs': rec['runs']}
         if step.get('emit_rx') or rec['emits_stored']:     # only a step that emits says so
             entry.update(emits=rec['emits'], emits_stored=rec['emits_stored'])
+        if step.get('added'):                               # typed into the page, not in the source yet
+            entry['added'] = {'after': step['added'].get('after'), 'at': step['added'].get('at')}
         steps_json.append(entry)
     orphaned_json = []
     for oid in orphan_ids:
@@ -556,7 +653,9 @@ def build_json(doc, sidecar_path, sidecar, records, orphan_ids, captures, notes_
             'runs': runs,
         })
     return {'doc': doc, 'sidecar': sidecar_path, 'savedAt': sidecar.get('savedAt'),
-            'steps': steps_json, 'orphaned': orphaned_json, 'notes': notes_list, 'summary': summary}
+            'steps': steps_json, 'orphaned': orphaned_json, 'notes': notes_list,
+            'todos': todo_rows(todos or {}),
+            'removed': [dict(a, id=rid) for rid, a in (removed or [])], 'summary': summary}
 
 
 # ── no-sidecar guidance ───────────────────────────────────────────────────
@@ -614,16 +713,24 @@ def main(argv=None):
         print('flowviz-captures: %s does not hold a JSON object' % sidecar_path, file=sys.stderr)
         return 2
 
-    steps = extract_steps(root)
+    html_steps = extract_steps(root)
     captures = sidecar.get('captures') or {}
+    in_html = {s['id'] for s in html_steps if s['id']}
+    added = sidecar.get('added') if isinstance(sidecar.get('added'), dict) else {}
+    todos = sidecar.get('todos') if isinstance(sidecar.get('todos'), dict) else {}
+    steps, place_warnings = place_added(html_steps, added, in_html)
     step_ids = {s['id'] for s in steps if s['id']}
-    orphan_ids = [k for k in captures.keys() if k not in step_ids]
+    removed = sorted((k, v) for k, v in added.items() if isinstance(v, dict) and v.get('gone') and k not in in_html)
+    gone_ids = {k for k, _ in removed}
+    orphan_ids = [k for k in captures.keys() if k not in step_ids and k not in gone_ids]
     specs, spec_warnings = extract_drawing_specs(root)
     notes_list = build_notes_list(sidecar.get('notes') or {}, specs)
 
     records = [(s, step_capture_record(s, captures, sidecar.get('emits') or {})) for s in steps]
     summary, any_error = summarize(records)
     summary['notes'] = len(notes_list)
+    summary['added'] = sum(1 for s in steps if s.get('added'))
+    summary['todos_open'] = sum(1 for t in todo_rows(todos) if not t.get('done'))
 
     if args.step is not None:
         match = next(((s, r) for s, r in records if s['id'] == args.step), None)
@@ -636,22 +743,24 @@ def main(argv=None):
 
     if args.json:
         out_obj = build_json(doc, sidecar_path, sidecar, records_to_show, orphan_ids, captures,
-                              notes_list, summary)
+                              notes_list, summary, todos, removed)
         print(json.dumps(out_obj, indent=2, ensure_ascii=False))
         return 0
 
     lines = []
-    for w in spec_warnings:
+    for w in spec_warnings + place_warnings:
         lines.append('warning: %s' % w)
     playbook = object()
     for step, rec in records_to_show:
         if step.get('playbook') != playbook:
             playbook = step.get('playbook')
             lines.append(('' if lines else '') + ('playbook  %s' % playbook if playbook else 'steps outside a playbook'))
-        print_step_block(step, rec, args.all, lines)
+        print_step_block(step, rec, args.all, lines, folded=added.get(step['id']) if step['id'] in in_html else None)
     if args.step is None:
         print_orphaned_block(orphan_ids, captures, args.all, lines)
+        print_removed_block(removed, captures, lines)
         print_notes_block(notes_list, args.all, lines)
+        print_todos_block(todos, lines)
         lines.append('')
         lines.append(summary_line(summary))
         if any_error:

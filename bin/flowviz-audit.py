@@ -902,8 +902,13 @@ def emit_checks(doc):
     return uniq(bad), uniq(dangling), uniq(order), uniq(paste)
 
 
+INSERTED_ID = re.compile(r'^([a-z])([0-9]+)([a-z])$')
+
+
 def naming_checks(doc):
     """Rows are lettered a, b, c… in order; a step is its row's letter plus its number: b1, b2…
+    A step the human added in the page and `flowviz fold` brought in keeps the id it was given there:
+    the step before it plus a letter, b3a, b3b…, between b3 and b4 (b0a before b1), so no number moves.
     Steps in a Results section are r1, r2…; a step anywhere else sits outside a section."""
     problems, placed = [], set()
     rows = doc.find(lambda e: e.tag == 'details' and e.has('row'))
@@ -915,9 +920,20 @@ def naming_checks(doc):
             problems.append('row %s should be lettered "%s" — rows are a, b, c… in order' % (r.attrs.get('data-row'), want))
         if ordel is None or ordel.text() != want:
             problems.append('row %s should show "%s" as its label' % (want, want))
-        for n, li in enumerate(r.find(lambda e: e.tag == 'li' and e.has('step')), 1):
+        n, sub = 0, ''
+        for li in r.find(lambda e: e.tag == 'li' and e.has('step')):
             placed.add(id(li))
-            if li.attrs.get('data-step') != '%s%d' % (want, n):
+            sid = li.attrs.get('data-step') or ''
+            m = INSERTED_ID.match(sid)
+            if m:
+                expect = '%s%d%s' % (want, n, chr(ord(sub) + 1) if sub else 'a')
+                if sid != expect:
+                    problems.append('step "%s" in row %s should be "%s" — a step folded in from the page is the '
+                                    'step before it plus the next letter' % (sid, want, expect))
+                sub = expect[-1]
+                continue
+            n, sub = n + 1, ''
+            if sid != '%s%d' % (want, n):
                 problems.append('step "%s" in row %s should be "%s%d"' % (li.attrs.get('data-step'), want, want, n))
     for res in doc.find(lambda e: e.tag == 'section' and e.has('results')):
         for n, li in enumerate(res.find(lambda e: e.tag == 'li' and e.has('step')), 1):
@@ -928,6 +944,33 @@ def naming_checks(doc):
         if id(li) not in placed:
             problems.append('step "%s" sits outside a lettered row or the Results section' % li.attrs.get('data-step'))
     return problems
+
+def additions_notes(a, doc, path):
+    """What the human added in the page and the source does not hold yet. Reported, never blocking:
+    the agent decides what each becomes, and `flowviz fold` writes steps in under their own ids."""
+    meta = doc.first(lambda e: e.tag == 'meta' and e.attrs.get('name') == 'flowviz-doc')
+    if meta is None:
+        return
+    side = os.path.join(os.path.dirname(os.path.abspath(path)), (meta.attrs.get('content') or '') + '.flow.json')
+    try:
+        data = json.load(open(side, encoding='utf-8'))
+    except (OSError, ValueError):
+        return
+    if not isinstance(data, dict):
+        return
+    have = {e.attrs.get('data-step') for e in doc.find(lambda e: e.tag == 'li' and e.has('step'))}
+    live = lambda d: {k: v for k, v in (d or {}).items() if isinstance(v, dict) and not v.get('gone')}
+    added = sorted(k for k in live(data.get('added')) if k not in have)
+    todos = live(data.get('todos'))
+    src = re.sub(r'\.html$', '', os.path.basename(path))
+    src = src if src.endswith('.src') else src + '.src'
+    if added:
+        a.note('author checks', 'steps added in the page', '%s: not in the source yet — flowviz fold %s.html'
+               % (', '.join(added), src))
+    opened = sorted((k for k, v in todos.items() if not v.get('done')), key=lambda k: int(k[1:]) if k[1:].isdigit() else 0)
+    if opened:
+        a.note('author checks', 'open to-dos', '%s — read them with flowviz captures' % ', '.join(opened))
+
 
 # ── the browser ──────────────────────────────────────────────────────────────
 def chrome():
@@ -1011,6 +1054,8 @@ def main():
     if kind == 'drawing':
         a.unmeasured('page', 'screens at rest', 'needs layout: --browser')
     page_checks(a, doc, tpl_pages, unfilled)
+    if kind == 'report':
+        additions_notes(a, doc, o.file)
     if o.browser:
         a.rows = [r for r in a.rows if r[4] != '--']
         browser_rows(a, o.file)

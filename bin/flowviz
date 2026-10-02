@@ -5,7 +5,7 @@ import sys
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(BIN)
-COMMANDS = ('new', 'build', 'audit', 'serve', 'captures', 'results', 'relabel')
+COMMANDS = ('new', 'build', 'audit', 'serve', 'captures', 'fold', 'results', 'relabel')
 
 
 def version():
@@ -28,8 +28,11 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
     4  $F audit --browser <dir>/<NAME>.html     fix every OVER and FAIL; split, never raise a cap
     5  parse-check every command yourself: bash -n · python3 -m py_compile · Parser::ParseFile
     6  $F serve <dir> --open                    hand over served; from Finder nothing reaches disk
-    7  $F captures <dir>/<NAME>.html            what they pasted, per step, and every note
-    8  $F results <dir>/<NAME>.src.html         once they have run it: a Results section on top (outcome,
+    7  $F captures <dir>/<NAME>.html            what they pasted, per step, every note, every step they
+                                                added (+ b3a, in place) and every to-do
+    8  $F fold <dir>/<NAME>.src.html            steps they added, into the source under the same ids;
+                                                write what fold leaves, rebuild, audit (--todo t2: a to-do too)
+    9  $F results <dir>/<NAME>.src.html         once they have run it: a Results section on top (outcome,
                                                 a diagram marking where it passed or failed, summary, next,
                                                 a gated archive step); write it, rebuild, audit, hand back
 
@@ -56,6 +59,7 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
                         a value an earlier step printed: data-emit="VER=VERSION ([0-9.]+)" on its textarea,
                         {{{{b1.VER}}}} in the later command (copy refuses until it resolves) · never PASTE_...
   STATE    <doc>.flow.json beside the html. Ids are join keys: never rename one after handover.
+           A step the human adds after b3 is b3a (then b3b); to-dos are t1, t2. Neither moves another id.
            $F relabel <NAME>.src.html moves an older report onto a / b1 naming, pasted state included.
   EXAMPLES ~/Projects/FLOW_VIZ/PLAN.html (a report with a drawing spine)
            ~/Projects/FLOW_VIZ/examples/checkout/checkout.html (a drawing with 3 flows and a segment)

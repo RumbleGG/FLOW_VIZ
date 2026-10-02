@@ -3,6 +3,44 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.1.0 — 2026-10-01 · steps and to-dos the human adds mid-run
+
+**Added steps.** A playbook no longer has to be right the first time. Mid-run the human can add the step
+that was missing: from a line on every seam between steps (on hover), **+ step after** at each step's foot,
+the prompt under a `fail` or `error` chip (*Was a step missing before b4?*), or **+ Add a step** at the end of
+a playbook. One composer serves all four: one sentence, read or write, an optional command, with the audit's
+rules shown as meters while typing — 20 words, one sentence, ASCII, one line, and a **fix** for smart quotes —
+and nothing refused. The step is drawn in place in violet, dashed, with a proofreader's caret where it went
+in, and behaves as any step does: gate, copy, paste box, Done, re-run, dimming, progress, evidence. Its id is
+the step it follows plus the next free letter — `b3a`, then `b3b`; `b0a` before a row's first step — so no
+number moves and nothing pasted is orphaned. With no rule yet its chip reads `captured`, not `no match`.
+
+**To-dos.** One section at the end of every report, one line at rest: *add to write-up* (the write-up is
+missing something; **make it a step** turns it into one, closing the to-do as `→ b1a`) and *do after* (a
+task once the run is over). `t` anywhere, or **+ to-do** in the pill with its open count, adds one tied to the
+step you were last in, without the page moving. Rows and steps carry a small violet count at rest.
+
+**Back to the agent.** State schema 5 adds `added` and `todos`; an added step's output uses the ordinary
+`captures` and `steps` keys. Removing writes a tombstone (`gone`), because the load merge is a union and a
+deleted key would come back from the other store. **Copy captures for agent** and **Save evidence** carry
+both. `flowviz captures` prints an added step in place, marked `+`, a removed one apart, and the to-dos
+after the playbooks; `--json` has them too. **`flowviz fold`** (new) writes added steps into the source
+after the step they followed, under the same ids, chaining `data-after`, with the template's own words left
+where only the agent can write — so the audit blocks until the pass and fail lines, the regexes and any gate
+are written; `--todo t2` folds an *add to write-up* to-do the same way. `flowviz results` names unfolded
+steps and open to-dos; `flowviz relabel` moves `added` and to-do anchors with the steps they hang off.
+
+**Audited.** The naming check accepts a folded step's id (`b3a` between `b3` and `b4`), and the audit notes,
+without failing, any added step or open to-do in the sidecar beside the page. What the human added is left
+out of every cap: added steps, the counts on rows and steps, and the to-do section's height.
+
+**Fixed: an older page could erase newer state.** `merge()` copied only the keys it knew, so a page built
+before a key existed dropped it on its next save. It now keeps keys it does not know, and `flowviz serve`
+carries over any top-level key a save leaves out; serve's index lists open to-dos per page.
+
+Minor: no cap changed, and the audit fails nothing it passed. The design was approved from the prototype in
+`mockups/todo-steps/`.
+
 ## 3.0.0 — 2026-09-29 · letters for rows, numbers for steps, and values that carry
 
 **Names.** Rows are lettered a, b, c… in order, and a step's id is its row's letter and its number in that

@@ -29,7 +29,8 @@ $F build ~/work/sto/STO.src.html          # 3. one self-contained .html (rebuild
                                           #    output is kept in .flowviz/history/ beside it)
 $F audit --browser ~/work/sto/STO.html    # 4. fix every OVER and FAIL
 $F serve ~/work/sto --open                # 5. hand over, served
-$F captures ~/work/sto/STO.html           # later: what they pasted, and every note they left
+$F captures ~/work/sto/STO.html           # later: what they pasted, every note, every step or to-do they added
+$F fold ~/work/sto/STO.src.html           # the steps they added in the page, into the source, same ids
 $F results ~/work/sto/STO.src.html        # once they have run it all: start the Results section
 $F relabel ~/work/sto/STO.src.html        # an older report onto a, b, c and b1, b2: what was pasted moves too
 ```
@@ -108,7 +109,8 @@ behind the disclosure, so a nine-step playbook reads as nine sentences.
 thing on the screen, in the sidecar and in your read-back. A Results section's steps are `r1`, `r2`…. The
 scaffold writes these ids and the page shows them where a bare number would be; the audit fails any
 other. Ids are the join key for what the human pastes, so **never change one after handover** — to move
-an older report onto this convention, `flowviz relabel` moves what was pasted along with the ids.
+an older report onto this convention, `flowviz relabel` moves what was pasted along with the ids. A step
+the human added after `d2` is `d2a` (then `d2b`), and keeps that id once you fold it in.
 
 ```html
 <li class="step" data-step="d2" data-risk="ro" data-after="d1">
@@ -385,6 +387,18 @@ diagnosis), then every note left on a drawing, keyed `<drawing>/[<segment>/]node
 system. `error` means the interpreter rejected the command, so the target was never asked — evidence
 about your playbook; conclude nothing about the system. `no match` means the pass condition is probably
 wrong about what the command prints.
+
+**What they added.** Mid-run the human can add a step where one was missing and keep to-dos; the page
+does this itself and you write nothing for it. `captures` prints an added step in place — `+    b3a  read
+CAPTURED …`, captured because it has no rule yet — and the to-dos after the playbooks: *add to write-up*
+(the write-up is missing something) or *do after* (a task once the run is over). Decide what each becomes:
+
+- **A step that belongs**: `$F fold <NAME>.src.html` writes it into the source after the step it followed,
+  under the same id, so its output re-attaches; the next step's `data-after` follows. Then write what fold
+  leaves in the template's words — pass and fail, their regexes, and the gate if it writes — and rebuild.
+  `--todo t2` folds an *add to write-up* to-do the same way, after the step it is tied to.
+- **A step in the wrong words**: fold it, then reword the sentence. Never renumber the steps around it.
+- **A do after**: a Next item when you write Results; `flowviz results` lists the open ones.
 
 No sidecar means they opened the file from Finder. Don't guess: ask them to `flowviz serve` the folder,
 or to press **Copy captures for agent** and paste the block to you.

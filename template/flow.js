@@ -5,8 +5,8 @@
    A deliverable declares, before this script (the build writes it):
      window.FLOW = { doc:'api-500-rootcause', version:'0.6.0', kind:'report', built:'…' }
 
-   State shape (also the on-disk sidecar <doc>.flow.json), schema 4:
-     { schema:4, doc, flowviz, savedAt,
+   State shape (also the on-disk sidecar <doc>.flow.json), schema 5:
+     { schema:5, doc, flowviz, savedAt,
        ui:{theme:'auto'|'light'|'dark', motion, draw:{<drawingId>:{…}}},
        vars:{host:'app-vm-01'},          // data-var inputs
        checks:{'<id>':true},                 // label.chk checkboxes
@@ -15,6 +15,8 @@
        captures:{'<id>':{text,exit,verdict,at,note,runs:[{text,exit,verdict,at}]}},
        notes:{'<drawingId>/[<segment>/]<node|edge|step>:<id>':{text,at}},
        emits:{'<stepId>':{'<NAME>':'<value>'}},        // derived, never typed
+       added:{'b3a':{after,text,cmd,risk,at,folded?,gone?}},   // steps typed into the page
+       todos:{'t1':{text,kind,ref,at,done,doneAt?,became?,gone?}},
        relabel:'<ISO time>' }    // the last flowviz relabel this state was moved through
 
    verdict is one of 'pass' | 'fail' | 'error' | 'saved' | null.
@@ -22,9 +24,11 @@
      fail   the command ran and said no — evidence about the target
      saved  captured, matched neither regex (the chip reads "no match")
 
-   schema 1–3 load unchanged: note, runs (2), notes (3) and emits (4) are
-   additive and default empty. emits are re-derived from the captures on every
-   load, so a stored value is a cache, never a source.
+   schema 1–4 load unchanged: note, runs (2), notes (3), emits (4), added and
+   todos (5) are additive and default empty. emits are re-derived from the
+   captures on every load, so a stored value is a cache, never a source. A key
+   this build does not know is kept, not dropped, so an older page never erases
+   what a newer one saved.
 
    window.FLOWVIZ is the contract with draw.js (see CLAUDE.md): the live state,
    save(), onHydrate(fn), auditHooks, ptTime() and flash(). draw.js keeps its
@@ -41,10 +45,11 @@
   var served = /^https?:$/.test(location.protocol);
 
   var st = {
-    schema: 4, doc: DOC, flowviz: VER, savedAt: null,
+    schema: 5, doc: DOC, flowviz: VER, savedAt: null,
     ui: { theme: 'auto' }, vars: {}, checks: {}, open: {}, steps: {}, captures: {}, notes: {},
-    emits: {}
+    emits: {}, added: {}, todos: {}
   };
+  var MERGED = ['ui', 'vars', 'checks', 'open', 'steps', 'captures', 'notes', 'emits', 'added', 'todos'];
   var RELABEL = relabels();
   if (RELABEL.length) st.relabel = RELABEL[RELABEL.length - 1].at;
 
@@ -134,13 +139,33 @@
     if (!d || typeof d !== 'object') return d;
     RELABEL.forEach(function (r) {
       if ((d.relabel || '') >= r.at) return;
-      var sm = r.steps || {}, om = {};
+      var sm = r.steps || {}, om = {}, am = {}, all = {};
+      /* a step typed into the page hangs off its anchor, so b3a moves with b3;
+         one already folded into the source is in the map by its own id */
+      Object.keys((d.added && typeof d.added === 'object') ? d.added : {}).forEach(function (id) {
+        var m = /^([a-z][0-9]+)([a-z])$/.exec(id);
+        if (m && sm[m[1]] && !sm[id]) am[id] = sm[m[1]] + m[2];
+      });
+      Object.keys(sm).forEach(function (k) { all[k] = sm[k]; });
+      Object.keys(am).forEach(function (k) { all[k] = am[k]; });
       Object.keys(r.rows || {}).forEach(function (k) { om[k] = r.rows[k]; });
-      Object.keys(sm).forEach(function (k) { om['step:' + k] = 'step:' + sm[k]; });
+      Object.keys(all).forEach(function (k) { om['step:' + k] = 'step:' + all[k]; });
       ['captures', 'steps', 'emits'].forEach(function (k) {
-        if (d[k] && typeof d[k] === 'object') d[k] = rekey(d[k], sm);
+        if (d[k] && typeof d[k] === 'object') d[k] = rekey(d[k], all);
       });
       if (d.open && typeof d.open === 'object') d.open = rekey(d.open, om);
+      if (d.added && typeof d.added === 'object') {
+        d.added = rekey(d.added, all);
+        Object.keys(d.added).forEach(function (k) {
+          var a = d.added[k];
+          if (a && sm[a.after]) a.after = sm[a.after];
+        });
+      }
+      if (d.todos && typeof d.todos === 'object') Object.keys(d.todos).forEach(function (k) {
+        var t = d.todos[k];
+        if (t && all[t.ref]) t.ref = all[t.ref];
+        if (t && all[t.became]) t.became = all[t.became];
+      });
       d.relabel = r.at;
     });
     return d;
@@ -148,8 +173,13 @@
 
   function merge(d) {
     if (!d) return;
-    ['ui', 'vars', 'checks', 'open', 'steps', 'captures', 'notes', 'emits'].forEach(function (k) {
+    MERGED.forEach(function (k) {
       if (d[k] && typeof d[k] === 'object') st[k] = Object.assign(st[k] || {}, d[k]);
+    });
+    /* a key this build does not know came from a newer one: keep it, so the
+       next save carries it back to disk instead of erasing it */
+    Object.keys(d).forEach(function (k) {
+      if (!Object.prototype.hasOwnProperty.call(st, k) && k !== 'relabel' && d[k] !== undefined) st[k] = d[k];
     });
     if (d.savedAt) st.savedAt = d.savedAt;
   }
@@ -163,6 +193,7 @@
       return noteText(st.notes[k]).trim();
     });
     return any || notesAny || Object.keys(st.steps).length > 0 || Object.keys(st.checks).length > 0 ||
+      Object.keys(st.added || {}).length > 0 || Object.keys(st.todos || {}).length > 0 ||
       Object.keys(st.vars).some(function (k) { return st.vars[k]; });
   }
 
@@ -171,7 +202,7 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (d && (!st.savedAt || (d.savedAt || '') > st.savedAt)) {
-          live = false; merge(upgrade(d)); hydrate(); applyTheme(); live = true;
+          live = false; merge(upgrade(d)); renderAdditions(); hydrate(); applyTheme(); live = true;
           loadedFrom = 'sidecar';
           try { localStorage.setItem(LSKEY, JSON.stringify(st)); } catch (e) {}
           setPill('disk', 'loaded from disk');
@@ -454,14 +485,15 @@
      A row whose id is one letter shows that letter; a step whose id is a letter
      and a number (b1) shows its id instead of the counter, so "look at b3" means
      the same thing on screen, in the sidecar and in the agent's read-back.
-     Other ids keep the counter, so an older report looks as it did.        */
+     Other ids keep the counter, so an older report looks as it did. A step
+     folded in from the page keeps the id it was given there: b3a.          */
   $$('details.row').forEach(function (d) {
     if (!/^[a-z]$/.test(d.dataset.row || '')) return;
     var o = $('summary .ord', d); if (o) o.textContent = d.dataset.row;
   });
   $$('li.step').forEach(function (li) {
     var id = li.dataset.step || '';
-    if (!/^[a-z][0-9]+$/.test(id)) return;
+    if (!/^[a-z][0-9]+[a-z]?$/.test(id)) return;
     var n = $('.sd>summary .n', li);
     if (n) { n.textContent = id; li.classList.add('named'); }
   });
@@ -592,14 +624,19 @@
        one in the row header, and one at the foot of the step beside `Done`,
        because after a long paste the header is off the top of the screen and
        pass/fail is the one thing the human scrolled down for.               */
+    /* a step with no data-pass and no data-fail — one typed into the page,
+       until the agent folds it — has no rule to miss, so it reads `captured`,
+       never `no match`, which would blame a pass condition that is not there */
+    var norule = !!ta && !ta.dataset.pass && !ta.dataset.fail;
     $$('[data-vd="' + id + '"]').forEach(function (chip) {
       var foot = chip.classList.contains('vdf');
       var was = chip.dataset.v, now = r.verdict || '';
+      var plain = now === 'saved' && norule;
       chip.className = 'vd' + (foot ? ' vdf' : '') + (now ? ' ' + now : '');
       chip.textContent = foot
-        ? (now ? VD_GLYPH[now] + ' ' + VD_LABEL[now] : '· not captured')
-        : (VD_LABEL[now] || '—');
-      chip.title = VD_HINT[now] ||
+        ? (now ? (plain ? '● captured' : VD_GLYPH[now] + ' ' + VD_LABEL[now]) : '· not captured')
+        : (plain ? 'captured' : VD_LABEL[now] || '—');
+      chip.title = (plain ? 'captured: this step has no pass rule yet, so there is nothing to match' : VD_HINT[now]) ||
         (foot ? 'paste the output above — this then reads pass, fail, error or no match' : '');
       chip.dataset.v = now;
       // a verdict that just changed under your cursor gets one pulse, once
@@ -651,6 +688,7 @@
   function repaintAll() {
     $$('li.step').forEach(paintStep);
     $$('.pb').forEach(paintProgress);
+    paintMissed();
   }
 
   /* Two controls finish one step. The checkbox in the row header stays, but the
@@ -689,7 +727,9 @@
     repaintAll(); save();
   }
 
-  $$('li.step').forEach(function (li) {
+  /* every step is bound here: authored ones at load, and each step typed into
+     the page as it is drawn, so both behave alike in every respect */
+  function bindStep(li) {
     var id = li.dataset.step;
     var sd = $('details.sd', li);
     var inb = $('.sd>.in', li);      // the step body, not the `why this step` .in
@@ -729,9 +769,11 @@
       step(id).acked = ak.checked; paintStep(li); save();
     });
     if (sd) sd.addEventListener('toggle', function () { st.open['step:' + id] = sd.open; save(); });
-  });
+  }
+  $$('li.step').forEach(bindStep);
 
-  $$('textarea[data-cap]').forEach(function (ta) {
+  function bindCaptureIn(root) {
+  $$('textarea[data-cap]', root).forEach(function (ta) {
     ta.addEventListener('input', function () {
       var id = ta.dataset.cap, r = cap(id);
       r.text = ta.value;
@@ -746,15 +788,15 @@
       save();
     });
   });
-  $$('input[data-ec]').forEach(function (i) {
+  $$('input[data-ec]', root).forEach(function (i) {
     i.addEventListener('input', function () { cap(i.dataset.ec).exit = i.value; save(); });
   });
-  $$('input[data-note]').forEach(function (i) {
+  $$('input[data-note]', root).forEach(function (i) {
     i.addEventListener('input', function () { cap(i.dataset.note).note = i.value; save(); });
   });
 
   /* ── re-run: keep the old attempt, clear the box for a fresh one ────────── */
-  $$('[data-rr]').forEach(function (b) {
+  $$('[data-rr]', root).forEach(function (b) {
     b.addEventListener('click', function () {
       var id = b.dataset.rr, r = cap(id);
       if (!(r.text || '').trim()) return;
@@ -769,6 +811,8 @@
       flash(b, 'run ' + (r.runs.length + 1));
     });
   });
+  }
+  bindCaptureIn(document);
 
   /* ── export for the agent ──────────────────────────────────────────────── */
   function notesForExport() {
@@ -801,11 +845,23 @@
       if (Object.keys(st.emits[k] || {}).length) emits[k] = st.emits[k];
     });
     if (Object.keys(emits).length) out.emits = emits;
+    // what the human added to the page: steps (their output is under captures) and to-dos
+    var added = {}, todos = {};
+    liveKeys(st.added).forEach(function (k) {
+      var a = st.added[k];
+      added[k] = { after: a.after, text: a.text, cmd: a.cmd || '', risk: a.risk, at: a.at };
+      if (a.folded) added[k].folded = a.folded;
+    });
+    liveKeys(st.todos).forEach(function (k) { todos[k] = st.todos[k]; });
+    var na = Object.keys(added).length, nt = Object.keys(todos).length;
+    if (na) out.added = added;
+    if (nt) out.todos = todos;
     var n = Object.keys(out.captures).length;
     navigator.clipboard.writeText('```json\n' + JSON.stringify(out, null, 2) + '\n```')
       .then(function () {
         flash(ac, n + ' capture' + (n === 1 ? '' : 's') +
-          (nn ? ' · ' + nn + ' note' + (nn === 1 ? '' : 's') : '') + ' copied');
+          (nn ? ' · ' + nn + ' note' + (nn === 1 ? '' : 's') : '') +
+          (na ? ' · ' + na + ' added' : '') + (nt ? ' · ' + nt + ' to-do' + (nt === 1 ? '' : 's') : '') + ' copied');
       }, function () { flash(ac, 'clipboard blocked'); });
   });
 
@@ -846,13 +902,15 @@
     var jobs = [];             // texts to hash; a marker holds each one's place
     var MK = String.fromCharCode(0xE000), MKE = String.fromCharCode(0xE001);
     function line(s) { L.push(s); }
-    function emitCapture(id, n, sentence, risk, cmd) {
+    function emitCapture(id, n, sentence, risk, cmd, how) {
       var r = peek(id);
-      var vd = (VD_LABEL[r.verdict] || 'not captured').toUpperCase();
+      var vd = ((how && how.norule && r.verdict === 'saved' ? 'captured' : VD_LABEL[r.verdict]) || 'not captured').toUpperCase();
       line(bar);
-      line('step ' + (n === id ? id : n + ' · ' + id) + ' · ' + (risk === 'w' ? 'WRITE' : 'read') + ' · ' + vd);
+      line('step ' + (n === id ? id : n + ' · ' + id) + ' · ' + (risk === 'w' ? 'WRITE' : 'read') + ' · ' + vd +
+           (how && how.added ? ' · ADDED IN THE PAGE' : ''));
       line(bar);
       line(sentence);
+      if (how && how.note) line(how.note);
       if (cmd) {
         var cl = cmd.split('\n');
         line('command    ' + cl[0]);
@@ -889,9 +947,11 @@
       line('');
       $$('li.step', pb).forEach(function (li, i) {
         var id = li.dataset.step; seen[id] = 1;
-        var ds = $('.ds', li), pre = $('.cmd pre', li);
+        var ds = $('.ds', li), pre = $('.cmd pre', li), ta = $('textarea[data-cap]', li);
+        var ad = li.classList.contains('added') && st.added[id];
         emitCapture(id, labels[id] || String(i + 1), textOf(ds).trim(), li.dataset.risk,
-                    textOf(pre).trim());
+                    textOf(pre).trim(), { added: !!ad, norule: !!ta && !ta.dataset.pass && !ta.dataset.fail,
+                    note: ad ? 'added      ' + (ad.at || '—') + '   after ' + ad.after + '   not in the source yet' : '' });
       });
     });
     var loose = Object.keys(st.captures).filter(function (k) {
@@ -912,6 +972,20 @@
         notes[k].text.replace(/\r/g, '').split('\n').forEach(function (x) { line('  | ' + x); });
         line('');
       });
+    }
+
+    var tds = liveKeys(st.todos).sort(todoOrder);
+    if (tds.length) {
+      var open = tds.filter(function (k) { return !st.todos[k].done; }).length;
+      line('TO-DOS     ' + open + ' open · ' + (tds.length - open) + ' done'); line('');
+      tds.forEach(function (k) {
+        var t = st.todos[k];
+        line((t.done ? '[x] ' : '[ ] ') + pad(k, 5) + pad(TODO_KINDS[t.kind === 'do' ? 'do' : 'add'][1], 17) +
+             pad(t.ref ? 'after ' + t.ref : '', 11) + t.text);
+        line('           ' + (t.at || '—') + (t.done ? '   done ' + (t.doneAt || '—') : '') +
+             (t.became ? '   became step ' + t.became : ''));
+      });
+      line('');
     }
 
     Promise.all(jobs.map(sha256)).then(function (hs) {
@@ -980,6 +1054,629 @@
     hydrateHooks.forEach(function (fn) { try { fn(); } catch (e) { console.error('[flowviz] onHydrate', e); } });
   }
 
+  /* ── what the human adds after handover: steps and to-dos ─────────────────
+     Mid-run the human finds a step missing, or remembers something the write-up
+     should say, or something to do once it is over. They write it down here,
+     where it belongs, and it reaches the agent with everything else.
+       added: { b3a: { after:'b3', text, cmd, risk:'ro'|'w', at, edited?, folded?, gone? } }
+       todos: { t1:  { text, kind:'add'|'do', ref:'b4'|null, at, done, doneAt?, edited?, became?, gone? } }
+     A step typed into the page uses the ordinary keys for what it captures
+     (captures.b3a, steps.b3a), so it pastes, dims, counts and exports like any
+     step; with no data-pass or data-fail, its chip says `captured`. Its id is its
+     anchor plus the next free letter — b3a, then b3b — so b4 is never renamed,
+     and `flowviz fold` writes it into the source under that same id, where its
+     output re-attaches. Nothing is deleted: removing writes `gone`, because the
+     load merge is a union and a missing key would come back from the other
+     store. All of it is drawn from state, none of it is markup, and the audit
+     leaves it out of the agent's caps.                                       */
+  var ANCHOR = /^[a-z][0-9]+$/, INSERTED = /^[a-z][0-9]+[a-z]$/;
+  var TODO_KINDS = { add: ['Add to the write-up', 'add to write-up'], 'do': ['Do after this run', 'do after'] };
+  var lastStep = null, todoKind = 'add', comp = null, quick = null, quickRef = null, toastEl = null, toastT = null;
+  function liveKeys(o) { return Object.keys(o || {}).filter(function (k) { return o[k] && !o[k].gone; }); }
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function stepEl(id) { return id ? $('li.step[data-step="' + id + '"]') : null; }
+  function isAdded(li) { return !!li && li.classList.contains('added'); }
+  function baseOf(id) { var m = /^[a-z][0-9]+/.exec(id || ''); return m ? m[0] : null; }
+  function isZero(base) { return /^[a-z]0$/.test(base || ''); }
+  function openTodos() { return liveKeys(st.todos).filter(function (k) { return !st.todos[k].done; }); }
+  // a playbook a human may add to: lettered steps, outside the Results section
+  function anchorsIn(ol) {
+    if (ol.closest('section.results')) return [];
+    return $$('li.step', ol).filter(function (li) { return ANCHOR.test(li.dataset.step || ''); });
+  }
+  // a base and what hangs off it — b3, b3a, b3b — as drawn, in order
+  function groupOf(base) {
+    return $$('li.step').map(function (li) { return li.dataset.step || ''; }).filter(function (id) {
+      return id === base || (INSERTED.test(id) && id.slice(0, -1) === base);
+    }).sort();
+  }
+  function lastOf(base) { var g = groupOf(base); return g.length ? g[g.length - 1] : base; }
+  // the next letter never used after a base; a tombstone counts, so no id is handed out twice
+  function nextAddedId(base) {
+    for (var c = 97; c < 123; c++) {
+      var id = base + String.fromCharCode(c);
+      if (!st.added[id] && !stepEl(id)) return id;
+    }
+    return null;
+  }
+  // the anchor a missing step would hang off: one number back in the row, else the row's start, b0
+  function prevBase(li) {
+    var m = /^([a-z])([0-9]+)$/.exec(li.dataset.step || '');
+    if (!m) return null;
+    var p = m[1] + (+m[2] - 1);
+    return +m[2] > 1 && stepEl(p) ? p : m[1] + '0';
+  }
+  function nextTodoId() {
+    var n = 0;
+    Object.keys(st.todos).forEach(function (k) { var m = /^t([0-9]+)$/.exec(k); if (m) n = Math.max(n, +m[1]); });
+    return 't' + (n + 1);
+  }
+  function todoOrder(a, b) {
+    var ta = st.todos[a], tb = st.todos[b];
+    if (!!ta.done !== !!tb.done) return ta.done ? 1 : -1;
+    return (+a.slice(1) || 0) - (+b.slice(1) || 0);
+  }
+  function toast(t) {
+    if (!toastEl) {
+      toastEl = document.createElement('div');
+      toastEl.className = 'flow-toast';
+      toastEl.setAttribute('aria-live', 'polite');
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = t;
+    toastEl.classList.add('on');
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { toastEl.classList.remove('on'); }, 2600);
+  }
+  function flashEl(n) { n.classList.remove('flashed'); void n.offsetWidth; n.classList.add('flashed'); }
+
+  /* An added step is the template's step, drawn from state: the same checkbox,
+     gate, command, paste box and Done, bound by bindStep() and bindCaptureIn()
+     exactly as an authored one is. What differs is said once, in violet: a tag
+     with when it went in, a line saying the agent will fold it, edit, remove. */
+  function addedLi(id) {
+    var a = st.added[id], w = a.risk === 'w';
+    var li = document.createElement('li');
+    li.className = 'step named added';
+    li.setAttribute('data-step', id);
+    li.setAttribute('data-risk', w ? 'w' : 'ro');
+    li.innerHTML =
+      '<input type="checkbox" class="done" aria-label="' + id + ' done">' +
+      '<details class="sd"><summary><span class="n">' + id + '</span><span class="ds">' + escHtml(a.text) + '</span>' +
+        '<span class="addtag" title="typed into the page after handover, ' + escHtml(a.at || '') +
+        ': not in the source yet">added ' + escHtml(ptTime(a.at)) + '</span></summary>' +
+      '<div class="in">' +
+        (w ? '<label class="gate"><input type="checkbox" class="ack"> I accept this writes: ' + escHtml(a.text) + '</label>' : '') +
+        (a.cmd ? '<div class="cmd"><button class="copy">copy</button><pre><code>' + escHtml(a.cmd) + '</code></pre></div>'
+               : '<p class="byhand">No command: something done or checked by hand.</p>') +
+        '<div class="cap"><div class="cl">Paste output <span class="kp">captures["' + id + '"]</span></div>' +
+          '<textarea data-cap="' + id + '" placeholder="paste what it printed — it saves as you type"></textarea>' +
+          '<div class="ft"><span>exit <input class="ec" data-ec="' + id + '" placeholder="0"></span>' +
+            '<span data-cnt="' + id + '">empty</span><span data-at="' + id + '"></span>' +
+            '<span class="rn" data-run="' + id + '"></span>' +
+            '<button class="rr" data-rr="' + id + '" title="keep this attempt and clear the box">re-run</button></div>' +
+          '<input class="nt" data-note="' + id + '" placeholder="note for the agent (optional)">' +
+        '</div>' +
+        '<div class="addown"><span>Added by you, ' + (isZero(a.after) ? 'before the first step' : 'after <b>' + a.after + '</b>') +
+          '. The agent folds it into the source as <b>' + id + '</b>, so what you paste here stays attached.</span>' +
+          '<span class="addacts"><button type="button" class="lnk" data-add="edit">edit</button>' +
+          '<button type="button" class="lnk" data-add="remove">remove</button></span></div>' +
+      '</div></details>' +
+      '<span class="ctr"><span class="badge ' + (w ? 'w' : 'ro') + '">' + (w ? 'write' : 'read') + '</span>' +
+        (a.cmd ? '<button class="copy">⧉</button>' : '') + '<span class="vd" data-vd="' + id + '">—</span></span>';
+    $$('.copy', li).forEach(function (b) {
+      b.title = b.closest('.cmd') ? 'Copy this command to the clipboard' : 'Copy this step’s command without opening the step';
+      b.setAttribute('aria-label', b.title);
+    });
+    return li;
+  }
+  // a drawn step filled from state, as hydrate() fills the authored ones
+  function fillStep(li) {
+    var id = li.dataset.step, r = st.captures[id] || {}, s = st.steps[id] || {};
+    var ta = $('textarea[data-cap]', li); if (ta) ta.value = r.text || '';
+    var ec = $('input[data-ec]', li); if (ec) ec.value = r.exit || '';
+    var nt = $('input[data-note]', li); if (nt) nt.value = r.note || '';
+    var dn = $('input.done', li); if (dn) dn.checked = !!s.done;
+    var ak = $('input.ack', li); if (ak) ak.checked = !!s.acked;
+    var sd = $('details.sd', li);
+    if (sd && sd.open !== !!st.open['step:' + id]) sd.open = !!st.open['step:' + id];
+    paintCapture(id);
+  }
+
+  /* the playbook: added steps in place, a line on every seam, one more at the end */
+  function renderSteps() {
+    $$('li.step.added, li.seam, li.pb-end').forEach(function (n) { n.remove(); });
+    $$('ol.steps').forEach(function (ol) {
+      var anchors = anchorsIn(ol);
+      if (!anchors.length) return;
+      liveKeys(st.added).filter(function (id) {
+        var a = st.added[id];
+        if (stepEl(id) || !a.after) return false;             // folded: the source draws it now
+        var at = stepEl(isZero(a.after) ? a.after.charAt(0) + '1' : a.after);
+        return !!at && at.closest('ol.steps') === ol;
+      }).sort().forEach(function (id) {
+        var a = st.added[id], li = addedLi(id);
+        var prev = groupOf(a.after).filter(function (g) { return g < id; }).pop();
+        if (prev) { stepEl(prev).after(li); li.setAttribute('data-after', prev); }
+        else ol.insertBefore(li, stepEl(a.after.charAt(0) + '1'));
+        bindStep(li); bindCaptureIn(li); fillStep(li);
+      });
+      anchors.forEach(function (li, i) {
+        var base = li.dataset.step, last = stepEl(lastOf(base)) || li, nid = nextAddedId(base);
+        var g = document.createElement('li');
+        if (i < anchors.length - 1) {
+          g.className = 'seam';
+          g.innerHTML = '<button type="button" class="seam-add" data-add="insert" data-base="' + base + '" ' +
+            'title="Add a step here. It becomes ' + nid + ', and no other step is renamed.">' +
+            '<span>+ add a step after ' + last.dataset.step + '<i>→ ' + nid + '</i></span></button>';
+          last.after(g);
+        } else {
+          g.className = 'pb-end';
+          g.innerHTML = '<button type="button" class="pb-add" data-add="insert" data-base="' + base + '">' +
+            '+ Add a step to this playbook<i>→ ' + nid + '</i></button>';
+          ol.appendChild(g);
+        }
+      });
+    });
+  }
+  // every step's foot gains + step after and + to-do, left of the verdict and Done
+  function renderFoot() {
+    $$('li.step').forEach(function (li) {
+      if (li.closest('section.results') || !/^[a-z][0-9]+[a-z]?$/.test(li.dataset.step || '')) return;
+      var fin = $('.sd>.in>.fin', li);
+      if (!fin || $('.addfoot', fin)) return;
+      var f = document.createElement('span');
+      f.className = 'addfoot';
+      f.innerHTML = '<button type="button" class="addbtn" data-add="after" title="Add a step after this one">+ step after</button>' +
+        '<button type="button" class="addbtn" data-add="todo" title="Add a to-do tied to this step (t)">+ to-do</button>';
+      fin.insertBefore(f, fin.firstChild);
+    });
+  }
+  // a red or amber chip is often how a missing step is found: offer it there
+  function paintMissed() {
+    if (KIND === 'drawing' || !ANCHOR) return;
+    $$('li.step').forEach(function (li) {
+      if (isAdded(li) || li.closest('section.results') || !ANCHOR.test(li.dataset.step || '')) return;
+      var inb = $('.sd>.in', li), id = li.dataset.step, v = (st.captures[id] || {}).verdict;
+      if (!inb) return;
+      var box = $('.missed', inb);
+      if (v !== 'fail' && v !== 'error') { if (box) box.hidden = true; return; }
+      if (!box) { box = document.createElement('div'); box.className = 'missed'; inb.insertBefore(box, $('.fin', inb)); }
+      var prev = prevBase(li), at = isZero(prev) && !groupOf(prev).length ? 'before ' + id : 'after ' + lastOf(prev);
+      box.hidden = false;
+      box.innerHTML = '<span>' + (v === 'error' ? 'Rejected before it ran. Was a setup step missing before ' + id + '?'
+        : 'Was a step missing before ' + id + '?') + '</span><button type="button" class="addbtn" data-add="insert" ' +
+        'data-base="' + prev + '">+ add it ' + at + ' → ' + nextAddedId(prev) + '</button>';
+    });
+  }
+
+  /* ── the composer: one sentence, read or write, an optional command. The
+     meters are the audit's own rules shown while typing; nothing is refused,
+     because the agent tidies a step when it folds it. ────────────────────── */
+  function openComposer(base, o) {
+    o = o || {};
+    closeComposer();
+    if (!base) return;
+    var anchor, before = false;
+    if (o.edit) anchor = stepEl(o.edit);
+    else if (isZero(base) && !groupOf(base).length) { anchor = stepEl(base.charAt(0) + '1'); before = true; }
+    else anchor = stepEl(lastOf(base));
+    var id = o.edit || nextAddedId(base);
+    if (!anchor || !id) return;
+    var row = anchor.closest('details.row'); if (row && !row.open) row.open = true;
+    var a = o.edit ? st.added[o.edit] : null;
+    var li = document.createElement('li');
+    li.className = 'composer';
+    li.innerHTML =
+      '<div class="cmp-h"><span class="car">‸</span>' + (o.edit ? 'Edit added step' :
+        (before ? 'New step before ' : 'New step after ') + '<span class="lc">' + anchor.dataset.step + '</span>') +
+        ' <span class="cmp-id">' + id + '</span><span class="hint">' + (o.todo ? 'from to-do ' + o.todo + ' · ' : '') +
+        (o.edit ? 'its id and what it captured stay' : 'no other step is renamed') + '</span></div>' +
+      '<input class="cmp-in" data-k="text" placeholder="One sentence: what this step establishes or changes.">' +
+      '<div class="cmp-row"><span class="meter" data-m="words"></span><span class="meter" data-m="sent"></span>' +
+        '<span class="seg" role="group" aria-label="blast radius"><button type="button" data-add="risk" data-risk="ro">read</button>' +
+        '<button type="button" data-add="risk" data-risk="w" class="w">write</button></span>' +
+        '<span class="hint" data-m="risk"></span></div>' +
+      '<label class="cmp-lab">Command <span>optional: leave it empty for something done by hand</span></label>' +
+      '<textarea class="cmp-in mono" data-k="cmd" rows="1" spellcheck="false" placeholder="the command, on one line"></textarea>' +
+      '<div class="cmp-row" data-m="lint"></div>' +
+      '<div class="cmp-btns"><button type="button" class="btn-p" data-add="csave">' + (o.edit ? 'Save ' : 'Add ') + id + '</button>' +
+        '<button type="button" class="btn-g" data-add="ccancel">Cancel</button>' +
+        (o.edit || o.todo ? '' : '<button type="button" class="lnk" data-add="ctodo">or keep it as a to-do</button>') +
+        '<span class="hint">↵ add · esc cancel</span></div>';
+    if (before) anchor.parentNode.insertBefore(li, anchor); else anchor.after(li);
+    if (o.edit) anchor.hidden = true;
+    comp = { li: li, base: base, id: id, edit: o.edit || null, todo: o.todo || null,
+             risk: a ? a.risk : 'ro', hid: o.edit ? anchor : null };
+    $('[data-k="text"]', li).value = a ? a.text : (o.text || '');
+    $('[data-k="cmd"]', li).value = a ? (a.cmd || '') : '';
+    paintComposer();
+    var inp = $('[data-k="text"]', li);
+    inp.focus({ preventScroll: true });
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+    li.scrollIntoView({ block: 'nearest' });
+  }
+  function closeComposer() {
+    if (!comp) return;
+    if (comp.hid) comp.hid.hidden = false;
+    comp.li.remove();
+    comp = null;
+  }
+  function meter(n, ok, text) {
+    n.className = 'meter ' + (ok ? 'ok' : 'warn');
+    n.innerHTML = text;
+    n.hidden = !text;
+  }
+  function paintComposer() {
+    if (!comp) return;
+    var li = comp.li, text = $('[data-k="text"]', li).value, cmd = $('[data-k="cmd"]', li).value;
+    var n = words(text), multi = (text.trim().replace(/[.!?]$/, '').match(/[.!?]\s/g) || []).length > 0;
+    meter($('[data-m="words"]', li), n <= 20, n ? n + ' / 20 words' : '');
+    meter($('[data-m="sent"]', li), !multi, !text.trim() ? '' : multi ? 'two sentences: the agent will split it' : 'one sentence');
+    $$('.seg button', li).forEach(function (b) {
+      b.setAttribute('aria-pressed', b.dataset.risk === comp.risk ? 'true' : 'false');
+    });
+    $('[data-m="risk"]', li).textContent = comp.risk === 'w' ? 'it writes, so it gets a gate like every write step'
+      : 'it changes nothing';
+    /* the paste-safety rules: a smart quote copied from chat or a doc is the one
+       a human brings in most, and a console rejects it */
+    var out = [];
+    if (cmd.trim()) {
+      var bad = /[^\x00-\x7E]/.exec(cmd);
+      var lines = cmd.replace(/\r/g, '').split('\n').filter(function (l) { return l.trim(); }).length;
+      out.push(bad ? '<span class="meter warn">non-ASCII ' + escHtml(bad[0]) + ' at ' + (bad.index + 1) +
+        ': a console rejects it <button type="button" data-add="ascii">fix</button></span>'
+        : '<span class="meter ok">ASCII</span>');
+      out.push(lines > 1 ? '<span class="meter warn">' + lines + ' lines: keep it to one</span>' : '<span class="meter ok">one line</span>');
+      if (/^\s*(#|\/\/|<#|rem\b)/i.test(cmd)) out.push('<span class="meter warn">starts with a comment: its first character gets dropped</span>');
+    }
+    $('[data-m="lint"]', li).innerHTML = out.join('');
+    $('[data-add="csave"]', li).disabled = !text.trim();
+  }
+  function asciiFix(s) {
+    return s.replace(/[‘’‚′]/g, "'").replace(/[“”„″]/g, '"')
+      .replace(/[–—−]/g, '-').replace(/…/g, '...').replace(/[   ]/g, ' ');
+  }
+  function saveComposer() {
+    if (!comp) return;
+    var c = comp, li = c.li, id = c.id;
+    var text = $('[data-k="text"]', li).value.trim().replace(/\s+/g, ' ');
+    var cmd = $('[data-k="cmd"]', li).value.replace(/\r/g, '').trim();
+    if (!text) return;
+    if (c.edit) {
+      var a = st.added[id];
+      a.text = text; a.cmd = cmd; a.risk = c.risk; a.edited = new Date().toISOString();
+    } else {
+      st.added[id] = { after: c.base, text: text, cmd: cmd, risk: c.risk, at: new Date().toISOString() };
+      st.open['step:' + id] = true;
+    }
+    if (c.todo && st.todos[c.todo]) {
+      var t = st.todos[c.todo];
+      t.became = id; t.done = true; t.doneAt = new Date().toISOString();
+    }
+    closeComposer();
+    save(); renderAdditions();
+    var nli = stepEl(id);
+    if (nli) {
+      flashEl(nli);
+      var ta = !c.edit && $('textarea[data-cap]', nli);
+      if (ta) ta.focus({ preventScroll: true });
+    }
+    toast((c.edit ? 'Saved ' : 'Added ') + id + (c.todo ? ' from ' + c.todo : '') + ': saved with the page, not yet in the source');
+  }
+
+  /* ── to-dos: one section at the end, one line at rest; two kinds, in the
+     words used mid-run: something the write-up is missing (it can become a
+     step), and something to do once the run is over (it can become Next). ── */
+  function addTodo(text, kind, ref) {
+    text = (text || '').trim().replace(/\s+/g, ' ');
+    if (!text) return null;
+    var id = nextTodoId();
+    st.todos[id] = { text: text, kind: kind === 'do' ? 'do' : 'add', ref: ref || null,
+                     at: new Date().toISOString(), done: false };
+    save(); renderTodos(); renderMarkers(); renderPill();
+    return id;
+  }
+  function setKind(k) { todoKind = k === 'do' ? 'do' : 'add'; st.ui.todoKind = todoKind; }
+  function todoItem(id) {
+    var t = st.todos[id];
+    var anc = t.ref ? '<button type="button" class="todo-anc" data-add="go" data-go="' + t.ref + '" title="go to ' + t.ref + '">after ' + t.ref + '</button>' : '';
+    var became = t.became ? '<button type="button" class="todo-became" data-add="go" data-go="' + t.became +
+      '" title="this to-do became step ' + t.became + '">→ ' + t.became + '</button>' : '';
+    var promote = !t.done && t.kind === 'add' && t.ref ? '<button type="button" class="lnk" data-add="promote">make it a step</button>' : '';
+    var when = t.done ? 'done ' + ptTime(t.doneAt) : ptTime(t.at);
+    return '<li class="todo-item' + (t.done ? ' done' : '') + '" data-tid="' + id + '">' +
+      '<input type="checkbox" class="todo-ck"' + (t.done ? ' checked' : '') + ' aria-label="' + id + ' done">' +
+      '<span class="todo-id">' + id + '</span><span class="todo-tx">' + escHtml(t.text) + '</span>' +
+      '<span class="todo-meta">' + anc + became + '<span title="' + escHtml((t.done ? t.doneAt : t.at) || '') + '">' + escHtml(when) + '</span>' +
+      '<span class="todo-acts">' + promote + '<button type="button" class="lnk" data-add="tedit">edit</button>' +
+      '<button type="button" class="lnk" data-add="tdel">remove</button></span></span></li>';
+  }
+  function stepOptions(sel) {
+    return '<option value="">no step</option>' + $$('li.step').filter(function (li) {
+      return !li.closest('section.results');
+    }).map(function (li) {
+      var id = li.dataset.step;
+      return '<option value="' + escHtml(id) + '"' + (id === sel ? ' selected' : '') + '>after ' + escHtml(id) + '</option>';
+    }).join('');
+  }
+  function renderTodos() {
+    var sec = $('section.todo');
+    if (!sec) {
+      sec = document.createElement('section');
+      sec.className = 'todo';
+      sec.innerHTML = '<details><summary><span class="todo-k">To do</span><span class="todo-cnt"></span>' +
+        '<span class="todo-peek"></span><button type="button" class="todo-add" data-add="quick">+ to-do</button></summary>' +
+        '<div class="todo-body"></div></details>';
+      var foot = $('.foot');
+      if (foot) foot.parentNode.insertBefore(sec, foot); else document.body.appendChild(sec);
+      var d = $('details', sec);
+      d.addEventListener('toggle', function () {
+        if (!!st.open['todo:list'] !== d.open) { st.open['todo:list'] = d.open; save(); }
+      });
+    }
+    var dd = $('details', sec);
+    if (dd.open !== !!st.open['todo:list']) dd.open = !!st.open['todo:list'];
+    var ids = liveKeys(st.todos), open = openTodos().sort(todoOrder);
+    $('.todo-cnt', sec).innerHTML = ids.length ? '<b>' + open.length + ' open</b> · ' + (ids.length - open.length) + ' done'
+      : 'nothing yet · press <b>t</b> anywhere';
+    $('.todo-peek', sec).textContent = open.length ? open[0] + '  ' + st.todos[open[0]].text : '';
+    var h = '';
+    ['add', 'do'].forEach(function (k) {
+      var list = ids.filter(function (id) { return (st.todos[id].kind === 'do' ? 'do' : 'add') === k; }).sort(todoOrder);
+      if (!list.length) return;
+      var n = list.filter(function (id) { return !st.todos[id].done; }).length;
+      h += '<div class="todo-grp">' + TODO_KINDS[k][0] + ' <em>' + n + '</em></div><ul class="todo-list">' +
+        list.map(todoItem).join('') + '</ul>';
+    });
+    if (!ids.length) h += '<p class="todo-empty">Something this write-up is missing, or something to do once the run is ' +
+      'over. Press <b>t</b> anywhere, or <b>+ to-do</b> in the pill, and it lands here without moving the page.</p>';
+    h += '<div class="todo-new"><input class="cmp-in" data-k="ttext" placeholder="Something to add to this write-up, or to do after the run">' +
+      '<span class="seg" role="group" aria-label="kind"><button type="button" data-add="tkind" data-kind="add">add to write-up</button>' +
+      '<button type="button" data-add="tkind" data-kind="do">do after</button></span>' +
+      '<select data-k="tref" aria-label="tie it to a step">' + stepOptions(lastStep) + '</select>' +
+      '<button type="button" class="btn-p" data-add="tadd">Add</button></div>';
+    $('.todo-body', sec).innerHTML = h;
+    paintKind();
+  }
+  function paintKind() {
+    $$('[data-add="tkind"], [data-add="qkind"]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.dataset.kind === todoKind ? 'true' : 'false');
+    });
+  }
+  // at rest the rows are shut: say on the row, and on the step, where the human added something
+  function renderMarkers() {
+    $$('.todo-mark, .row-mark').forEach(function (n) { n.remove(); });
+    var byRef = {};
+    openTodos().forEach(function (id) {
+      var t = st.todos[id];
+      if (t.ref) (byRef[t.ref] = byRef[t.ref] || []).push(id);
+    });
+    Object.keys(byRef).forEach(function (ref) {
+      var ds = $('.sd>summary .ds', stepEl(ref) || document.createElement('i'));
+      if (!ds) return;
+      var c = document.createElement('span');
+      c.className = 'todo-mark';
+      c.setAttribute('data-add', 'gotodo');
+      c.setAttribute('data-tid', byRef[ref][0]);
+      c.textContent = byRef[ref].length + ' to-do';
+      c.title = byRef[ref].map(function (id) { return id + ': ' + st.todos[id].text; }).join('\n');
+      ds.after(c);
+    });
+    $$('details.row').forEach(function (row) {
+      var ids = $$('li.step', row).map(function (li) { return li.dataset.step; });
+      var nAdd = $$('li.step.added', row).length, nTodo = 0;
+      openTodos().forEach(function (id) { if (ids.indexOf(st.todos[id].ref) >= 0) nTodo++; });
+      if (!nAdd && !nTodo) return;
+      var s = $('summary', row), m = document.createElement('span');
+      m.className = 'row-mark';
+      m.textContent = [nAdd ? '+' + nAdd + ' added' : '', nTodo ? nTodo + ' to-do' : ''].filter(Boolean).join(' · ');
+      m.title = 'typed into the page after handover: the agent reads these back';
+      s.insertBefore(m, $('.rt', s));
+    });
+  }
+  function renderPill() {
+    var txt = $('#flowPillTxt');
+    if (!txt) return;
+    var b = $('#flowTodo');
+    if (!b) {
+      b = document.createElement('button');
+      b.id = 'flowTodo'; b.type = 'button';
+      b.setAttribute('data-add', 'quick');
+      b.title = 'Add a to-do without losing your place (t)';
+      var sep = document.createElement('span');
+      sep.className = 'sep';
+      txt.parentNode.insertBefore(sep, txt.nextSibling);
+      txt.parentNode.insertBefore(b, sep.nextSibling);
+    }
+    var n = openTodos().length;
+    b.innerHTML = '+ to-do' + (n ? '<span class="todo-n">' + n + '</span>' : '');
+  }
+
+  /* ── quick capture: a to-do from anywhere, tied to the step you were on,
+     without the page moving ───────────────────────────────────────────────── */
+  function openQuick(ref) {
+    if (!quick) {
+      quick = document.createElement('div');
+      quick.className = 'todo-quick';
+      quick.setAttribute('role', 'dialog');
+      quick.setAttribute('aria-label', 'New to-do');
+      document.body.appendChild(quick);
+    }
+    quickRef = ref !== undefined ? ref : lastStep;
+    var n = openTodos().length;
+    quick.innerHTML = '<div class="tq-h"><span class="todo-k">New to-do · <span class="lc">' + nextTodoId() + '</span></span>' +
+      (quickRef ? '<span class="tq-anc" title="tied to the step you were on">after ' + escHtml(quickRef) +
+        '<button type="button" data-add="qnoref" title="not tied to a step">✕</button></span>' : '') +
+      '<button type="button" class="lnk" data-add="qclose">esc</button></div>' +
+      '<input class="cmp-in" data-k="qtext" placeholder="Add to the write-up, or do after the run">' +
+      '<div class="tq-f"><span class="seg" role="group" aria-label="kind">' +
+        '<button type="button" data-add="qkind" data-kind="add">add to write-up</button>' +
+        '<button type="button" data-add="qkind" data-kind="do">do after</button></span>' +
+        '<span class="hint">↵ save · <a href="#" data-add="qall">' + n + ' open, see all</a></span></div>';
+    paintKind();
+    quick.hidden = false;
+    $('[data-k="qtext"]', quick).focus();
+  }
+  function closeQuick() { if (quick) quick.hidden = true; }
+  function saveQuick() {
+    var inp = quick && $('[data-k="qtext"]', quick);
+    if (!inp || !inp.value.trim()) return;
+    var id = addTodo(inp.value, todoKind, quickRef);
+    closeQuick();
+    var b = $('#flowTodo'); if (b) flashEl(b);
+    toast(id + ' saved' + (quickRef ? ' · after ' + quickRef : '') + ' · it waits in To do at the bottom');
+  }
+  function goStep(id) {
+    var li = stepEl(id);
+    if (!li) return;
+    var row = li.closest('details.row'); if (row && !row.open) row.open = true;
+    li.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    flashEl(li);
+  }
+  function goTodo(tid) {
+    var sec = $('section.todo'); if (!sec) return;
+    var d = $('details', sec); if (d && !d.open) d.open = true;
+    var li = (tid && $('li.todo-item[data-tid="' + tid + '"]', sec)) || sec;
+    li.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    flashEl(li);
+  }
+
+  function renderAdditions() {
+    if (KIND === 'drawing') return;
+    if (st.ui && st.ui.todoKind) todoKind = st.ui.todoKind === 'do' ? 'do' : 'add';
+    renderSteps(); renderFoot(); renderTodos(); renderMarkers(); renderPill();
+    repaintAll();
+  }
+
+  /* ── events: delegated, because everything here is drawn after load and
+     drawn again whenever its structure changes ────────────────────────────── */
+  if (KIND !== 'drawing') {
+    document.addEventListener('input', function (e) {
+      if (comp && comp.li.contains(e.target)) paintComposer();
+    });
+    document.addEventListener('change', function (e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      var ti = t.closest('li.todo-item');
+      if (ti && t.matches('.todo-ck')) {
+        var td = st.todos[ti.dataset.tid];
+        td.done = t.checked;
+        td.doneAt = t.checked ? new Date().toISOString() : null;
+        save(); renderTodos(); renderMarkers(); renderPill();
+      }
+      if (t.matches('select[data-k="tref"]') && t.value) lastStep = t.value;
+    });
+    // the step you were last in is what a new to-do is tied to; toggle does not bubble
+    document.addEventListener('toggle', function (e) {
+      var d = e.target;
+      if (d.matches && d.matches('details.sd') && d.open) {
+        var li = d.closest('li.step');
+        if (li && !li.closest('section.results')) lastStep = li.dataset.step;
+      }
+    }, true);
+    document.addEventListener('focusin', function (e) {
+      var li = e.target.closest && e.target.closest('li.step');
+      if (li && !li.closest('section.results')) lastStep = li.dataset.step;
+    });
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      if (quick && !quick.hidden && !quick.contains(t) && !t.closest('#flowTodo, [data-add="todo"], [data-add="quick"]')) closeQuick();
+      var b = t.closest('[data-add]');
+      if (!b) return;
+      var act = b.getAttribute('data-add'), li = b.closest('li.step'), ti = b.closest('li.todo-item');
+      if (act === 'insert') { e.preventDefault(); openComposer(b.dataset.base); }
+      else if (act === 'after' && li) openComposer(baseOf(li.dataset.step));
+      else if (act === 'todo' && li) openQuick(li.dataset.step);
+      else if (act === 'risk' && comp) { comp.risk = b.dataset.risk; paintComposer(); }
+      else if (act === 'ascii' && comp) { var ci = $('[data-k="cmd"]', comp.li); ci.value = asciiFix(ci.value); paintComposer(); }
+      else if (act === 'csave') saveComposer();
+      else if (act === 'ccancel') closeComposer();
+      else if (act === 'ctodo' && comp) {
+        var tx = $('[data-k="text"]', comp.li).value, ref = lastOf(comp.base);
+        closeComposer();
+        var nid = addTodo(tx, 'add', isZero(ref) ? null : ref);
+        if (nid) toast(nid + ' saved as a to-do · make it a step whenever you like');
+      }
+      else if (act === 'edit' && li && st.added[li.dataset.step]) openComposer(st.added[li.dataset.step].after, { edit: li.dataset.step });
+      else if (act === 'remove' && li && st.added[li.dataset.step]) {
+        if (!b.classList.contains('sure')) {
+          b.classList.add('sure'); b.textContent = 'remove ' + li.dataset.step + '?';
+          setTimeout(function () { b.classList.remove('sure'); b.textContent = 'remove'; }, 3000);
+          return;
+        }
+        var gone = li.dataset.step;
+        st.added[gone].gone = new Date().toISOString();       // a tombstone, never a delete
+        save(); renderAdditions();
+        toast(gone + ' removed · its id is never reused, and what it captured is kept');
+      }
+      else if (act === 'go') { e.preventDefault(); goStep(b.dataset.go); }
+      else if (act === 'gotodo') { e.preventDefault(); e.stopPropagation(); goTodo(b.dataset.tid); }
+      else if (act === 'quick') { e.preventDefault(); if (quick && !quick.hidden) closeQuick(); else openQuick(); }
+      else if (act === 'qclose') closeQuick();
+      else if (act === 'qnoref') {
+        quickRef = null;
+        var qa = b.closest('.tq-anc'); if (qa) qa.remove();
+        $('[data-k="qtext"]', quick).focus();
+      }
+      else if (act === 'qkind' || act === 'tkind') { setKind(b.dataset.kind); paintKind(); }
+      else if (act === 'qall') { e.preventDefault(); closeQuick(); goTodo(''); }
+      else if (act === 'tadd') {
+        var sec = $('section.todo'), inp = $('[data-k="ttext"]', sec), sel = $('[data-k="tref"]', sec);
+        var id2 = addTodo(inp.value, todoKind, sel.value || null);
+        if (id2) { var again = $('[data-k="ttext"]', sec); if (again) again.focus(); toast(id2 + ' saved'); }
+      }
+      else if (act === 'promote' && ti) {
+        var td = st.todos[ti.dataset.tid];
+        openComposer(baseOf(td.ref), { todo: ti.dataset.tid, text: td.text });
+      }
+      else if (act === 'tedit' && ti) {
+        var tx2 = $('.todo-tx', ti);
+        tx2.innerHTML = '<input class="cmp-in" data-k="tedit" value="' + escHtml(st.todos[ti.dataset.tid].text) + '">';
+        var ei = $('input', tx2); ei.focus(); ei.select();
+      }
+      else if (act === 'tdel' && ti) {
+        if (!b.classList.contains('sure')) {
+          b.classList.add('sure'); b.textContent = 'remove ' + ti.dataset.tid + '?';
+          setTimeout(function () { b.classList.remove('sure'); b.textContent = 'remove'; }, 3000);
+          return;
+        }
+        st.todos[ti.dataset.tid].gone = new Date().toISOString();
+        save(); renderTodos(); renderMarkers(); renderPill();
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      var t = e.target || {};
+      if (e.key === 'Escape') {
+        if (quick && !quick.hidden) { closeQuick(); e.preventDefault(); }
+        else if (comp && comp.li.contains(t)) { closeComposer(); e.preventDefault(); }
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+        if (comp && comp.li.contains(t)) { e.preventDefault(); saveComposer(); return; }
+        if (quick && quick.contains(t) && t.matches('[data-k="qtext"]')) { e.preventDefault(); saveQuick(); return; }
+        if (t.matches && t.matches('[data-k="ttext"]')) { e.preventDefault(); var ad = $('[data-add="tadd"]'); if (ad) ad.click(); return; }
+        if (t.matches && t.matches('[data-k="tedit"]')) {
+          e.preventDefault();
+          var tl = t.closest('li.todo-item'), v = t.value.trim();
+          if (tl && v) { st.todos[tl.dataset.tid].text = v; st.todos[tl.dataset.tid].edited = new Date().toISOString(); save(); }
+          renderTodos(); renderMarkers();
+          return;
+        }
+      }
+      // t, anywhere you are not typing: a to-do tied to the step you were on
+      if (e.key === 't' && !e.metaKey && !e.ctrlKey && !e.altKey &&
+          !(t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''))) {
+        e.preventDefault();
+        openQuick();
+      }
+    });
+  }
+
   /* ── print ────────────────────────────────────────────────────────────────
      Force light, open every <details>, and grow the textareas so a capture is
      not clipped to three visible lines on paper. All three are restored after,
@@ -1016,6 +1713,7 @@
     st.ui.theme = order[(order.indexOf(st.ui.theme || 'auto') + 1) % 3];
     applyTheme(); save();
   });
+  renderAdditions();
   hydrate();
   live = true;          // from here on, a verdict changing means the human did it
   setPill(served ? 'disk' : '', served ? 'disk-backed' : 'local only');
@@ -1039,10 +1737,21 @@
        three-screen budget is measured without it */
     var resEl = $('section.results');
     var resH = resEl ? resEl.getBoundingClientRect().height : 0;
-    var screens = (document.documentElement.scrollHeight - resH) / window.innerHeight;
+    /* what the human added is theirs, not the agent's budget: the to-do section,
+       the counts on the rows and the steps typed into the page are measured out */
+    var tdEl = $('section.todo'), tdD = tdEl && $('details', tdEl), tdOpen = !!(tdD && tdD.open);
+    if (tdD) tdD.open = false;
+    var tdH = tdEl ? tdEl.getBoundingClientRect().height + (parseFloat(getComputedStyle(tdEl).marginTop) || 0) : 0;
+    var screens = (document.documentElement.scrollHeight - resH - tdH) / window.innerHeight;
+    if (tdD) tdD.open = tdOpen;
     var restWords = words(($('.card') ? $('.card').innerText : '') + ' ' +
       secs.map(function (h) { return h.textContent; }).join(' ') + ' ' +
-      rowsEls.map(function (d) { var s = $('summary', d); return s ? s.innerText : ''; }).join(' '));
+      rowsEls.map(function (d) {
+        var s = $('summary', d);
+        return s ? Array.prototype.map.call(s.childNodes, function (n) {
+          return n.classList && n.classList.contains('row-mark') ? '' : (n.textContent || '');
+        }).join(' ') : '';
+      }).join(' '));
     rowsEls.forEach(function (d, i) { d.open = wasOpen[i]; });
 
     var rows = [];
@@ -1073,13 +1782,13 @@
       /* textContent, not innerText: the rows were just closed to measure the page
          at rest, and innerText is '' for anything inside a closed <details> — so
          every step sentence silently measured 0 and the cap always read ok. */
-      chk('longest step sentence', Math.max.apply(null, [0].concat($$('li.step .ds').map(function (s) { return words(s.textContent); }))), CAP.stepWords);
-      var multi = $$('li.step .ds').filter(function (s) {
+      chk('longest step sentence', Math.max.apply(null, [0].concat($$('li.step:not(.added) .ds').map(function (s) { return words(s.textContent); }))), CAP.stepWords);
+      var multi = $$('li.step:not(.added) .ds').filter(function (s) {
         return (s.textContent.trim().replace(/[.!?]$/, '').match(/[.!?]\s/g) || []).length > 0;
       }).length;
       must('multi-sentence steps', multi, 0);
-      must('steps with no risk tag', $$('li.step:not([data-risk])').length, 0);
-      must('write steps with no gate', $$('li.step[data-risk="w"]').filter(function (li) {
+      must('steps with no risk tag', $$('li.step:not(.added):not([data-risk])').length, 0);
+      must('write steps with no gate', $$('li.step:not(.added)[data-risk="w"]').filter(function (li) {
         return !$('input.ack', li);
       }).length, 0);
       must('untagged next items', $$('.next li').filter(function (l) { return !$('.badge', l); }).length, 0);

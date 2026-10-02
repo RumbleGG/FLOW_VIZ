@@ -59,6 +59,14 @@ def sidecar_stats(data):
     return cap_n, done_n, len(notes)
 
 
+def additions_stats(data):
+    """(open to-dos, steps added in the page and not yet folded) from a parsed sidecar object."""
+    live = lambda d: [v for v in (d or {}).values() if isinstance(v, dict) and not v.get('gone')]
+    todos = sum(1 for t in live(data.get('todos')) if not t.get('done'))
+    added = sum(1 for a in live(data.get('added')) if not a.get('folded'))
+    return todos, added
+
+
 def fmt_kb(nbytes):
     return '%.1f KB' % (nbytes / 1024.0)
 
@@ -92,7 +100,7 @@ def scan_deliverables(root):
                 'title': extract_title(text) or relpath,
                 'doc': doc,
                 'kind': kind,
-                'captures': None, 'done': None, 'notes': None, 'saved_at': None,
+                'captures': None, 'done': None, 'notes': None, 'todos': None, 'saved_at': None,
             }
             if doc:
                 sidecar_path = os.path.join(dirpath, doc + '.flow.json')
@@ -102,6 +110,7 @@ def scan_deliverables(root):
                     if isinstance(sdata, dict):
                         cap_n, done_n, note_n = sidecar_stats(sdata)
                         item['captures'], item['done'], item['notes'] = cap_n, done_n, note_n
+                        item['todos'] = additions_stats(sdata)[0]
                         item['saved_at'] = sdata.get('savedAt')
                 except (OSError, ValueError):
                     pass
@@ -132,19 +141,20 @@ def render_index(root, items):
             '<td>%s</td>'
             '<td>%s</td>'
             '<td>%s</td>'
+            '<td>%s</td>'
             '<td><a href="%s">audit</a></td>'
             '</tr>' % (
                 href, html_mod.escape(it['relpath']),
                 html_mod.escape(it['title']),
                 html_mod.escape(it['doc'] or '—'),
                 html_mod.escape(it['kind'] or '—'),
-                dash(it['captures']), dash(it['done']), dash(it['notes']),
+                dash(it['captures']), dash(it['done']), dash(it['notes']), dash(it['todos']),
                 html_mod.escape(it['saved_at'] or '—'),
                 audit_href,
             )
         )
     body = ''.join(rows) if rows else (
-        '<tr><td colspan="9" class="empty">No FLOW_VIZ deliverables found under this folder.</td></tr>'
+        '<tr><td colspan="10" class="empty">No FLOW_VIZ deliverables found under this folder.</td></tr>'
     )
     page = '''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -172,7 +182,7 @@ a:hover{text-decoration:underline}
 <p class="meta">serving <code>%s</code> &middot; %d found</p>
 <table>
 <tr><th>File</th><th>Title</th><th>Doc</th><th>Kind</th><th>Captures</th><th>Done</th>
-<th>Notes</th><th>Saved</th><th></th></tr>
+<th>Notes</th><th>Open to-dos</th><th>Saved</th><th></th></tr>
 %s
 </table>
 </div></body></html>''' % (html_mod.escape(root), html_mod.escape(root), len(items), body)
@@ -305,6 +315,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                           % (os.path.relpath(sidecar_path, root).replace(os.sep, '/'), moved_at), flush=True)
                     self.send_error(409, 'the ids moved (flowviz relabel %s): reload the page' % moved_at)
                     return
+            # an older page knows fewer keys (to-dos and added steps arrived in schema 5): carry over any
+            # top-level key the body leaves out, so its save never erases what a newer page wrote
+            if os.path.exists(sidecar_path):
+                try:
+                    disk = json.load(open(sidecar_path, encoding='utf-8'))
+                except (OSError, ValueError):
+                    disk = None
+                if isinstance(disk, dict):
+                    kept = [k for k in disk if k not in data]
+                    for k in kept:
+                        data[k] = disk[k]
+                    if kept:
+                        body = json.dumps(data, indent=2, ensure_ascii=False).encode('utf-8')
             need_backup_check = key not in self.server.fv_backed_up
             if need_backup_check and os.path.exists(sidecar_path):
                 backup_dir = os.path.join(target_dir, '.flowviz', 'state-backup')
@@ -330,10 +353,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 raise
 
         cap_n, done_n, note_n = sidecar_stats(data)
+        todo_n, add_n = additions_stats(data)
         rel_sidecar = os.path.relpath(sidecar_path, root).replace(os.sep, '/')
         plural = lambda n, w: '%d %s%s' % (n, w, '' if n == 1 else 's')
-        print('PUT %s  %s · %d done · %s · %s'
-              % (rel_sidecar, plural(cap_n, 'capture'), done_n, plural(note_n, 'note'), fmt_kb(len(body))), flush=True)
+        print('PUT %s  %s · %d done · %s%s%s · %s'
+              % (rel_sidecar, plural(cap_n, 'capture'), done_n, plural(note_n, 'note'),
+                 ' · %d added' % add_n if add_n else '', ' · %s open' % plural(todo_n, 'to-do') if todo_n else '',
+                 fmt_kb(len(body))), flush=True)
 
         self.send_response(204)
         self.send_header('Content-Length', '0')

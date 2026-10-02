@@ -73,7 +73,8 @@ def main():
     if not os.path.exists(sidecar):
         print(m.no_sidecar_message(sidecar, folder), file=sys.stderr)
         sys.exit(2)
-    captures = (json.load(open(sidecar, encoding='utf-8')) or {}).get('captures') or {}
+    state = json.load(open(sidecar, encoding='utf-8')) or {}
+    captures = state.get('captures') or {}
 
     # a rollback row's steps only run when something went wrong: "not run" there is not missing
     kind_of = {}
@@ -168,6 +169,17 @@ def main():
     if hit:
         print('  at       %s  %s' % (label(hit[0]), hit[0]['sentence']))
     print('  archive  %s' % cmd)
+    # what the human added in the page: the outcome above is the plan's, so say what it left out
+    in_html = {x['id'] for x in steps}
+    live = lambda d: {k: v for k, v in (d or {}).items() if isinstance(v, dict) and not v.get('gone')}
+    unfolded = sorted(k for k in live(state.get('added')) if k not in in_html)
+    if unfolded:
+        print('  added    %s: added in the page, not in the outcome — flowviz fold first to count them'
+              % ', '.join(unfolded))
+    for k, t in sorted(live(state.get('todos')).items(), key=lambda kv: int(kv[0][1:]) if kv[0][1:].isdigit() else 0):
+        if not t.get('done'):
+            print('  to-do    %s %s: %s' % (k, '(do after: a Next item?)' if t.get('kind') == 'do'
+                                              else '(add to write-up)', t.get('text') or ''))
     print('next: check the outcome, then write the claim, the summary and the next actions, and mark the')
     print('diagram — "result": "pass" | "fail" | "error" on the box or connection where it passed or failed.')
     print('  %s build %s && %s audit --browser %s' % (F, tilde(src_path), F, tilde(src_path[:-9] + '.html')))

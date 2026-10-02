@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="flowviz-doc" content="todo-steps">
+<meta name="flowviz-kind" content="report">
+<title>Added steps and to-dos fit the sidecar without moving an id</title>
+<!-- flowviz:head -->
+</head>
+<body>
+
+<!-- ══════════════ LAYER 1 — THE CARD ══════════════
+     A proposal for FLOW_VIZ 3.1.0, written to the standard it proposes to extend. The mockups in
+     rows a and b use classes from proto/proto.css, which build.sh injects after flowviz build:
+     prototype only, outside template/. -->
+<div class="card">
+  <div class="top">
+    <span class="chip ok"><span class="d"></span>Approved · shipped in 3.1.0</span>
+    <span class="meta">2026-10-01 · proposed on 3.0.0 with a prototype outside template/</span>
+  </div>
+
+  <h1>Added steps and to-dos fit the sidecar without moving an id</h1>
+
+  <div class="slot">
+    <span class="k">Verdict</span>
+    <div class="v" data-slot="verdict">Treat both as human input, like a capture. A step you insert after b3 is
+    b3a, a to-do is t1, and both save to the sidecar. The agent reads them back and folds b3a into the source
+    under the same id, so nothing moves and no cap changes.</div>
+  </div>
+
+  <div class="slot wh">
+    <span class="k">So what</span>
+    <div class="v" data-slot="sowhat">Pick where to-dos live and which ways of adding a step ship. Try each first
+    on the prototype: the deploy example, mid-run, with both working.</div>
+  </div>
+
+  <div class="vitals">
+    <div><div class="n">0</div><div class="l">caps raised</div></div>
+    <div><div class="n">2</div><div class="l">new state keys</div></div>
+    <div><div class="n">4</div><div class="l">ways to add a step</div></div>
+    <div><div class="n">1</div><div class="l">new command</div></div>
+    <div><div class="n">3.1.0</div><div class="l">a minor bump</div></div>
+  </div>
+
+  <div class="next">
+    <span class="k">Next</span>
+    <ol>
+      <li>Open <a href="DEPLOY-PROTO.html">the prototype</a> and add a step after b3 <span class="badge ro">read-only</span></li>
+      <li>Press t inside a step and leave yourself a to-do <span class="badge ro">read-only</span></li>
+      <li>Tick your picks in row f; I read them from the sidecar <span class="badge ro">read-only</span></li>
+      <li>Approve 3.1.0, and I build the picks into template/ <span class="badge w">write</span></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══════════════ LAYER 2 — THE SPINE ══════════════
+     The round trip of one added step. One flow, because the order is the point: it is the
+     back-and-forth between the page and the agent, and the Sequence view lays it out in time. -->
+<div class="spine">
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "spine",
+  "name": "The round trip",
+  "title": "An added step keeps its id from your browser to the source",
+  "lede": "One added step, end to end: typed in the page, saved beside it, read back, folded into the source, and rebuilt with its output still attached.",
+  "grid": { "cols": 5, "rows": 2 },
+  "zones": [
+    { "id": "browser", "label": "Your browser", "cols": [0, 1], "rows": [0, 0], "tone": "neutral", "tag": "tl" },
+    { "id": "disk", "label": "Beside the page, on disk", "cols": [2, 3], "rows": [0, 0], "tone": "data", "tag": "tl" },
+    { "id": "turn", "label": "The agent's turn", "cols": [2, 4], "rows": [1, 1], "tone": "svc", "tag": "bl" }
+  ],
+  "nodes": [
+    { "id": "you", "label": "You, mid-run", "kind": "client", "icon": "user", "at": [0, 0], "tech": "the human",
+      "peek": "You remember a missing step, or a follow-up, while you are running the playbook.", "facts": ["one gesture to add"] },
+    { "id": "page", "label": "Report page", "kind": "client", "icon": "browser", "at": [1, 0], "tech": "flow.js + the new layer",
+      "peek": "Draws added steps in place and keeps to-dos in one section, all from state, none in markup.", "facts": ["no markup changes"] },
+    { "id": "serve", "label": "serve", "kind": "service", "icon": "server", "at": [2, 0], "tech": "flowviz serve",
+      "peek": "Takes each PUT and writes the sidecar beside the page, keeping any key the body leaves out.", "facts": ["PUT _flow/state"] },
+    { "id": "sidecar", "label": "doc.flow.json", "kind": "data", "icon": "json", "at": [3, 0], "tech": "state schema 5",
+      "peek": "Holds added steps under added and to-dos under todos, beside the captures they produce.", "facts": ["added + todos", "tombstones"] },
+    { "id": "captures", "label": "captures", "kind": "service", "icon": "terminal", "at": [4, 0], "tech": "flowviz captures",
+      "peek": "Prints each added step in place, marked +, and every to-do after the playbooks.", "facts": ["+ b3a, in place"] },
+    { "id": "agent", "label": "Agent", "kind": "client", "icon": "agent", "at": [4, 1], "tech": "Claude, in your folder",
+      "peek": "Decides what each addition becomes: a folded step, a reworded one, or a next action.", "facts": ["reads, then folds"] },
+    { "id": "fold", "label": "fold", "kind": "service", "icon": "gear", "at": [3, 1], "tech": "flowviz fold, new",
+      "peek": "Writes each added step into the source under its own id, then stamps it folded in the sidecar.", "facts": ["keeps b3a", "regexes left blank"] },
+    { "id": "src", "label": "The source", "kind": "data", "icon": "file", "at": [2, 1], "tech": "NAME.src.html",
+      "peek": "Once folded, b3a is an authored step: one sentence, a risk tag, a gate if it writes, anchored regexes.", "facts": ["audited like any step"] },
+    { "id": "build", "label": "build", "kind": "service", "icon": "box", "at": [1, 1], "tech": "flowviz build",
+      "peek": "Rebuilds the page; the output b3a captured re-attaches by id, because the id never changed.", "facts": ["history kept"] }
+  ],
+  "edges": [
+    { "id": "you-page", "from": "you", "to": "page", "mode": "sync", "label": "add, tick",
+      "peek": "A hover line on a seam, a button at a step's foot, the end row, or the prompt under a red chip." },
+    { "id": "page-serve", "from": "page", "to": "serve", "mode": "sync", "label": "PUT state",
+      "peek": "Debounced 700 ms; the same PUT that carries captures carries added and todos." },
+    { "id": "serve-sidecar", "from": "serve", "to": "sidecar", "mode": "sync", "label": "write",
+      "peek": "An atomic replace, the old copy backed up once per run, and no key dropped." },
+    { "id": "sidecar-captures", "from": "sidecar", "to": "captures", "mode": "sync", "label": "read",
+      "peek": "Read only: the read-back never writes the sidecar." },
+    { "id": "captures-agent", "from": "captures", "to": "agent", "mode": "sync", "label": "prints + b3a",
+      "peek": "Added steps print between their neighbours; to-dos print after the playbooks, open ones first." },
+    { "id": "agent-fold", "from": "agent", "to": "fold", "mode": "sync", "label": "runs",
+      "peek": "Only for the additions the agent agrees with; the rest become next actions or get reworded." },
+    { "id": "fold-src", "from": "fold", "to": "src", "mode": "sync", "label": "inserts b3a",
+      "peek": "After b3, with data-after chained, placeholder regexes, and a gate if it writes." },
+    { "id": "fold-sidecar", "from": "fold", "to": "sidecar", "mode": "sync", "label": "stamps folded",
+      "peek": "Marks b3a folded so the page stops drawing its own copy; the capture stays where it is." },
+    { "id": "src-build", "from": "src", "to": "build", "mode": "sync", "label": "inline",
+      "peek": "Unchanged: build inlines flow.css, flow.js and draw.js into one file." },
+    { "id": "build-page", "from": "build", "to": "page", "mode": "sync", "label": "rebuild",
+      "peek": "Unchanged: the previous output is kept in .flowviz/history before it is replaced." }
+  ],
+  "flows": [
+    { "id": "trip", "label": "Fold b3a", "summary": "7 steps; b3a keeps its id from the first to the last.",
+      "steps": [
+        { "id": "s1", "path": ["you", "page"], "msg": "insert after b3", "say": "You insert a step after b3, so it is b3a, and paste what it printed." },
+        { "id": "s2", "path": ["page", "serve", "sidecar"], "msg": "PUT added + captures", "say": "The page saves b3a under added and its output under captures, like any step." },
+        { "id": "s3", "path": ["sidecar", "captures", "agent"], "msg": "+ b3a, in place", "say": "flowviz captures prints b3a between b3 and b4, marked as added by hand." },
+        { "id": "s4", "path": ["agent", "fold"], "msg": "fold the source", "say": "The agent agrees b3a belongs and runs flowviz fold on the source." },
+        { "id": "s5", "path": ["fold", "src"], "msg": "li.step b3a", "say": "fold writes b3a after b3, leaving regexes the audit blocks until they are written." },
+        { "id": "s6", "path": ["fold", "sidecar"], "msg": "b3a folded", "say": "fold stamps b3a folded, so the page stops drawing its own copy." },
+        { "id": "s7", "path": ["src", "build", "page"], "msg": "same id, same output", "say": "The rebuilt page shows b3a as authored, and its output re-attaches by id." }
+      ] }
+  ]
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="sidecar">
+  <p>Two keys arrive in schema 5. An added step's output, tick and note use the keys every step already uses,
+  so evidence, progress and dimming need nothing new.</p>
+  <div class="cmd fig"><pre><code>"added": { "b3a": { "after": "b3", "text": "Check the provider allowlist includes the new pods' egress range.",
+                    "cmd": "curl -s https://provider.example.test/v1/allowlist | grep -c 10.40.2.",
+                    "risk": "ro", "at": "2026-10-01T20:39:02Z" } },
+"todos": { "t1": { "text": "Ask the provider to allowlist 10.40.2.0/24, then re-run b4",
+                   "kind": "do", "ref": "b4", "at": "2026-10-01T20:40:15Z", "done": false } }</code></pre></div>
+</section>
+<section data-for="captures">
+  <p>An added step prints between its neighbours with a <code>+</code> where <code>step</code> would be, and its
+  verdict reads <code>CAPTURED</code>: it has no pass rule until it is folded. To-dos follow the playbooks.</p>
+  <div class="cmd fig"><pre><code>step b3    read   PASS      Check the new pods report v2.3 and a configured provider client.
++    b3a   read   CAPTURED  Check the provider allowlist includes the new pods' egress range.
+  added 13:39 PDT in the page, after b3 · not in the source yet
+step b4    read   FAIL      Send one test email end to end and wait up to 30 seconds for delivery.</code></pre></div>
+</section>
+<section data-for="fold">
+  <p>New in 3.1.0, beside <code>flowviz results</code> and <code>flowviz relabel</code>: it edits the source, backs
+  the sidecar up first, and never renames anything.</p>
+  <div class="cmd fig"><pre><code>$ flowviz fold DEPLOY.src.html
+fold  b3a  after b3 in row b · read
+      wrote li.step b3a; b4 now waits on b3a
+      data-pass / data-fail left as PASS_SIGNAL / FAIL_SIGNAL: the audit blocks until you write them
+sidecar  stamped added.b3a.folded · backup in .flowviz/state-backup/</code></pre></div>
+</section>
+<section data-for="step:s5">
+  <p>The folded step is ordinary markup. The audit's naming check learns one more shape, a row letter, a number
+  and one letter, for a step that came in from a fold.</p>
+  <div class="cmd fig"><pre><code>&lt;li class="step" data-step="b3a" data-risk="ro" data-after="b3"&gt; ... &lt;/li&gt;
+&lt;li class="step" data-step="b4"  data-risk="ro" data-after="b3a"&gt; ... &lt;/li&gt;</code></pre></div>
+</section>
+</div>
+</figure>
+</div>
+
+<div class="ctl">
+  <button id="flowExpand">Expand all</button>
+  <button id="flowCollapse">Collapse all</button>
+  <button id="flowAgentCopy">Copy captures for agent</button>
+  <button id="flowEvidence">Save evidence</button>
+  <span class="hint">nothing is open at load, by design</span>
+</div>
+
+<!-- ══════════════ THE ROWS ══════════════ -->
+<h2 class="sec">Capture it mid-run</h2>
+
+<!-- ─────────── ROW a ─────────── -->
+<details class="row" data-row="a" data-kind="decision">
+<summary><span class="ord">a</span><span class="cl">Four ways to add a step, and all of them write the same record</span><span class="rt">3 min</span></summary>
+<div class="in">
+<p>A step you add mid-run is drawn where it belongs, in violet: the ink flow.css already gives the sidecar key on
+every paste box. It is dashed where the agent's steps are solid, and a proofreader's caret marks where it went in.
+The circled numbers are the four ways in.</p>
+
+<div class="fvm" aria-label="Mockup: a playbook with one added step">
+  <div class="hd">Roll out notify v2.3 to staging <span class="prog">4 / 5 done · <span class="f">1 failed</span></span></div>
+  <div class="fvm-step done"><input type="checkbox" checked disabled aria-label="done">
+    <div class="sm"><span class="n">b2</span><span class="ds">Roll out v2.3 across the three pods and wait for all of them.</span></div>
+    <span class="ctr"><span class="badge w">write</span><span class="vd pass">pass</span></span></div>
+  <div class="fvm-gap"><span class="fv-ins"><span>① + add a step after b2<i>→ b2a</i></span></span></div>
+  <div class="fvm-step done"><input type="checkbox" checked disabled aria-label="done">
+    <div class="sm"><span class="n">b3</span><span class="ds">Check the new pods report v2.3 and a configured provider client.</span></div>
+    <span class="ctr"><span class="badge ro">read</span><span class="vd pass">pass</span></span></div>
+  <div class="fvm-step fv-added done"><input type="checkbox" checked disabled aria-label="done">
+    <div class="sm"><span class="n">b3a</span><span class="ds">Check the provider allowlist includes the new pods' egress range.</span><span class="fv-tag">added 13:39 PDT</span></div>
+    <span class="ctr"><span class="badge ro">read</span><span class="vd saved">captured</span></span></div>
+  <div class="fvm-step"><input type="checkbox" disabled aria-label="done">
+    <div class="sm"><span class="n">b4</span><span class="ds">Send one test email end to end and wait up to 30 seconds for delivery.</span><span class="fv-tdm">1 to-do</span></div>
+    <span class="ctr"><span class="badge ro">read</span><span class="vd fail">fail</span></span>
+    <div class="bd">
+      <div class="fv-miss"><span>③ Was a step missing before b4?</span><span class="fv-fb">+ add it after b3a → b3b</span></div>
+      <div class="fvm-fin"><span class="fv-foot"><span class="fv-fb">② + step after</span><span class="fv-fb">+ to-do</span></span>
+        <span class="vd vdf fail">✕ fail</span><span class="fvm-fd">Done ☐</span></div>
+    </div>
+  </div>
+  <div class="fvm-end"><span class="fv-endbtn">④ + Add a step to this playbook<i>→ b4a</i></span></div>
+</div>
+
+<table>
+<thead><tr><th>Way in</th><th>When it fits</th><th>Cost at rest</th></tr></thead>
+<tbody>
+<tr><td>① a line on every seam, on hover</td><td>you know exactly where the step belongs</td><td>nothing: it appears under the pointer</td></tr>
+<tr><td>② <b>+ step after</b>, at a step's foot</td><td>on a touch screen, or right after finishing the step before</td><td>nothing: it sits inside the step</td></tr>
+<tr><td>③ the prompt under a red or amber chip</td><td>the failure is how you learned what was missing</td><td>nothing: it shows only after <code>fail</code> or <code>error</code></td></tr>
+<tr><td>④ <b>+ Add a step</b>, at the end of a playbook</td><td>one more thing after the last step</td><td>one line per playbook, inside its row</td></tr>
+</tbody>
+</table>
+
+<h3>All four open the same composer</h3>
+<div class="fvm" aria-label="Mockup: the composer, opened from to-do t2">
+  <div class="fv-compose">
+    <div class="fv-ch"><span class="fv-car">‸</span>New step after <span class="fv-lc">b1</span> <span class="fv-nid">b1a</span><span class="fv-hint">from to-do t2 · no other step is renamed</span></div>
+    <div class="fvm-fake">Confirm kubectl points at the staging context before the rollout.<span class="caret"></span></div>
+    <div class="fv-row"><span class="fv-m ok">10 / 20 words</span><span class="fv-m ok">one sentence</span>
+      <span class="fv-seg"><button type="button" tabindex="-1" aria-pressed="true">read</button><button type="button" tabindex="-1" class="w" aria-pressed="false">write</button></span>
+      <span class="fv-hint">it changes nothing</span></div>
+    <span class="fv-lab">Command <span>optional: leave it empty for something done by hand</span></span>
+    <div class="fvm-fake mono">kubectl config current-context | grep -c <mark>’</mark>staging<mark>’</mark></div>
+    <div class="fv-row"><span class="fv-m warn">non-ASCII ’ at 42: a console rejects it <u>fix</u></span><span class="fv-m ok">one line</span></div>
+    <div class="fv-btns"><span class="fv-bp">Add b1a</span><span class="fv-bg">Cancel</span><span class="fv-hint">↵ add · esc cancel</span></div>
+  </div>
+</div>
+<p class="fvm-cap">The audit's own rules, shown while you type: one sentence, 20 words, ASCII, one line. Nothing is
+blocked; the agent tidies the step when it folds it. <b>fix</b> swaps smart quotes and dashes for ASCII.</p>
+
+<div class="box key"><p><b>Recommended: all four.</b> They cost nothing at rest, and they share one composer and one
+record. Pick in row f.</p></div>
+</div>
+</details>
+
+<!-- ─────────── ROW b ─────────── -->
+<details class="row" data-row="b" data-kind="decision">
+<summary><span class="ord">b</span><span class="cl">To-dos live in one section and are captured without losing your place</span><span class="rt">3 min</span></summary>
+<div class="in">
+<p>Three places a to-do list could live:</p>
+
+<div class="fvm-opts">
+  <div class="fvm-opt">
+    <h4><span class="L">A</span>A tray from the pill</h4>
+    <div class="fvm-mini" aria-hidden="true">
+      <div class="ln m"></div><div class="ln"></div><div class="ln s"></div><div class="ln m"></div><div class="ln s"></div>
+      <div class="tray"><div class="k2">To do</div><div class="it"><i>t1</i> Ask the provider…</div><div class="it"><i>t2</i> Add a step that…</div><div class="it"><i>t3</i> Tell #notify…</div></div>
+    </div>
+    <p><b>Reachable from anywhere</b>, and nothing at rest. <b>But</b> it is invisible in print and at a glance, and it is one more drawer.</p>
+  </div>
+  <div class="fvm-opt rec">
+    <h4><span class="L">B</span>A section at the end <span class="rb">pick</span></h4>
+    <div class="fvm-mini" aria-hidden="true">
+      <div class="ln m"></div><div class="ln"></div><div class="ln s"></div>
+      <div class="sec"><span class="k2">To do</span> 2 open · 1 done</div>
+    </div>
+    <p><b>Reads as part of the report</b>, prints as a checklist, and mirrors what the agent reads back. <b>But</b> it sits below the step you are on.</p>
+  </div>
+  <div class="fvm-opt">
+    <h4><span class="L">C</span>On the steps themselves</h4>
+    <div class="fvm-mini" aria-hidden="true">
+      <div class="stp"><b>b1</b> Confirm staging runs… <span class="chipm">1 to-do</span></div>
+      <div class="stp"><b>b2</b> Roll out v2.3…</div>
+      <div class="stp"><b>b3</b> Check the new pods…</div>
+      <div class="stp"><b>b4</b> Send one test email… <span class="chipm">1 to-do</span></div>
+    </div>
+    <p><b>In context</b>: the to-do sits on the step it is about. <b>But</b> there is no overview, and a to-do with no step has nowhere to go.</p>
+  </div>
+</div>
+
+<div class="box key"><p><b>Recommended: B as the home, A's reach, C's markers.</b> The list lives in a section at
+the end, one line at rest. You add from anywhere with <b>t</b> or <b>+ to-do</b> in the pill, tied to the step you
+were on, and the page does not move. Steps and rows carry a small violet count.</p></div>
+
+<div class="fvm fvm-pad" aria-label="Mockup: the pill, quick capture and the to-do section">
+  <div class="fvm-tr"><span class="fvm-pill"><span class="dot"></span>saved 13:45 PDT<span class="sep"></span><span class="t">+ to-do <span class="fv-pc">2</span></span><span class="sep"></span><span class="b">auto · light</span><span class="sep"></span><span class="b">state</span></span></div>
+  <div class="fv-quick">
+    <div class="fv-qh"><span class="fv-k">New to-do · <span class="fv-lc">t4</span></span><span class="fv-qa">after b4<button type="button" tabindex="-1">✕</button></span><span class="fv-lnk">esc</span></div>
+    <div class="fvm-fake">Re-run b4 once the provider confirms the allowlist change<span class="caret"></span></div>
+    <div class="fv-qf"><span class="fv-seg"><button type="button" tabindex="-1" aria-pressed="false">add to write-up</button><button type="button" tabindex="-1" aria-pressed="true">do after</button></span><span class="fv-hint">↵ save · <u>2 open, see all</u></span></div>
+  </div>
+  <div class="fv-todo">
+    <div class="fvm-sumrow"><span class="fv-k">To do</span><span class="fv-cnt"><b>2 open</b> · 1 done</span><span class="fv-add">+ to-do</span></div>
+    <div class="fv-body">
+      <div class="fv-grp">Add to the write-up <em>1</em></div>
+      <ul class="fv-tl">
+        <li class="fv-ti"><input type="checkbox" disabled aria-label="t2 done"><span class="fv-id">t2</span><span class="fv-tx">Add a step that checks kubectl points at staging before b2</span><span class="fv-meta"><span class="fv-anc">after b1</span>13:41 PDT <span class="fv-lnk">make it a step</span></span></li>
+      </ul>
+      <div class="fv-grp">Do after this run <em>1</em></div>
+      <ul class="fv-tl">
+        <li class="fv-ti"><input type="checkbox" disabled aria-label="t1 done"><span class="fv-id">t1</span><span class="fv-tx">Ask the provider to allowlist 10.40.2.0/24, then re-run b4</span><span class="fv-meta"><span class="fv-anc">after b4</span>13:40 PDT</span></li>
+        <li class="fv-ti done"><input type="checkbox" checked disabled aria-label="t3 done"><span class="fv-id">t3</span><span class="fv-tx">Tell #notify-oncall the staging rollout is paused</span><span class="fv-meta">done 13:44 PDT</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Two kinds, in the words you would use mid-run</h3>
+<table>
+<thead><tr><th>Kind</th><th>Means</th><th>Can become</th></tr></thead>
+<tbody>
+<tr><td><b>add to write-up</b></td><td>the write-up is missing something: a step, a warning, a value</td><td>a step: <b>make it a step</b> opens the composer at its anchor, and the to-do closes as <code>→ b1a</code></td></tr>
+<tr><td><b>do after</b></td><td>a task for once the run is over, outside this playbook</td><td>a Next item: <code>flowviz results</code> offers every open one</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<h2 class="sec">Hand it back</h2>
+
+<!-- ─────────── ROW c ─────────── -->
+<details class="row" data-row="c" data-kind="context">
+<summary><span class="ord">c</span><span class="cl">An inserted step is named b3a, so no id ever moves</span><span class="rt">2 min</span></summary>
+<div class="in">
+<p>Ids are join keys: what you paste is filed under one. So a step added between b3 and b4 cannot take b4's name,
+and it should not take a number that lies about its place either.</p>
+<table>
+<thead><tr><th>Name it</th><th>What follows</th></tr></thead>
+<tbody>
+<tr><td><b>b3a</b>: the anchor plus the next free letter <span class="badge acc">pick</span></td><td>b4 keeps its name and its output; "look at b3a" means one step; a second insert is b3b; a letter is never handed out twice</td></tr>
+<tr><td>b5: the next free number</td><td>the numbers stop matching the order, and the audit fails the report for it</td></tr>
+<tr><td>renumber b4 to b5 with <code>flowviz relabel</code></td><td>every capture moves, a tab left open gets <code>409</code>, and "look at b4" changes meaning mid-run</td></tr>
+</tbody>
+</table>
+<ul>
+<li>Steps added after b3 queue behind each other: b3a, b3b, b3c. Before the first step of a row the anchor is b0, so the
+first one there is b0a.</li>
+<li>Removing writes a tombstone (<code>gone</code>), never a delete. The load merge is a union, so a deleted key
+would come back from the copy in the other store, and a removed id is never reused.</li>
+<li>The audit's naming check learns one shape, a row letter, a number and one letter, for steps a fold brought in.
+It fails nothing it passes today, so this is a minor version.</li>
+<li>Carried values work unchanged: <code>{{b3a.VER}}</code> already matches the token pattern, once the fold gives
+b3a a <code>data-emit</code>.</li>
+</ul>
+<h3>State schema 5: two keys, both default empty</h3>
+<div class="cmd fig"><pre><code>"added": {
+  "b3a": { "after": "b3", "text": "Check the provider allowlist includes the new pods' egress range.",
+           "cmd": "curl -s https://provider.example.test/v1/allowlist | grep -c 10.40.2.",
+           "risk": "ro", "at": "2026-10-01T20:39:02Z", "folded": "2026-10-01T21:02:11Z" },
+  "b3b": { "after": "b3", "text": "...", "at": "2026-10-01T20:40:51Z", "gone": "2026-10-01T20:41:30Z" }
+},
+"todos": {
+  "t1": { "text": "Ask the provider to allowlist 10.40.2.0/24, then re-run b4", "kind": "do",
+          "ref": "b4", "at": "2026-10-01T20:40:15Z", "done": false },
+  "t2": { "text": "Add a step that checks kubectl points at staging before b2", "kind": "add",
+          "ref": "b1", "at": "2026-10-01T20:41:02Z", "done": true, "became": "b1a" }
+},
+"captures": { "b3a": { "text": "0", "exit": "1", "verdict": "saved", "at": "2026-10-01T20:39:40Z" } },
+"steps":    { "b3a": { "done": true } }</code></pre></div>
+<p>An added step's output, tick and note use the keys every step already uses, so <b>Save evidence</b>, the
+progress count and <code>data-after</code> dimming reach it without new code. Its chip reads <b>captured</b>, not
+<b>no match</b>: there is no pass rule to blame until the fold writes one.</p>
+</div>
+</details>
+
+<!-- ─────────── ROW d ─────────── -->
+<details class="row" data-row="d" data-kind="context">
+<summary><span class="ord">d</span><span class="cl">The agent reads additions back, then folds the steps into the source</span><span class="rt">3 min</span></summary>
+<div class="in">
+<h3>What <code>flowviz captures</code> prints in 3.1.0</h3>
+<div class="cmd fig"><pre><code>playbook  Roll out notify v2.3 to staging
+step b3    read   PASS      Check the new pods report v2.3 and a configured provider client.
++    b3a   read   CAPTURED  Check the provider allowlist includes the new pods' egress range.
+  added 13:39 PDT in the page, after b3 · not in the source yet
+  $ curl -s https://provider.example.test/v1/allowlist | grep -c 10.40.2.
+  exit 1 · note: the new egress range is not on the list, which is why b4 timed out
+  | 0
+step b4    read   FAIL      Send one test email end to end and wait up to 30 seconds for delivery.
+
+to-dos  2 open · 1 done
+  t2  [ ]  add  after b1  Add a step that checks kubectl points at staging before b2
+  t1  [ ]  do   after b4  Ask the provider to allowlist 10.40.2.0/24, then re-run b4
+  t3  [x]  do             Tell #notify-oncall the staging rollout is paused
+
+5 captured · pass 3 · fail 1 · captured 1 · 1 added step · 2 open to-dos</code></pre></div>
+
+<h3>What <code>flowviz fold</code> does with them</h3>
+<div class="cmd fig"><pre><code>$ flowviz fold DEPLOY.src.html
+fold  b3a  after b3 in row b · read · "Check the provider allowlist includes the new pods' egress range."
+      wrote li.step[data-step="b3a"] with data-after="b3"; b4 now waits on b3a
+      data-pass / data-fail left as PASS_SIGNAL / FAIL_SIGNAL: write them, the audit blocks until you do
+skip  b3b  removed in the page (tombstone): nothing to fold
+todo  t2   is "add to write-up" and tied to b1: fold it as a step too with --todo t2
+sidecar  stamped added.b3a.folded · backup in .flowviz/state-backup/
+next: write the regexes, then flowviz build and audit --browser</code></pre></div>
+
+<h3>How each addition ends</h3>
+<div class="dia fvm-life">
+<svg viewBox="0 0 920 372" role="img" aria-label="An added step goes from typed, to saved, to read back, to folded, to audited; it can be removed, or become a next item instead. A to-do goes from open to done, to a step, to a Results next item, or is removed.">
+<defs><marker id="fvmArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--dim)"/></marker></defs>
+<text x="20" y="22" style="font:700 10.5px var(--f-ui);letter-spacing:1.15px;fill:var(--dim2)">AN ADDED STEP</text>
+<rect x="20" y="34" width="150" height="44" rx="5" style="fill:var(--magbg);stroke:var(--mag)"/>
+<text x="32" y="53" style="font:600 12.5px var(--f-ui);fill:var(--fg)">typed in the page</text>
+<text x="32" y="69" style="font:11px var(--f-ui);fill:var(--dim)">you, in violet ink</text>
+<line x1="170" y1="56" x2="198" y2="56" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="200" y="34" width="150" height="44" rx="5" style="fill:var(--panel2);stroke:var(--line2)"/>
+<text x="212" y="53" style="font:600 12.5px var(--f-ui);fill:var(--fg)">saved beside it</text>
+<text x="212" y="69" style="font:11px var(--f-ui);fill:var(--dim)">added.b3a, in the sidecar</text>
+<line x1="350" y1="56" x2="378" y2="56" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="380" y="34" width="150" height="44" rx="5" style="fill:var(--accbg);stroke:var(--acc)"/>
+<text x="392" y="53" style="font:600 12.5px var(--f-ui);fill:var(--fg)">read back</text>
+<text x="392" y="69" style="font:11px var(--f-ui);fill:var(--dim)">flowviz captures</text>
+<line x1="530" y1="56" x2="558" y2="56" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="560" y="34" width="150" height="44" rx="5" style="fill:var(--accbg);stroke:var(--acc)"/>
+<text x="572" y="53" style="font:600 12.5px var(--f-ui);fill:var(--fg)">folded</text>
+<text x="572" y="69" style="font:11px var(--f-ui);fill:var(--dim)">flowviz fold, same id</text>
+<line x1="710" y1="56" x2="738" y2="56" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="740" y="34" width="160" height="44" rx="5" style="fill:var(--okbg);stroke:var(--ok)"/>
+<text x="752" y="53" style="font:600 12.5px var(--f-ui);fill:var(--fg)">audited, rebuilt</text>
+<text x="752" y="69" style="font:11px var(--f-ui);fill:var(--dim)">an authored step now</text>
+<line x1="275" y1="78" x2="275" y2="110" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="200" y="112" width="150" height="40" rx="5" style="fill:none;stroke:var(--dim2);stroke-dasharray:4 3"/>
+<text x="212" y="129" style="font:600 12px var(--f-ui);fill:var(--dim)">removed by you</text>
+<text x="212" y="144" style="font:10.5px var(--f-ui);fill:var(--dim2)">tombstone, id retired</text>
+<line x1="455" y1="78" x2="455" y2="110" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="380" y="112" width="150" height="40" rx="5" style="fill:none;stroke:var(--acc);stroke-dasharray:4 3"/>
+<text x="392" y="129" style="font:600 12px var(--f-ui);fill:var(--fg)">a Next item instead</text>
+<text x="392" y="144" style="font:10.5px var(--f-ui);fill:var(--dim2)">the agent's call</text>
+<text x="20" y="196" style="font:700 10.5px var(--f-ui);letter-spacing:1.15px;fill:var(--dim2)">A TO-DO</text>
+<rect x="20" y="248" width="150" height="44" rx="5" style="fill:var(--magbg);stroke:var(--mag)"/>
+<text x="32" y="267" style="font:600 12.5px var(--f-ui);fill:var(--fg)">open</text>
+<text x="32" y="283" style="font:11px var(--f-ui);fill:var(--dim)">t, + to-do, or the list</text>
+<line x1="170" y1="262" x2="248" y2="224" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<line x1="170" y1="268" x2="248" y2="264" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<line x1="170" y1="274" x2="248" y2="304" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<line x1="170" y1="280" x2="248" y2="344" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="250" y="206" width="220" height="36" rx="5" style="fill:var(--okbg);stroke:var(--ok)"/>
+<text x="262" y="228" style="font:600 12px var(--f-ui);fill:var(--fg)">done <tspan style="font-weight:400;fill:var(--dim)">· ticked in the page</tspan></text>
+<rect x="250" y="246" width="220" height="36" rx="5" style="fill:var(--magbg);stroke:var(--mag);stroke-dasharray:4 3"/>
+<text x="262" y="268" style="font:600 12px var(--f-ui);fill:var(--fg)">a step: b1a <tspan style="font-weight:400;fill:var(--dim)">· joins the lane above</tspan></text>
+<rect x="250" y="286" width="220" height="36" rx="5" style="fill:var(--accbg);stroke:var(--acc)"/>
+<text x="262" y="308" style="font:600 12px var(--f-ui);fill:var(--fg)">a Next item <tspan style="font-weight:400;fill:var(--dim)">· flowviz results</tspan></text>
+<rect x="250" y="326" width="220" height="36" rx="5" style="fill:none;stroke:var(--dim2);stroke-dasharray:4 3"/>
+<text x="262" y="348" style="font:600 12px var(--f-ui);fill:var(--dim)">removed <tspan style="font-weight:400;fill:var(--dim2)">· tombstone</tspan></text>
+<text x="560" y="196" style="font:700 10.5px var(--f-ui);letter-spacing:1.15px;fill:var(--dim2)">KEY</text>
+<rect x="560" y="212" width="22" height="14" rx="3" style="fill:var(--magbg);stroke:var(--mag)"/>
+<text x="592" y="224" style="font:12px var(--f-ui);fill:var(--fg)">typed by you, after handover</text>
+<rect x="560" y="240" width="22" height="14" rx="3" style="fill:var(--panel2);stroke:var(--line2)"/>
+<text x="592" y="252" style="font:12px var(--f-ui);fill:var(--fg)">on disk, in the sidecar</text>
+<rect x="560" y="268" width="22" height="14" rx="3" style="fill:var(--accbg);stroke:var(--acc)"/>
+<text x="592" y="280" style="font:12px var(--f-ui);fill:var(--fg)">the agent and its commands</text>
+<rect x="560" y="296" width="22" height="14" rx="3" style="fill:var(--okbg);stroke:var(--ok)"/>
+<text x="592" y="308" style="font:12px var(--f-ui);fill:var(--fg)">finished</text>
+<rect x="560" y="324" width="22" height="14" rx="3" style="fill:none;stroke:var(--dim2);stroke-dasharray:4 3"/>
+<text x="592" y="336" style="font:12px var(--f-ui);fill:var(--fg)">dashed: not the usual path</text>
+</svg>
+</div>
+
+<h3>What changes, where</h3>
+<table>
+<thead><tr><th>File</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td><code>template/flow.js</code></td><td>draw added steps and the to-do section from state; <code>merge()</code> keeps keys it does not know; Copy captures and Save evidence carry both; <b>t</b> and the pill button</td></tr>
+<tr><td><code>template/flow.css</code></td><td>the insertion look, the to-do section, quick capture, print rules</td></tr>
+<tr><td><code>SPEC.md</code> · <code>AGENTS.md</code></td><td>schema 5 (§6), the b3a shape (§1.2b), and a short section for agents: read additions back, then fold, reword or carry them</td></tr>
+<tr><td><code>bin/flowviz-captures.py</code></td><td><code>+</code> lines in place, a to-dos block, both in <code>--json</code></td></tr>
+<tr><td><code>bin/flowviz-fold.py</code> (new)</td><td>write added steps into the source under their ids; stamp them folded; back the sidecar up first</td></tr>
+<tr><td><code>bin/flowviz-results.py</code></td><td>open "do after" to-dos are offered as Next; the archive gate names any still open</td></tr>
+<tr><td><code>bin/flowviz-audit.py</code></td><td>naming accepts b3a; what a human added is left out of the caps; a note when a sidecar beside the page holds unfolded additions</td></tr>
+<tr><td><code>bin/flowviz-serve.py</code></td><td>keep any top-level key a PUT leaves out; the index lists open to-dos per page</td></tr>
+</tbody>
+</table>
+
+<div class="box warn"><p><b>Without the merge fix, a page built before 3.1.0 erases them.</b> flow.js's
+<code>merge()</code> copies only the keys it knows, so an older page's next save writes a sidecar without
+<code>added</code> and <code>todos</code>. Fix it in both places: serve keeps any key a PUT leaves out, and
+<code>merge()</code> keeps keys it does not know. The prototype works around it by reading both stores itself.</p></div>
+</div>
+</details>
+
+<h2 class="sec">Try it, then pick</h2>
+
+<!-- ─────────── ROW e ─────────── -->
+<details class="row" data-row="e" data-kind="test">
+<summary><span class="ord">e</span><span class="cl">The prototype runs the deploy example mid-run, with both features working</span><span class="rt">5 min</span></summary>
+<div class="in">
+<div class="box key"><p>Open <a href="DEPLOY-PROTO.html"><b>DEPLOY-PROTO.html</b></a> beside this page. It is
+<code>examples/deploy</code> caught just as b4 fails, with a demo run loaded: one added step (b3a) and three
+to-dos. <b>start empty</b> and <b>demo run</b> sit at the bottom left. Served, everything you type saves to
+<code>deploy-proto.flow.json</code>.</p></div>
+
+<label class="chk"><input type="checkbox" data-ck="e-seam"><span>Hover the seam between b2 and b3, add a step, and see it named b2a</span></label>
+<label class="chk"><input type="checkbox" data-ck="e-paste"><span>Paste anything into the new step's box, then press Done</span></label>
+<label class="chk"><input type="checkbox" data-ck="e-t"><span>Open b4, press t, and save a to-do without the page moving</span></label>
+<label class="chk"><input type="checkbox" data-ck="e-promote"><span>Open To do at the bottom and make t2 a step</span></label>
+<label class="chk"><input type="checkbox" data-ck="e-reload"><span>Reload: everything you added comes back</span></label>
+<label class="chk"><input type="checkbox" data-ck="e-theme"><span>Switch the theme from the pill, then open print preview</span></label>
+
+<div class="pb" data-pb="e">
+  <div class="hd">
+    <span class="t">See what the prototype saved</span>
+    <span class="prog">0 / 1 done</span>
+  </div>
+  <ol class="steps">
+    <li class="step" data-step="e1" data-risk="ro">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Print the added steps and to-dos the prototype saved beside the page.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/Projects/FLOW_VIZ/mockups/todo-steps/deploy-proto.flow.json'))); print(json.dumps({k: d.get(k) for k in ('added', 'todos')}, indent=1))"</code></pre></div>
+          <p class="expect"><b>Pass:</b> an <code>"added"</code> block whose steps say <code>"after": "b3"</code> or similar &nbsp;·&nbsp;
+            <i>Fail:</i> <code>FileNotFoundError</code>: the folder was never served, so nothing reached disk</p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["e1"]</span></div>
+            <textarea data-cap="e1" data-pass="&quot;after&quot;:\s*&quot;[a-z][0-9]+&quot;" data-fail="\bFileNotFoundError\b|\bNo such file or directory\b"
+              placeholder="paste the JSON it prints"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="e1" placeholder="0"></span>
+              <span data-cnt="e1">empty</span><span data-at="e1"></span>
+              <span class="rn" data-run="e1"></span>
+              <button class="rr" data-rr="e1" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="e1" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>It shows the two new keys exactly as the agent would read them, straight from disk. The
+          page is no proof: it holds no state, and what you typed lives in the sidecar.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e1">—</span></span>
+    </li>
+  </ol>
+</div>
+</div>
+</details>
+
+<!-- ─────────── ROW f ─────────── -->
+<details class="row" data-row="f" data-kind="decision">
+<summary><span class="ord">f</span><span class="cl">Your ticks here decide what 3.1.0 builds into template/</span><span class="rt">2 min</span></summary>
+<div class="in">
+<p>Tick what should ship. Every tick saves to <code>todo-steps.flow.json</code> beside this page, and I read them
+from there. Anything else: press <b>t</b> on this page and leave it as a to-do.</p>
+
+<h3>Where to-dos live</h3>
+<label class="chk"><input type="checkbox" data-ck="f-home-section"><span>A section at the end, one line at rest (recommended)</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-home-tray"><span>A tray that slides out from the pill instead</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-markers"><span>Violet counts on the steps and rows they belong to (recommended)</span></label>
+
+<h3>Quick capture</h3>
+<label class="chk"><input type="checkbox" data-ck="f-key-t"><span>t anywhere opens a to-do tied to the step you were on (recommended)</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-pill"><span>+ to-do in the pill, with the open count (recommended)</span></label>
+
+<h3>Ways to add a step</h3>
+<label class="chk"><input type="checkbox" data-ck="f-seam"><span>① a line on every seam, on hover</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-foot"><span>② + step after, at each step's foot</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-miss"><span>③ the prompt under a red or amber chip</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-end"><span>④ + Add a step, at the end of each playbook</span></label>
+
+<h3>Names and kinds</h3>
+<label class="chk"><input type="checkbox" data-ck="f-ids"><span>b3a for inserts, t1 for to-dos, tombstones for removals (recommended)</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-kinds"><span>Two kinds of to-do: add to write-up, do after (recommended)</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-seeded"><span>Agents may write known follow-ups into a report as to-dos too</span></label>
+
+<h3>Tooling</h3>
+<label class="chk"><input type="checkbox" data-ck="f-fold"><span>flowviz fold writes added steps into the source (recommended)</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-results"><span>flowviz results offers open "do after" to-dos as Next</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-archive"><span>The archive step's gate names any to-do still open</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-index"><span>flowviz serve's index lists open to-dos for every page it serves</span></label>
+</div>
+</details>
+
+<!-- flowviz:foot -->
+<!-- flowviz:js -->
+</body>
+</html>

@@ -404,6 +404,193 @@ label.chk input:checked+span{color:var(--dim2);text-decoration:line-through}
   color:var(--mag);margin-bottom:2px}
 .phase .pt{font-weight:600;margin-bottom:7px}
 
+/* ── what the human added after handover: steps and to-dos ─────────────────
+   Violet is human ink. flow.css already gives it to the sidecar key on every
+   paste box, so whatever is typed into the page after handover — a step, a
+   to-do — wears it, dashed where the agent's work is solid. Journal light reads
+   it as pencil in the margin; traditional dark as a violet outline. flow.js
+   draws all of it from state; none of it is in a report's markup.            */
+li.step.added{position:relative;background:var(--magbg);border-left:2px dashed var(--mag);padding-left:13px}
+/* a proofreader's caret in the gap above it: this is where it went in */
+li.step.added::before{content:"\2038";position:absolute;left:3px;top:-11px;font:700 17px/1 var(--f-body);
+  color:var(--mag);pointer-events:none}
+li.step.added>.sd>summary .n{color:var(--mag)}
+li.step.added .vd.saved{color:var(--mag)}
+li.step.added .vd.vdf.saved{border-color:var(--mag);background:var(--magbg)}
+.addtag{flex:none;font:700 9.5px/1.5 var(--f-ui);letter-spacing:.55px;text-transform:uppercase;color:var(--mag);
+  border:1px dashed var(--mag);border-radius:3px;padding:0 5px;white-space:nowrap;align-self:center}
+.addown{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;font:12px/1.5 var(--f-ui);color:var(--mag)}
+.addown b{color:var(--mag)}
+.addacts{margin-left:auto;display:inline-flex;gap:10px}
+.byhand{font:12.5px/1.5 var(--f-ui);color:var(--dim);margin:0 0 6px}
+.lnk{background:none;border:none;padding:0 2px;font:12px var(--f-ui);color:var(--mag);cursor:pointer;
+  text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+.lnk:hover{color:var(--fg)}
+.lnk.sure{color:var(--bad);text-decoration-style:solid}
+
+/* the seam between two steps: hover it, and a step goes in there. It overlaps
+   only the steps' own padding, so it never covers a word */
+li.seam{list-style:none;position:relative;height:0;margin:0;padding:0;border:0}
+.seam-add{position:absolute;left:15px;right:15px;top:-9px;height:18px;z-index:3;display:flex;align-items:center;
+  justify-content:center;background:none;border:none;padding:0;cursor:pointer;opacity:0;transition:opacity .12s}
+.seam-add::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1.5px dashed var(--mag)}
+.seam-add span{position:relative;font:600 11px/1 var(--f-ui);color:var(--mag);background:var(--paper);
+  border:1px solid var(--mag);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.seam-add i,.pb-add i{font-style:normal;font-family:var(--f-mono);margin-left:6px;opacity:.8}
+.seam-add:hover,.seam-add:focus-visible{opacity:1}
+.seam-add:focus-visible span{outline:2px solid var(--mag);outline-offset:2px}
+li.pb-end{list-style:none;margin:0;padding:6px 15px 7px}
+.pb-add{background:none;border:none;padding:2px 0;cursor:pointer;font:600 12px var(--f-ui);color:var(--mag);opacity:.75}
+.pb-add:hover,.pb-add:focus-visible{opacity:1}
+
+/* + step after and + to-do sit at the foot of every step, left of the verdict and Done */
+li.step .in .fin .addfoot{margin-right:auto;display:inline-flex;gap:6px}
+.addbtn{background:none;border:1px dashed var(--line2);border-radius:var(--r2);cursor:pointer;
+  font:600 11px var(--f-ui);color:var(--mag);padding:4px 9px;line-height:1}
+.addbtn:hover,.addbtn:focus-visible{border-color:var(--mag);background:var(--magbg)}
+/* after a red or amber chip: a missing step is often how a step fails */
+.missed{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:7px 11px;
+  border:1px dashed var(--mag);border-radius:var(--r2);background:var(--magbg);font:12.5px/1.45 var(--f-ui);color:var(--mag)}
+.missed[hidden]{display:none}
+.missed .addbtn{margin-left:auto;border-style:solid;border-color:var(--mag);background:var(--paper)}
+
+/* the composer: one sentence, read or write, an optional command */
+li.composer{list-style:none;margin:0;padding:12px 15px 13px;background:var(--paper);border-top:1px solid var(--mag);
+  border-bottom:1px solid var(--mag);border-left:3px solid var(--mag)}
+.cmp-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font:700 11px var(--f-ui);letter-spacing:.7px;
+  text-transform:uppercase;color:var(--mag);margin-bottom:8px}
+.cmp-h .car{font:700 16px/1 var(--f-body);letter-spacing:0}
+.cmp-id{font:700 12px var(--f-mono);text-transform:none;letter-spacing:0;color:var(--mag);background:var(--magbg);
+  border:1px dashed var(--mag);border-radius:3px;padding:0 6px}
+/* an id inside an uppercase label stays exactly as it is typed */
+.lc{text-transform:none;letter-spacing:0;font-family:var(--f-mono)}
+.cmp-h .hint,.cmp-lab span{text-transform:none;letter-spacing:0;font-weight:400}
+.composer .hint,.todo-quick .hint{font:11.5px var(--f-ui);color:var(--dim2)}
+.cmp-in{width:100%;background:var(--sunk);color:var(--fg);border:1px solid var(--line);border-radius:var(--r2);
+  padding:7px 10px;font:15px/1.4 var(--f-body)}
+.cmp-in.mono{font:12.5px/1.55 var(--f-mono)}
+textarea.cmp-in{resize:vertical;min-height:38px}
+.cmp-in:focus{outline:none;border-color:var(--mag)}
+.cmp-in::placeholder{color:var(--dim2);opacity:.75}
+.cmp-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
+.cmp-lab{display:block;font:700 10px var(--f-ui);letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);margin:11px 0 4px}
+/* the audit's own rules, shown while typing — a meter, never a gate */
+.meter{display:inline-flex;align-items:center;gap:4px;font:600 10.5px/1.6 var(--f-ui);border:1px solid var(--line);
+  border-radius:999px;padding:0 8px;color:var(--dim);background:var(--panel2)}
+.meter[hidden]{display:none}
+.meter.ok{color:var(--ok);border-color:var(--ok);background:var(--okbg)}
+.meter.warn{color:var(--warn);border-color:var(--warn);background:var(--warnbg)}
+.meter button{background:none;border:none;padding:0 0 0 4px;font:700 10.5px var(--f-ui);color:inherit;cursor:pointer;
+  text-decoration:underline}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:var(--r2);overflow:hidden;flex:none}
+.seg button{background:var(--panel2);border:none;border-right:1px solid var(--line2);cursor:pointer;
+  font:600 11.5px var(--f-ui);color:var(--dim);padding:4px 11px}
+.seg button:last-child{border-right:none}
+.seg button[aria-pressed="true"]{background:var(--magbg);color:var(--mag)}
+.seg button[aria-pressed="true"].w{background:var(--badbg);color:var(--bad)}
+.cmp-btns{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:11px}
+.cmp-btns .hint{margin-left:auto}
+.btn-p{background:var(--mag);color:var(--paper);border:1px solid var(--mag);border-radius:var(--r2);
+  font:700 12px var(--f-ui);padding:6px 13px;cursor:pointer}
+.btn-p:disabled{opacity:.4;cursor:default}
+.btn-g{background:var(--panel2);color:var(--dim);border:1px solid var(--line);border-radius:var(--r2);
+  font:12px var(--f-ui);padding:5px 12px;cursor:pointer}
+.btn-g:hover{color:var(--fg);border-color:var(--mag)}
+
+/* at rest the rows are shut: a small violet count says where something was added */
+.row-mark{flex:none;font:600 10px/1.6 var(--f-ui);letter-spacing:.3px;color:var(--mag);border:1px dashed var(--mag);
+  border-radius:999px;padding:0 7px;white-space:nowrap}
+.todo-mark{flex:none;font:600 10px/1.6 var(--f-ui);color:var(--mag);background:var(--magbg);border:1px solid var(--mag);
+  border-radius:999px;padding:0 7px;white-space:nowrap;cursor:pointer;align-self:center}
+
+/* the to-do section: one line at rest, the list one click down */
+section.todo{margin:26px 0 0;border:1px solid var(--line2);border-left:3px solid var(--mag);border-radius:var(--r);
+  background:var(--panel)}
+section.todo>details>summary{display:flex;align-items:center;gap:12px;padding:12px 17px;cursor:pointer;list-style:none;
+  outline:none}
+section.todo>details[open]>summary{border-bottom:1px solid var(--line)}
+.todo-k{font:700 10.5px/1.3 var(--f-ui);letter-spacing:1.15px;text-transform:uppercase;color:var(--mag);flex:none}
+.todo-cnt{font:12px var(--f-ui);color:var(--dim);flex:none}
+.todo-cnt b{color:var(--mag)}
+.todo-peek{flex:1;min-width:0;font:13px var(--f-body);color:var(--dim2);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+section.todo>details[open] .todo-peek{visibility:hidden}
+.todo-add{flex:none;margin-left:auto;background:var(--paper);border:1px solid var(--mag);color:var(--mag);
+  border-radius:999px;font:700 11px var(--f-ui);padding:3px 11px;cursor:pointer}
+.todo-add:hover{background:var(--magbg)}
+.todo-body{padding:4px 0 14px}
+.todo-grp{display:flex;align-items:center;gap:8px;font:700 10px/1.3 var(--f-ui);letter-spacing:.9px;
+  text-transform:uppercase;color:var(--dim2);padding:12px 17px 4px}
+.todo-grp::after{content:"";flex:1;height:1px;background:var(--line)}
+.todo-grp em{font-style:normal;color:var(--mag)}
+ul.todo-list{list-style:none;margin:0;padding:0}
+li.todo-item{display:grid;grid-template-columns:18px 30px 1fr auto;gap:0 9px;align-items:baseline;margin:0;padding:6px 17px}
+li.todo-item:hover{background:var(--panel2)}
+li.todo-item>input{margin:0;transform:translateY(2px);cursor:pointer;accent-color:var(--mag)}
+.todo-id{font:700 11.5px var(--f-mono);color:var(--mag)}
+.todo-tx{font-size:.97em;line-height:1.45;min-width:0}
+li.todo-item.done .todo-tx{color:var(--dim2);text-decoration:line-through}
+.todo-meta{display:flex;align-items:center;gap:8px;font:11px var(--f-ui);color:var(--dim2);white-space:nowrap}
+.todo-anc{font:11px var(--f-mono);color:var(--acc);background:var(--accbg);border:1px solid var(--line);
+  border-radius:3px;padding:0 6px;cursor:pointer}
+.todo-anc:hover{border-color:var(--acc)}
+.todo-became{font:11px var(--f-mono);color:var(--mag);background:none;border:1px dashed var(--mag);border-radius:3px;
+  padding:0 6px;cursor:pointer}
+.todo-acts{display:inline-flex;gap:8px;opacity:0;transition:opacity .1s}
+li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
+.todo-new{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;margin:12px 17px 0;
+  padding-top:12px;border-top:1px dashed var(--line)}
+.todo-new select{background:var(--sunk);color:var(--fg);border:1px solid var(--line);border-radius:var(--r2);
+  font:12px var(--f-ui);padding:5px 6px}
+.todo-empty{margin:10px 17px 2px;font:12.5px var(--f-ui);color:var(--dim2)}
+
+/* the pill's + to-do, with the open count */
+.pill #flowTodo{color:var(--mag)}
+.todo-n{display:inline-block;min-width:1.5em;text-align:center;font-weight:700;background:var(--magbg);
+  border-radius:9px;padding:0 5px;margin-left:4px}
+/* quick capture: a to-do from anywhere, without the page moving */
+.todo-quick{position:fixed;top:50px;right:14px;z-index:61;width:min(390px,calc(100vw - 28px));background:var(--paper);
+  border:1px solid var(--line2);border-top:3px solid var(--mag);border-radius:var(--r);box-shadow:var(--sh-pop);
+  padding:12px 14px 11px}
+.todo-quick[hidden]{display:none}
+.tq-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.tq-h .todo-k{margin-right:auto}
+.tq-anc{display:inline-flex;align-items:center;gap:5px;font:11px var(--f-mono);color:var(--acc);background:var(--accbg);
+  border:1px solid var(--line);border-radius:3px;padding:0 3px 0 6px}
+.tq-anc button{background:none;border:none;color:var(--dim2);cursor:pointer;font:12px var(--f-ui);padding:0 3px}
+.tq-f{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
+.tq-f .hint{margin-left:auto}
+.tq-f a{color:var(--mag)}
+.flow-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:62;background:var(--fg);
+  color:var(--paper);font:600 12px var(--f-ui);border-radius:999px;padding:7px 15px;box-shadow:var(--sh-pop);
+  opacity:0;transition:opacity .18s;pointer-events:none}
+.flow-toast.on{opacity:1}
+@keyframes fvflash{0%{box-shadow:0 0 0 3px var(--mag)}100%{box-shadow:0 0 0 3px transparent}}
+.flashed{animation:fvflash 1.4s ease-out both}
+
+@media print{
+  /* paper keeps the work, not the controls: added steps print dashed in place,
+     the to-do list prints open, and its boxes can be ticked in pen */
+  li.seam,li.pb-end,.addfoot,.missed,li.composer,.addacts,.todo-acts,.todo-add,.todo-quick,.flow-toast,
+  .todo-new,.todo-peek{display:none!important}
+  li.step.added,li.todo-item,section.todo{break-inside:avoid}
+  section.todo{background:var(--print-bg)}
+}
+@media (prefers-reduced-motion:reduce){
+  .flashed{animation:none;outline:2px solid var(--mag)}
+  .seam-add,.todo-acts,.flow-toast{transition:none}
+}
+@media (max-width:700px){
+  li.todo-item{grid-template-columns:18px 30px 1fr}
+  li.todo-item .todo-meta{grid-column:3;flex-wrap:wrap;white-space:normal}
+  .todo-acts{opacity:1}
+  .todo-new{grid-template-columns:1fr 1fr}
+  .todo-new .cmp-in{grid-column:1/3}
+  /* the foot gets its own line above the verdict and Done, so nothing overlaps */
+  li.step .in .fin{flex-wrap:wrap}
+  li.step .in .fin .addfoot{flex:1 0 100%;margin:0 0 4px}
+}
+
 /* ── footer stamp ─────────────────────────────────────────────────────────── */
 .foot{margin-top:36px;padding-top:13px;border-top:1px solid var(--line2);
   font:11.5px/1.8 var(--f-ui);color:var(--dim2)}

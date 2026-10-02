@@ -21,7 +21,7 @@ plain rebuild. Never fix a single deliverable's markup for something the runtime
 | `template/report.src.html` | report skeleton with scaffold markers | `flowviz new report` expands it |
 | `template/drawing.src.html` | drawing skeleton | `flowviz new drawing` fills it |
 | `bin/flowviz` | the one entry point; bare = cheat sheet | pure passthroughs |
-| `bin/flowviz-*.py` | new, build, audit, serve, captures, results, relabel | stdlib Python 3 only |
+| `bin/flowviz-*.py` | new, build, audit, serve, captures, fold, results, relabel | stdlib Python 3 only |
 | `PLAN.src.html` → `PLAN.html` | the toolkit's own plan, written to the standard | must audit clean |
 | `examples/` | reference deliverables | rebuilt and audited with every change |
 
@@ -56,7 +56,7 @@ drawing without a template change, and a fix to any asset reaches everything on 
 ```js
 window.FLOWVIZ = {
   doc, version, kind,          // from window.FLOW
-  state,                       // the live state object, schema 4 (SPEC §6). Mutate, then save().
+  state,                       // the live state object, schema 5 (SPEC §6). Mutate, then save().
   save(),                      // debounced 700 ms: localStorage always, PUT to the sidecar when served
   onHydrate(fn),               // fn() after a sidecar load merged newer state into `state`
   auditHooks: [],              // push fn(add); add(label, actual, capText, ok) adds a ?audit=1 row
@@ -119,6 +119,15 @@ instance variable `--flow`, set on the figure — never `--acc`, which is the pa
   `flowviz new` and `flowviz results`, and displayed by `flow.js` only for ids of that shape, so an older
   report keeps its counters until it is relabelled.
 - **The error tier exists twice** — `CMD_ERR` in `flow.js` and in `bin/flowviz-captures.py`. Change both.
+- **An added step's id (`b3a`) is read in four places** — `flow.js` (where it is drawn, and the label),
+  `naming_checks()` in the audit, `plan()` in relabel, and `flowviz fold` (with `place_added()` in
+  captures). Change them together. Fold cuts its markup from the template's `step-ro`/`step-w` blocks and
+  replaces only the placeholders it can fill, so the unfilled-slot check still catches the rest.
+- **What the human adds is never the agent's budget.** `buildAudit()` in `flow.js` leaves out
+  `li.step.added`, `.row-mark` and `section.todo`; anything new the page draws from state must be left
+  out the same way, or a busy run pushes a clean report over its caps.
+- **State keys are additive and never dropped.** `merge()` keeps keys it does not know, and serve carries
+  over top-level keys a PUT leaves out. A removal is a tombstone (`gone`), because the merge is a union.
 - **The unfilled-slot check compares against the templates.** Change a template's placeholder words and
   the audit follows automatically; keep every placeholder inside every cap, or a fresh scaffold fails on
   more than "unfilled slots".
