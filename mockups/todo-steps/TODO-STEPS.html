@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="flowviz-doc" content="checkout">
-<meta name="flowviz-kind" content="drawing">
-<title>Checkout confirms in 300 ms</title>
-<script>window.FLOW={"doc": "checkout", "version": "3.1.0", "kind": "drawing", "built": "2026-10-02T02:14:57Z"};
+<meta name="flowviz-doc" content="todo-steps">
+<meta name="flowviz-kind" content="report">
+<title>Added steps and to-dos fit the sidecar without moving an id</title>
+<script>window.FLOW={"doc": "todo-steps", "version": "3.1.0", "kind": "report", "built": "2026-10-02T02:14:57Z"};
 (function(){var h=document.documentElement;h.setAttribute("data-kind",FLOW.kind);try{var q=(location.search.match(/[?&]theme=(light|dark)/)||[])[1];var s=JSON.parse(localStorage.getItem("flowviz:"+FLOW.doc)||"{}"),u=s.ui||{};var t=q||u.theme||"auto";var d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);h.setAttribute("data-theme",d?"dark":"light");if(u.motion===false)h.classList.add("still");}catch(e){h.setAttribute("data-theme","light");}})();</script>
 <style>
 /* ===========================================================================
@@ -1212,279 +1212,876 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 }
 
 </style>
+<style id="fvProtoCss">
+/* ===========================================================================
+   FLOW_VIZ — proto.css · PROTOTYPE LAYER for to-dos and added steps
+   Not part of template/. build.sh injects it after flow.css and draw.css.
+
+   One idea carries the look: violet (--mag) is human ink. flow.css already
+   uses it for the sidecar key on every paste box, so everything typed into
+   the page after handover — an added step, a to-do — wears the same ink, and
+   is dashed where the agent's work is solid. Journal light reads it as pencil
+   in the margin of a notebook; traditional dark as a violet outline.
+   Tokens only, like every FLOW_VIZ stylesheet.
+   =========================================================================== */
+
+/* ── an added step: an insertion in the playbook ──────────────────────────
+   Same grid as li.step. A dashed violet rule on the left and a faint violet
+   ground; a proofreader's caret sits in the gap above it, where it went in. */
+.fv-added{position:relative;background:var(--magbg);border-left:2px dashed var(--mag);
+  padding-left:13px!important}
+.fv-added::before{content:"\2038";position:absolute;left:3px;top:-11px;
+  font:700 17px/1 var(--f-body);color:var(--mag);pointer-events:none}
+.fv-added .n{color:var(--mag)!important}
+.fv-tag{display:inline-block;font:700 9.5px/1.5 var(--f-ui);letter-spacing:.55px;text-transform:uppercase;
+  color:var(--mag);border:1px dashed var(--mag);border-radius:3px;padding:0 5px;margin-left:8px;
+  white-space:nowrap;vertical-align:1px}
+.fv-own{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;
+  font:12px/1.5 var(--f-ui);color:var(--mag)}
+.fv-own b{color:var(--mag)}
+.fv-nocmd{font:12.5px/1.5 var(--f-ui);color:var(--dim);margin:0 0 6px}
+.fv-lnk{background:none;border:none;padding:0 2px;font:12px var(--f-ui);color:var(--mag);
+  cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+.fv-lnk:hover{color:var(--fg)}
+.fv-lnk.fv-sure{color:var(--bad);text-decoration-style:solid}
+.fv-acts2{margin-left:auto;display:inline-flex;gap:10px}
+
+/* an added step has no pass rule until it is folded: its chip says captured, in human ink */
+.fv-added .vd.saved{color:var(--mag)}
+.fv-added .vd.vdf.saved{border-color:var(--mag);background:var(--magbg)}
+
+/* ── the insert line: hover the seam between two steps ──────────────────── */
+li.fv-gap{list-style:none;position:relative;height:0;margin:0;padding:0;border:0}
+.fv-ins{position:absolute;left:15px;right:15px;top:-9px;height:18px;z-index:3;display:flex;
+  align-items:center;justify-content:center;background:none;border:none;padding:0;cursor:pointer;
+  opacity:0;transition:opacity .12s}
+.fv-ins::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1.5px dashed var(--mag)}
+.fv-ins span{position:relative;font:600 11px/1 var(--f-ui);color:var(--mag);background:var(--paper);
+  border:1px solid var(--mag);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.fv-ins span i{font-style:normal;font-family:var(--f-mono);margin-left:5px;opacity:.8}
+.fv-ins:hover,.fv-ins:focus-visible,.fv-ins.fv-pose{opacity:1}
+.fv-ins:focus-visible span{outline:2px solid var(--mag);outline-offset:2px}
+
+/* ── the end of a playbook: one more step after the last ───────────────── */
+li.fv-end{list-style:none;margin:0;padding:6px 15px 7px;border-top:1px solid var(--line)}
+.fv-endbtn{background:none;border:none;padding:2px 0;cursor:pointer;font:600 12px var(--f-ui);
+  color:var(--mag);opacity:.75}
+.fv-endbtn:hover,.fv-endbtn:focus-visible{opacity:1}
+.fv-endbtn i{font-style:normal;font-family:var(--f-mono);margin-left:6px;opacity:.75}
+
+/* ── the step foot: + step after, + to-do, beside Done ─────────────────── */
+.fin .fv-foot{margin-right:auto;display:inline-flex;gap:6px}
+.fv-fb{background:none;border:1px dashed var(--line2);border-radius:var(--r2);cursor:pointer;
+  font:600 11px var(--f-ui);color:var(--mag);padding:4px 9px;line-height:1}
+.fv-fb:hover,.fv-fb:focus-visible{border-color:var(--mag);background:var(--magbg)}
+
+/* ── after a red chip: was a step missing? ─────────────────────────────── */
+.fv-miss{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:7px 11px;
+  border:1px dashed var(--mag);border-radius:var(--r2);background:var(--magbg);
+  font:12.5px/1.45 var(--f-ui);color:var(--mag)}
+.fv-miss[hidden]{display:none}
+.fv-miss .fv-fb{margin-left:auto;border-style:solid;border-color:var(--mag);background:var(--paper)}
+
+/* ── the composer: one sentence, read or write, an optional command ────── */
+.fv-compose{list-style:none;margin:0;padding:12px 15px 13px;background:var(--paper);
+  border-top:1px solid var(--mag);border-bottom:1px solid var(--mag);border-left:3px solid var(--mag)}
+.fv-ch{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font:700 11px var(--f-ui);
+  letter-spacing:.7px;text-transform:uppercase;color:var(--mag);margin-bottom:8px}
+.fv-ch .fv-nid{font:700 12px var(--f-mono);text-transform:none;letter-spacing:0;color:var(--mag);
+  background:var(--magbg);border:1px dashed var(--mag);border-radius:3px;padding:0 6px}
+.fv-ch .fv-car{font:700 16px/1 var(--f-body);letter-spacing:0}
+.fv-ch .fv-hint,.fv-lab span{text-transform:none;letter-spacing:0;font-weight:400}
+/* an id inside an uppercase micro-label stays exactly as it is typed */
+.fv-lc{text-transform:none;letter-spacing:0;font-family:var(--f-mono)}
+.fv-in{width:100%;background:var(--sunk);color:var(--fg);border:1px solid var(--line);
+  border-radius:var(--r2);padding:7px 10px;font:15px/1.4 var(--f-body)}
+.fv-in.mono,.fv-in[data-mono]{font:12.5px/1.55 var(--f-mono)}
+textarea.fv-in{resize:vertical;min-height:38px}
+.fv-in:focus{outline:none;border-color:var(--mag)}
+.fv-in::placeholder{color:var(--dim2);opacity:.75}
+.fv-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
+.fv-lab{font:700 10px var(--f-ui);letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);
+  margin:11px 0 4px;display:block}
+/* meters: the audit's own rules, shown while typing — never a hard stop */
+.fv-m{display:inline-flex;align-items:center;gap:4px;font:600 10.5px/1.6 var(--f-ui);
+  border:1px solid var(--line);border-radius:999px;padding:0 8px;color:var(--dim);background:var(--panel2)}
+.fv-m.ok{color:var(--ok);border-color:var(--ok);background:var(--okbg)}
+.fv-m.warn{color:var(--warn);border-color:var(--warn);background:var(--warnbg)}
+.fv-m button{background:none;border:none;padding:0 0 0 4px;font:700 10.5px var(--f-ui);
+  color:inherit;cursor:pointer;text-decoration:underline}
+.fv-seg{display:inline-flex;border:1px solid var(--line2);border-radius:var(--r2);overflow:hidden}
+.fv-seg button{background:var(--panel2);border:none;border-right:1px solid var(--line2);cursor:pointer;
+  font:600 11.5px var(--f-ui);color:var(--dim);padding:4px 11px}
+.fv-seg button:last-child{border-right:none}
+.fv-seg button[aria-pressed="true"]{background:var(--magbg);color:var(--mag)}
+.fv-seg button[aria-pressed="true"].w{background:var(--badbg);color:var(--bad)}
+.fv-hint{font:11.5px var(--f-ui);color:var(--dim2)}
+.fv-btns{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:11px}
+.fv-bp{background:var(--mag);color:var(--paper);border:1px solid var(--mag);border-radius:var(--r2);
+  font:700 12px var(--f-ui);padding:6px 13px;cursor:pointer}
+.fv-bp:disabled{opacity:.4;cursor:default}
+.fv-bp:not(:disabled):hover{filter:brightness(1.08)}
+.fv-bg{background:var(--panel2);color:var(--dim);border:1px solid var(--line);border-radius:var(--r2);
+  font:12px var(--f-ui);padding:5px 12px;cursor:pointer}
+.fv-bg:hover{color:var(--fg);border-color:var(--mag)}
+.fv-btns .fv-hint{margin-left:auto}
+
+/* ── markers at rest: where the human added something ─────────────────── */
+.fv-rm{flex:none;font:600 10px/1.6 var(--f-ui);letter-spacing:.3px;color:var(--mag);
+  border:1px dashed var(--mag);border-radius:999px;padding:0 7px;white-space:nowrap}
+.fv-tdm{display:inline-block;margin-left:8px;font:600 10px/1.6 var(--f-ui);color:var(--mag);
+  background:var(--magbg);border:1px solid var(--mag);border-radius:999px;padding:0 7px;
+  white-space:nowrap;cursor:pointer;vertical-align:1px}
+
+/* ── the to-do section: one line at rest, everything one click down ────── */
+.fv-todo{margin:26px 0 0;border:1px solid var(--line2);border-left:3px solid var(--mag);
+  border-radius:var(--r);background:var(--panel)}
+.fv-todo>details>summary,.fvm-sumrow{display:flex;align-items:center;gap:12px;padding:12px 17px;cursor:pointer;
+  list-style:none;outline:none}
+.fv-todo>details[open]>summary,.fvm-sumrow{border-bottom:1px solid var(--line)}
+.fv-k{font:700 10.5px/1.3 var(--f-ui);letter-spacing:1.15px;text-transform:uppercase;color:var(--mag);flex:none}
+.fv-cnt{font:12px var(--f-ui);color:var(--dim);flex:none}
+.fv-cnt b{color:var(--mag)}
+.fv-peek{flex:1;min-width:0;font:13px var(--f-body);color:var(--dim2);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.fv-todo>details[open] .fv-peek{visibility:hidden}
+.fv-add{flex:none;margin-left:auto;background:var(--paper);border:1px solid var(--mag);color:var(--mag);
+  border-radius:999px;font:700 11px var(--f-ui);padding:3px 11px;cursor:pointer}
+.fv-add:hover{background:var(--magbg)}
+.fv-body{padding:4px 0 12px}
+.fv-grp{display:flex;align-items:center;gap:8px;font:700 10px/1.3 var(--f-ui);letter-spacing:.9px;
+  text-transform:uppercase;color:var(--dim2);padding:12px 17px 4px}
+.fv-grp::after{content:"";flex:1;height:1px;background:var(--line)}
+.fv-grp em{font-style:normal;color:var(--mag)}
+ul.fv-tl{list-style:none;margin:0;padding:0}
+li.fv-ti{display:grid;grid-template-columns:18px 30px 1fr auto;gap:0 9px;align-items:baseline;
+  margin:0;padding:6px 17px}
+li.fv-ti:hover{background:var(--panel2)}
+li.fv-ti>input{margin:0;transform:translateY(2px);cursor:pointer;accent-color:var(--mag)}
+.fv-id{font:700 11.5px var(--f-mono);color:var(--mag)}
+.fv-tx{font-size:.97em;line-height:1.45;min-width:0}
+li.fv-ti.done .fv-tx{color:var(--dim2);text-decoration:line-through}
+.fv-meta{display:flex;align-items:center;gap:8px;font:11px var(--f-ui);color:var(--dim2);white-space:nowrap}
+.fv-anc{font:11px var(--f-mono);color:var(--acc);background:var(--accbg);border:1px solid var(--line);
+  border-radius:3px;padding:0 6px;cursor:pointer}
+.fv-anc:hover{border-color:var(--acc)}
+.fv-became{font:11px var(--f-mono);color:var(--mag);border:1px dashed var(--mag);border-radius:3px;
+  padding:0 6px;cursor:pointer;background:none}
+.fv-acts{display:inline-flex;gap:8px;opacity:0;transition:opacity .1s}
+li.fv-ti:hover .fv-acts,li.fv-ti:focus-within .fv-acts{opacity:1}
+.fv-edit{width:100%}
+.fv-new{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;
+  margin:12px 17px 2px;padding-top:12px;border-top:1px dashed var(--line)}
+.fv-new select{background:var(--sunk);color:var(--fg);border:1px solid var(--line);border-radius:var(--r2);
+  font:12px var(--f-ui);padding:5px 6px}
+.fv-rb{margin:12px 17px 0}
+.fv-rb .cmd.fig pre{white-space:pre;font-size:11.5px}
+.fv-rb .fv-btns{margin-top:8px}
+.fv-empty{padding:10px 17px 2px;font:12.5px var(--f-ui);color:var(--dim2)}
+
+/* ── the pill: + to-do, with the open count ────────────────────────────── */
+.pill #fvTodoBtn{color:var(--mag)}
+.fv-pc{display:inline-block;min-width:1.5em;text-align:center;font-weight:700;background:var(--magbg);
+  border-radius:9px;padding:0 5px;margin-left:4px}
+
+/* ── quick capture: a to-do without losing your place ──────────────────── */
+.fv-quick{position:fixed;top:50px;right:14px;z-index:61;width:min(390px,calc(100vw - 28px));
+  background:var(--paper);border:1px solid var(--line2);border-top:3px solid var(--mag);
+  border-radius:var(--r);box-shadow:var(--sh-pop);padding:12px 14px 11px}
+.fv-quick[hidden]{display:none}
+.fv-qh{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.fv-qh .fv-k{margin-right:auto}
+.fv-qa{display:inline-flex;align-items:center;gap:5px;font:11px var(--f-mono);color:var(--acc);
+  background:var(--accbg);border:1px solid var(--line);border-radius:3px;padding:0 3px 0 6px}
+.fv-qa button{background:none;border:none;color:var(--dim2);cursor:pointer;font:12px var(--f-ui);padding:0 3px}
+.fv-qf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
+.fv-qf .fv-hint{margin-left:auto}
+.fv-qf a{color:var(--mag)}
+
+/* ── toast and the prototype tag ───────────────────────────────────────── */
+.fv-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:62;
+  background:var(--fg);color:var(--paper);font:600 12px var(--f-ui);border-radius:999px;padding:7px 15px;
+  box-shadow:var(--sh-pop);opacity:0;transition:opacity .18s;pointer-events:none}
+.fv-toast.on{opacity:1}
+.fv-proto{position:fixed;right:14px;bottom:12px;z-index:59;display:flex;align-items:center;gap:8px;
+  font:11px var(--f-ui);color:var(--dim);background:var(--panel2);border:1px dashed var(--mag);
+  border-radius:20px;padding:4px 6px 4px 11px;box-shadow:var(--sh)}
+.fv-proto b{color:var(--mag);letter-spacing:.6px;text-transform:uppercase;font-size:10px}
+.fv-proto button{background:none;border:1px solid transparent;color:var(--mag);font:11px var(--f-ui);
+  cursor:pointer;padding:1px 5px;border-radius:4px}
+.fv-proto button:hover{border-color:var(--line2)}
+
+/* poses: fixed views for headless screenshots (?pose=steps|compose|todo), prototype only */
+html.fv-posing .card,html.fv-posing .spine,html.fv-posing .ctl,html.fv-posing h2.sec,
+html.fv-posing details.row:not(.fv-keep),html.fv-posing .foot,html.fv-posing .fv-proto{display:none}
+html.fv-posing .fv-todo{margin-top:8px}
+
+@keyframes fvflash{0%{box-shadow:0 0 0 3px var(--mag)}100%{box-shadow:0 0 0 3px transparent}}
+.fv-flash{animation:fvflash 1.4s ease-out both}
+
+/* ── static mockups inside the proposal: the same look, never live ─────── */
+.fvm{border:1px solid var(--line2);border-radius:var(--r);background:var(--panel);margin:14px 0;
+  overflow:hidden;font-size:15px}
+.fvm>.hd{display:flex;align-items:center;gap:11px;padding:9px 15px;border-bottom:1px solid var(--line);
+  background:var(--panel2);font:600 13px var(--f-ui)}
+.fvm>.hd .prog{margin-left:auto;font:11.5px var(--f-mono);color:var(--dim);font-weight:400}
+.fvm>.hd .prog .f{color:var(--bad)}
+.fvm-step{display:grid;grid-template-columns:20px 1fr auto;gap:0 11px;align-items:start;padding:9px 15px;
+  border-bottom:1px solid var(--line)}
+.fvm-step>input{margin:4px 0 0}
+.fvm-step .sm{display:flex;gap:9px;align-items:baseline}
+.fvm-step .n{font:700 12px var(--f-ui);color:var(--acc);min-width:1.9em;flex:none}
+.fvm-step .ds{flex:1;line-height:1.45;font-size:.97em}
+.fvm-step.done .ds{color:var(--dim2);text-decoration:line-through}
+.fvm-step .ctr{display:flex;align-items:center;gap:7px;padding-top:2px}
+.fvm-step .bd{grid-column:2/4;margin:8px 0 2px 2.1em;padding-top:8px;border-top:1px dotted var(--line)}
+.fvm .fv-ins{opacity:1}
+.fvm-gap{position:relative;height:0;z-index:3}
+.fvm-pill{display:inline-flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);
+  border-radius:20px;padding:4px 8px 4px 11px;font:11.5px var(--f-ui);color:var(--dim)}
+.fvm-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.fvm-pill .sep{width:1px;height:13px;background:var(--line)}
+.fvm-pill .b{color:var(--acc)}
+.fvm-pill .t{color:var(--mag)}
+.fvm .fv-quick{position:relative;top:auto;right:auto;width:auto;box-shadow:var(--sh)}
+.fvm-fake{background:var(--sunk);border:1px solid var(--mag);border-radius:var(--r2);padding:7px 10px;
+  font:15px/1.4 var(--f-body);color:var(--fg)}
+.fvm-fake.mono{font:12.5px/1.55 var(--f-mono);border-color:var(--line)}
+.fvm-fake .caret{display:inline-block;width:1.5px;height:1.05em;background:var(--mag);vertical-align:-2px;margin-left:1px}
+.fvm-fake mark{background:var(--warnbg);color:var(--warn);border-bottom:1.5px solid var(--warn);padding:0 1px}
+.fvm-opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+.fvm-opt{border:1px solid var(--line);border-radius:var(--r);background:var(--paper);padding:12px 13px 10px;
+  display:flex;flex-direction:column;gap:8px;min-width:0}
+.fvm-opt.rec{border-color:var(--mag);box-shadow:0 0 0 1px var(--mag)}
+.fvm-opt h4{margin:0;font:700 12.5px var(--f-ui);color:var(--fg);display:flex;align-items:center;gap:7px}
+.fvm-opt h4 .L{font:700 11px var(--f-mono);color:var(--mag)}
+.fvm-opt h4 .rb{margin-left:auto;font:700 9.5px var(--f-ui);letter-spacing:.6px;text-transform:uppercase;
+  color:var(--paper);background:var(--mag);border-radius:3px;padding:1px 6px}
+.fvm-opt p{margin:0;font:12.5px/1.5 var(--f-ui);color:var(--dim)}
+.fvm-opt p b{color:var(--fg)}
+.fvm-mini{border:1px solid var(--line);border-radius:var(--r2);background:var(--panel);padding:8px;
+  font:12px/1.4 var(--f-ui);color:var(--dim);min-height:96px;position:relative;overflow:hidden}
+.fvm-mini .ln{height:7px;border-radius:4px;background:var(--line);margin:6px 0}
+.fvm-mini .ln.s{width:62%} .fvm-mini .ln.m{width:80%}
+.fvm-mini .tray{position:absolute;top:0;right:0;bottom:0;width:46%;background:var(--paper);
+  border-left:3px solid var(--mag);padding:7px 8px;box-shadow:var(--sh-pop)}
+.fvm-mini .it{display:flex;gap:5px;align-items:center;font:10.5px var(--f-ui);color:var(--fg);margin:4px 0;
+  white-space:nowrap;overflow:hidden}
+.fvm-mini .it i{font-style:normal;font:700 10px var(--f-mono);color:var(--mag)}
+.fvm-mini .sec{border:1px solid var(--line2);border-left:3px solid var(--mag);border-radius:3px;
+  background:var(--paper);padding:5px 7px;margin-top:8px}
+.fvm-mini .chipm{display:inline-block;font:600 9.5px var(--f-ui);color:var(--mag);background:var(--magbg);
+  border:1px solid var(--mag);border-radius:999px;padding:0 6px;margin-left:4px}
+.fvm-mini .stp{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line);padding:4px 0;
+  font:11px var(--f-ui);color:var(--fg)}
+.fvm-mini .stp b{color:var(--acc);font-size:10.5px}
+.fvm-mini .k2{font:700 9px var(--f-ui);letter-spacing:.9px;text-transform:uppercase;color:var(--mag)}
+.fvm-cap{font:11.5px var(--f-ui);color:var(--dim2);text-align:center;margin:-6px 0 14px}
+.fvm-fin{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:10px;padding-top:9px;
+  border-top:1px dotted var(--line)}
+.fvm-fin .fv-foot{margin-right:auto;display:inline-flex;gap:6px}
+.fvm-fd{display:inline-flex;align-items:center;gap:8px;font:600 11.5px var(--f-ui);letter-spacing:.55px;
+  text-transform:uppercase;color:var(--dim);background:var(--panel2);border:1px solid var(--line);
+  border-radius:var(--r2);padding:5px 12px;line-height:1}
+.fvm-end{padding:6px 15px 7px}
+.fvm-pad{padding:10px 12px}
+.fvm-tr{display:flex;justify-content:flex-end}
+.fvm .fv-todo{margin:10px 0 0}
+.fvm .fv-quick{margin:8px 0 0 auto;max-width:390px}
+.fvm-step .fv-tdm{align-self:center}
+.fvm-life{overflow-x:auto}
+.fvm-life svg{display:block;min-width:760px;width:100%;height:auto}
+
+@media (max-width:700px){
+  .fvm-opts{grid-template-columns:1fr}
+  li.fv-ti{grid-template-columns:18px 30px 1fr}
+  li.fv-ti .fv-meta{grid-column:3;flex-wrap:wrap;white-space:normal}
+  .fv-acts{opacity:1}
+  .fv-new{grid-template-columns:1fr 1fr}
+  .fv-new .fv-in{grid-column:1/3}
+  /* the foot gets its own line above the verdict and Done, so nothing overlaps */
+  li.step .in .fin{flex-wrap:wrap}
+  .fin .fv-foot{flex:1 0 100%;margin:0 0 4px}
+}
+@media (prefers-reduced-motion:reduce){
+  .fv-flash{animation:none;outline:2px solid var(--mag)}
+  .fv-ins,.fv-acts,.fv-toast{transition:none}
+}
+@media print{
+  /* paper keeps the work, not the controls: added steps print dashed in place,
+     the to-do list prints open (flow.js opens every details), checkboxes stay
+     so an open to-do can be ticked in pen */
+  li.fv-gap,li.fv-end,.fv-foot,.fv-miss,.fv-compose,.fv-acts,.fv-acts2,.fv-add,.fv-quick,.fv-proto,
+  .fv-toast,.fv-new,.fv-rb,.pill #fvTodoBtn{display:none!important}
+  .fv-added,li.fv-ti,.fv-todo{break-inside:avoid}
+  .fv-todo{background:var(--print-bg)}
+  .fv-peek{display:none}
+}
+
+</style>
 </head>
 <body>
-<main>
-<!-- A reference drawing: a whole system with three flows and one segment.
-     Everything below is what an agent writes; the runtime does the rest. -->
-<figure class="fv-drawing" data-mode="page">
+
+<!-- ══════════════ LAYER 1 — THE CARD ══════════════
+     A proposal for FLOW_VIZ 3.1.0, written to the standard it proposes to extend. The mockups in
+     rows a and b use classes from proto/proto.css, which build.sh injects after flowviz build:
+     prototype only, outside template/. -->
+<div class="card">
+  <div class="top">
+    <span class="chip ok"><span class="d"></span>Approved · shipped in 3.1.0</span>
+    <span class="meta">2026-10-01 · proposed on 3.0.0 with a prototype outside template/</span>
+  </div>
+
+  <h1>Added steps and to-dos fit the sidecar without moving an id</h1>
+
+  <div class="slot">
+    <span class="k">Verdict</span>
+    <div class="v" data-slot="verdict">Treat both as human input, like a capture. A step you insert after b3 is
+    b3a, a to-do is t1, and both save to the sidecar. The agent reads them back and folds b3a into the source
+    under the same id, so nothing moves and no cap changes.</div>
+  </div>
+
+  <div class="slot wh">
+    <span class="k">So what</span>
+    <div class="v" data-slot="sowhat">Pick where to-dos live and which ways of adding a step ship. Try each first
+    on the prototype: the deploy example, mid-run, with both working.</div>
+  </div>
+
+  <div class="vitals">
+    <div><div class="n">0</div><div class="l">caps raised</div></div>
+    <div><div class="n">2</div><div class="l">new state keys</div></div>
+    <div><div class="n">4</div><div class="l">ways to add a step</div></div>
+    <div><div class="n">1</div><div class="l">new command</div></div>
+    <div><div class="n">3.1.0</div><div class="l">a minor bump</div></div>
+  </div>
+
+  <div class="next">
+    <span class="k">Next</span>
+    <ol>
+      <li>Open <a href="DEPLOY-PROTO.html">the prototype</a> and add a step after b3 <span class="badge ro">read-only</span></li>
+      <li>Press t inside a step and leave yourself a to-do <span class="badge ro">read-only</span></li>
+      <li>Tick your picks in row f; I read them from the sidecar <span class="badge ro">read-only</span></li>
+      <li>Approve 3.1.0, and I build the picks into template/ <span class="badge w">write</span></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══════════════ LAYER 2 — THE SPINE ══════════════
+     The round trip of one added step. One flow, because the order is the point: it is the
+     back-and-forth between the page and the agent, and the Sequence view lays it out in time. -->
+<div class="spine">
+<figure class="fv-drawing">
 <script type="application/json">
 {
-  "id": "checkout",
-  "name": "Checkout",
-  "title": "Checkout confirms in 300 ms because payment settles off the hot path",
-  "lede": "Three services and one database transaction sit on the request path. The card charge and the receipt run from the event bus after the customer already has an order id.",
-  "grid": {"cols": 5, "rows": 4},
+  "id": "spine",
+  "name": "The round trip",
+  "title": "An added step keeps its id from your browser to the source",
+  "lede": "One added step, end to end: typed in the page, saved beside it, read back, folded into the source, and rebuilt with its output still attached.",
+  "grid": { "cols": 5, "rows": 2 },
   "zones": [
-    {"id": "client", "label": "Client", "cols": [0, 0], "rows": [1, 1], "tone": "neutral"},
-    {"id": "hot", "label": "Hot path · p99 300 ms", "cols": [1, 3], "rows": [0, 1], "tone": "sync"},
-    {"id": "async", "label": "Settles async · seconds", "cols": [2, 3], "rows": [2, 3], "tone": "async", "tag": "tr"},
-    {"id": "ext", "label": "External", "cols": [4, 4], "rows": [2, 2], "tone": "ext"}
+    { "id": "browser", "label": "Your browser", "cols": [0, 1], "rows": [0, 0], "tone": "neutral", "tag": "tl" },
+    { "id": "disk", "label": "Beside the page, on disk", "cols": [2, 3], "rows": [0, 0], "tone": "data", "tag": "tl" },
+    { "id": "turn", "label": "The agent's turn", "cols": [2, 4], "rows": [1, 1], "tone": "svc", "tag": "bl" }
   ],
   "nodes": [
-    {"id": "web", "label": "Web & mobile", "kind": "client", "icon": "devices", "at": [0, 1], "tech": "React · Swift · Kotlin", "peek": "The storefront and apps. Every checkout call carries a fresh idempotency key, so a double tap never buys twice.", "facts": ["1.2k orders/min peak", "JWT · 15 min"]},
-    {"id": "gw", "label": "API gateway", "kind": "edge", "icon": "gateway", "at": [1, 1], "tech": "Envoy", "peek": "Terminates TLS, verifies the JWT against cached signing keys and rate-limits each customer before anything reaches a service.", "facts": ["p99 4 ms", "100 req/s per user"]},
-    {"id": "order", "label": "Order service", "kind": "service", "icon": "service", "at": [2, 1], "tech": "Go · 6 pods", "peek": "Owns the order lifecycle. It answers 202 as soon as the order and its event are committed together.", "facts": ["p99 200 ms", "6 pods"], "segment": "order-outbox"},
-    {"id": "inv", "label": "Inventory", "kind": "service", "icon": "box", "at": [2, 0], "tech": "gRPC", "peek": "Holds a 10-minute soft reservation per line item, so two customers cannot both buy the last unit.", "facts": ["p99 45 ms", "50 ms timeout"]},
-    {"id": "cache", "label": "Order cache", "kind": "data", "icon": "cache", "at": [3, 0], "tech": "Redis", "peek": "Cache-aside copy of recent orders. Status reads are served here and never touch the primary database.", "facts": ["hit rate 94%", "TTL 30 s"]},
-    {"id": "db", "label": "Orders DB", "kind": "data", "icon": "db", "at": [3, 1], "tech": "Postgres 16", "peek": "The system of record. The order row and its outbox row are written in the same transaction.", "facts": ["p99 18 ms", "1 primary · 2 replicas"]},
-    {"id": "bus", "label": "Event bus", "kind": "stream", "icon": "queue", "at": [2, 2], "tech": "Kafka", "peek": "Carries OrderPlaced, PaymentCaptured and PaymentFailed. Consumers retry on their own; nothing on the hot path waits for it.", "facts": ["3 topics", "7-day retention"]},
-    {"id": "pay", "label": "Payment worker", "kind": "service", "icon": "card", "at": [3, 2], "tech": "Go · consumer", "peek": "Consumes OrderPlaced and charges the card, using the order id as the idempotency key.", "facts": ["3 retries, backoff", "3 s timeout"]},
-    {"id": "psp", "label": "Card processor", "kind": "external", "icon": "bank", "at": [4, 2], "tech": "third-party PSP", "peek": "Authorizes and captures the charge. It is outside our control, so it is kept off the request path.", "facts": ["p99 1.4 s", "99.95% SLA"]},
-    {"id": "notify", "label": "Notifications", "kind": "service", "icon": "bell", "at": [2, 3], "tech": "email · push", "peek": "Sends the receipt or the payment-failed prompt. It only ever reads events.", "facts": ["p50 6 s after order"]}
+    { "id": "you", "label": "You, mid-run", "kind": "client", "icon": "user", "at": [0, 0], "tech": "the human",
+      "peek": "You remember a missing step, or a follow-up, while you are running the playbook.", "facts": ["one gesture to add"] },
+    { "id": "page", "label": "Report page", "kind": "client", "icon": "browser", "at": [1, 0], "tech": "flow.js + the new layer",
+      "peek": "Draws added steps in place and keeps to-dos in one section, all from state, none in markup.", "facts": ["no markup changes"] },
+    { "id": "serve", "label": "serve", "kind": "service", "icon": "server", "at": [2, 0], "tech": "flowviz serve",
+      "peek": "Takes each PUT and writes the sidecar beside the page, keeping any key the body leaves out.", "facts": ["PUT _flow/state"] },
+    { "id": "sidecar", "label": "doc.flow.json", "kind": "data", "icon": "json", "at": [3, 0], "tech": "state schema 5",
+      "peek": "Holds added steps under added and to-dos under todos, beside the captures they produce.", "facts": ["added + todos", "tombstones"] },
+    { "id": "captures", "label": "captures", "kind": "service", "icon": "terminal", "at": [4, 0], "tech": "flowviz captures",
+      "peek": "Prints each added step in place, marked +, and every to-do after the playbooks.", "facts": ["+ b3a, in place"] },
+    { "id": "agent", "label": "Agent", "kind": "client", "icon": "agent", "at": [4, 1], "tech": "Claude, in your folder",
+      "peek": "Decides what each addition becomes: a folded step, a reworded one, or a next action.", "facts": ["reads, then folds"] },
+    { "id": "fold", "label": "fold", "kind": "service", "icon": "gear", "at": [3, 1], "tech": "flowviz fold, new",
+      "peek": "Writes each added step into the source under its own id, then stamps it folded in the sidecar.", "facts": ["keeps b3a", "regexes left blank"] },
+    { "id": "src", "label": "The source", "kind": "data", "icon": "file", "at": [2, 1], "tech": "NAME.src.html",
+      "peek": "Once folded, b3a is an authored step: one sentence, a risk tag, a gate if it writes, anchored regexes.", "facts": ["audited like any step"] },
+    { "id": "build", "label": "build", "kind": "service", "icon": "box", "at": [1, 1], "tech": "flowviz build",
+      "peek": "Rebuilds the page; the output b3a captured re-attaches by id, because the id never changed.", "facts": ["history kept"] }
   ],
   "edges": [
-    {"id": "web-gw", "from": "web", "to": "gw", "mode": "sync", "label": "HTTPS", "ms": "p99 80 ms RTT", "peek": "Public TLS 1.3 from the device to our edge. A retry reuses the same idempotency key."},
-    {"id": "gw-order", "from": "gw", "to": "order", "mode": "sync", "label": "HTTP/2", "ms": "p99 4 ms", "peek": "Internal call carrying the verified customer id in a signed header."},
-    {"id": "order-inv", "from": "order", "to": "inv", "mode": "sync", "label": "gRPC", "ms": "p99 45 ms", "peek": "Reserve or release stock. A 50 ms timeout keeps a slow inventory from slowing checkout."},
-    {"id": "order-db", "from": "order", "to": "db", "mode": "sync", "label": "SQL", "ms": "p99 18 ms", "peek": "One transaction writes the order row and the outbox row, or neither."},
-    {"id": "order-cache", "from": "order", "to": "cache", "mode": "sync", "label": "RESP", "ms": "p99 2 ms", "peek": "Status reads check here first; every state change rewrites the entry."},
-    {"id": "order-bus", "from": "order", "to": "bus", "mode": "async", "both": true, "label": "events", "ms": "relay lag ~100 ms", "peek": "The outbox relay publishes OrderPlaced; the order service consumes payment results to confirm or cancel."},
-    {"id": "bus-pay", "from": "bus", "to": "pay", "mode": "async", "both": true, "label": "events", "ms": "lag < 1 s", "peek": "The worker consumes OrderPlaced and publishes PaymentCaptured or PaymentFailed."},
-    {"id": "pay-psp", "from": "pay", "to": "psp", "mode": "sync", "label": "HTTPS", "ms": "p99 1.4 s", "peek": "Charge request with an idempotency key, so a retry can never double-charge."},
-    {"id": "bus-notify", "from": "bus", "to": "notify", "mode": "async", "label": "events", "ms": "lag < 1 s", "peek": "Receipts and failure notices, driven only by events."}
+    { "id": "you-page", "from": "you", "to": "page", "mode": "sync", "label": "add, tick",
+      "peek": "A hover line on a seam, a button at a step's foot, the end row, or the prompt under a red chip." },
+    { "id": "page-serve", "from": "page", "to": "serve", "mode": "sync", "label": "PUT state",
+      "peek": "Debounced 700 ms; the same PUT that carries captures carries added and todos." },
+    { "id": "serve-sidecar", "from": "serve", "to": "sidecar", "mode": "sync", "label": "write",
+      "peek": "An atomic replace, the old copy backed up once per run, and no key dropped." },
+    { "id": "sidecar-captures", "from": "sidecar", "to": "captures", "mode": "sync", "label": "read",
+      "peek": "Read only: the read-back never writes the sidecar." },
+    { "id": "captures-agent", "from": "captures", "to": "agent", "mode": "sync", "label": "prints + b3a",
+      "peek": "Added steps print between their neighbours; to-dos print after the playbooks, open ones first." },
+    { "id": "agent-fold", "from": "agent", "to": "fold", "mode": "sync", "label": "runs",
+      "peek": "Only for the additions the agent agrees with; the rest become next actions or get reworded." },
+    { "id": "fold-src", "from": "fold", "to": "src", "mode": "sync", "label": "inserts b3a",
+      "peek": "After b3, with data-after chained, placeholder regexes, and a gate if it writes." },
+    { "id": "fold-sidecar", "from": "fold", "to": "sidecar", "mode": "sync", "label": "stamps folded",
+      "peek": "Marks b3a folded so the page stops drawing its own copy; the capture stays where it is." },
+    { "id": "src-build", "from": "src", "to": "build", "mode": "sync", "label": "inline",
+      "peek": "Unchanged: build inlines flow.css, flow.js and draw.js into one file." },
+    { "id": "build-page", "from": "build", "to": "page", "mode": "sync", "label": "rebuild",
+      "peek": "Unchanged: the previous output is kept in .flowviz/history before it is replaced." }
   ],
   "flows": [
-    {
-      "id": "place",
-      "label": "Place order",
-      "summary": "8 steps. The customer has an order id after step 4; steps 5 to 8 settle in the background.",
+    { "id": "trip", "label": "Fold b3a", "summary": "7 steps; b3a keeps its id from the first to the last.",
       "steps": [
-        {"id": "p1", "path": ["web", "gw", "order"], "msg": "POST /orders", "say": "The app posts the cart; the gateway checks the token and rate limit, then routes it."},
-        {"id": "p2", "path": ["order", "inv"], "msg": "Reserve", "say": "The order service reserves each line item in inventory, with a 50 ms timeout."},
-        {"id": "p3", "path": ["order", "db"], "msg": "COMMIT", "say": "The order row and its OrderPlaced outbox row commit in one transaction."},
-        {"id": "p4", "path": ["order", "gw", "web"], "msg": "202 Accepted", "say": "The customer gets 202 Accepted and an order id; the hot path ends here."},
-        {"id": "p5", "path": ["order", "bus"], "msg": "OrderPlaced", "say": "The outbox relay publishes OrderPlaced to the event bus."},
-        {"id": "p6", "path": ["bus", "pay"], "msg": "OrderPlaced", "say": "The payment worker consumes the event, long after the customer has moved on."},
-        {"id": "p7", "path": ["pay", "psp"], "msg": "Charge", "say": "It charges the card, using the order id as the idempotency key."},
-        {"id": "p8", "path": ["pay", "bus", "notify"], "msg": "PaymentCaptured", "say": "PaymentCaptured fans out: the order is confirmed and the receipt is sent."}
-      ]
-    },
-    {
-      "id": "status",
-      "label": "Check status",
-      "summary": "4 steps. 94% of reads end at the cache and never touch the database.",
-      "steps": [
-        {"id": "s1", "path": ["web", "gw", "order"], "msg": "GET /orders/:id", "say": "The app asks for the order status through the gateway."},
-        {"id": "s2", "path": ["order", "cache"], "msg": "GET", "say": "The order service reads the cache first; a hit returns in about 2 ms."},
-        {"id": "s3", "path": ["order", "db"], "msg": "SELECT", "say": "On a miss it reads a replica, then writes the result back with a 30 s TTL."},
-        {"id": "s4", "path": ["order", "gw", "web"], "msg": "200 OK", "say": "The status goes back to the app: pending, confirmed or cancelled."}
-      ]
-    },
-    {
-      "id": "declined",
-      "label": "Card declined",
-      "summary": "5 steps. A failing card never blocks checkout; it cancels the order and tells the customer.",
-      "steps": [
-        {"id": "d1", "path": ["bus", "pay"], "msg": "OrderPlaced", "say": "The payment worker picks up OrderPlaced as usual."},
-        {"id": "d2", "path": ["pay", "psp"], "msg": "Charge", "fail": true, "say": "The processor declines the card, or times out after 3 s on every retry."},
-        {"id": "d3", "path": ["pay", "bus"], "msg": "PaymentFailed", "say": "The worker publishes PaymentFailed instead of retrying forever."},
-        {"id": "d4", "path": ["bus", "order", "inv"], "msg": "Release", "say": "The order service cancels the order and releases the reserved stock."},
-        {"id": "d5", "path": ["bus", "notify"], "msg": "PaymentFailed", "say": "The customer is asked to update their card; the order id stays valid."}
-      ]
-    }
-  ],
-  "segments": {
-    "order-outbox": {
-      "kind": "segment",
-      "name": "Order service",
-      "parent": "order",
-      "title": "The order row and its event commit together, or neither does",
-      "lede": "Inside the order service, the handler never talks to Kafka. It writes an outbox row in the same transaction, and a relay publishes it afterwards.",
-      "grid": {"cols": 5, "rows": 2},
-      "zones": [
-        {"id": "svc", "label": "Order service · pod", "cols": [1, 3], "rows": [0, 0], "tone": "svc"},
-        {"id": "tx", "label": "Orders DB · one transaction", "cols": [2, 3], "rows": [1, 1], "tone": "data", "tag": "bl"}
-      ],
-      "nodes": [
-        {"id": "gw", "label": "API gateway", "kind": "edge", "icon": "gateway", "at": [0, 0], "ghost": "gw", "peek": "Part of the whole checkout drawing. Click to go back to it."},
-        {"id": "api", "label": "POST /orders", "kind": "service", "icon": "api", "at": [1, 0], "tech": "HTTP handler", "peek": "Parses the cart and the Idempotency-Key header. A repeated key returns the first response instead of a second order.", "facts": ["p99 200 ms in service"]},
-        {"id": "val", "label": "Validate cart", "kind": "service", "icon": "check", "at": [2, 0], "tech": "domain logic", "peek": "Re-prices the cart from the catalog and reserves stock. Prices sent by the client are never trusted.", "facts": ["calls Inventory", "50 ms timeout"]},
-        {"id": "relay", "label": "Outbox relay", "kind": "service", "icon": "relay", "at": [3, 0], "tech": "polls every 100 ms", "peek": "Reads unsent outbox rows, publishes them, then marks them sent. Delivery is at-least-once by design.", "facts": ["batch 100", "lag p99 150 ms"]},
-        {"id": "orders", "label": "orders", "kind": "data", "icon": "table", "at": [2, 1], "tech": "table", "peek": "One row per order. Status starts as PENDING and only events move it.", "facts": ["idempotency_key UNIQUE"]},
-        {"id": "outbox", "label": "outbox", "kind": "data", "icon": "table", "at": [3, 1], "tech": "table", "peek": "One row per event to publish, written in the same transaction as the order.", "facts": ["sent_at NULL = unsent"]},
-        {"id": "bus", "label": "Event bus", "kind": "stream", "icon": "queue", "at": [4, 0], "ghost": "bus", "peek": "Part of the whole checkout drawing. Click to go back to it."}
-      ],
-      "edges": [
-        {"id": "gw-api", "from": "gw", "to": "api", "mode": "sync", "label": "HTTP/2", "ms": "p99 4 ms", "peek": "The only way in. The verified customer id arrives in a signed header."},
-        {"id": "api-val", "from": "api", "to": "val", "mode": "sync", "label": "call", "ms": "p99 60 ms", "peek": "In-process call; validation and the inventory reservation happen here."},
-        {"id": "val-orders", "from": "val", "to": "orders", "mode": "sync", "label": "INSERT", "ms": "inside tx", "peek": "Inserts the order as PENDING. The unique idempotency key rejects a duplicate."},
-        {"id": "val-outbox", "from": "val", "to": "outbox", "mode": "sync", "label": "INSERT", "ms": "inside tx", "peek": "Inserts the OrderPlaced event in the same transaction as the order row."},
-        {"id": "outbox-relay", "from": "outbox", "to": "relay", "mode": "sync", "label": "poll", "ms": "every 100 ms", "peek": "SELECT … FOR UPDATE SKIP LOCKED, so several relays never publish the same row."},
-        {"id": "relay-bus", "from": "relay", "to": "bus", "mode": "async", "label": "publish", "ms": "acks=all", "peek": "Publishes with acks=all, then sets sent_at. A crash in between means one duplicate, never a loss."}
-      ],
-      "flows": [
-        {
-          "id": "write",
-          "label": "Write an order",
-          "summary": "6 steps. If the transaction rolls back, there is no event to publish.",
-          "steps": [
-            {"id": "w1", "path": ["gw", "api"], "msg": "POST /orders", "say": "The request arrives with the customer id and an idempotency key."},
-            {"id": "w2", "path": ["api", "val"], "msg": "cart", "say": "The cart is re-priced from the catalog and stock is reserved."},
-            {"id": "w3", "path": ["val", "orders"], "msg": "INSERT order", "say": "The order row is inserted as PENDING inside an open transaction."},
-            {"id": "w4", "path": ["val", "outbox"], "msg": "INSERT event", "say": "The OrderPlaced row joins the same transaction, then both commit."},
-            {"id": "w5", "path": ["api", "gw"], "msg": "202 Accepted", "say": "Only after the commit does the handler answer 202 Accepted."},
-            {"id": "w6", "path": ["outbox", "relay", "bus"], "msg": "OrderPlaced", "say": "The relay picks up the unsent row, publishes it and marks it sent."}
-          ]
-        }
-      ]
-    }
-  }
+        { "id": "s1", "path": ["you", "page"], "msg": "insert after b3", "say": "You insert a step after b3, so it is b3a, and paste what it printed." },
+        { "id": "s2", "path": ["page", "serve", "sidecar"], "msg": "PUT added + captures", "say": "The page saves b3a under added and its output under captures, like any step." },
+        { "id": "s3", "path": ["sidecar", "captures", "agent"], "msg": "+ b3a, in place", "say": "flowviz captures prints b3a between b3 and b4, marked as added by hand." },
+        { "id": "s4", "path": ["agent", "fold"], "msg": "fold the source", "say": "The agent agrees b3a belongs and runs flowviz fold on the source." },
+        { "id": "s5", "path": ["fold", "src"], "msg": "li.step b3a", "say": "fold writes b3a after b3, leaving regexes the audit blocks until they are written." },
+        { "id": "s6", "path": ["fold", "sidecar"], "msg": "b3a folded", "say": "fold stamps b3a folded, so the page stops drawing its own copy." },
+        { "id": "s7", "path": ["src", "build", "page"], "msg": "same id, same output", "say": "The rebuilt page shows b3a as authored, and its output re-attaches by id." }
+      ] }
+  ]
 }
 </script>
 <div class="fv-depth" hidden>
-<section data-for="order">
-  <h3>Latency budget, p99</h3>
-  <table>
-    <thead><tr><th>Stage</th><th>p99</th><th>Holds because</th></tr></thead>
-    <tbody>
-      <tr><td>Device → edge</td><td>80 ms</td><td>TLS resumed, HTTP/2 connection reused</td></tr>
-      <tr><td>Gateway</td><td>4 ms</td><td>JWT keys cached; no call to the auth server</td></tr>
-      <tr><td>Validate + price</td><td>60 ms</td><td>catalog prices cached in-process</td></tr>
-      <tr><td>Inventory reserve</td><td>45 ms</td><td>50 ms timeout; on expiry the order is refused, not delayed</td></tr>
-      <tr><td>Transaction</td><td>18 ms</td><td>two inserts and one commit on the primary</td></tr>
-      <tr><td>Serialize + return</td><td>15 ms</td><td>response is an id and a status, nothing more</td></tr>
-      <tr><td><b>Total</b></td><td><b>222 ms</b></td><td>78 ms of headroom under the 300 ms claim</td></tr>
-    </tbody>
-  </table>
-  <div>
-    <h3>What it deliberately does not do</h3>
-    <ul>
-      <li>Call the card processor. It is the one dependency with a p99 over a second.</li>
-      <li>Publish to Kafka directly. A broker hiccup would otherwise fail a checkout that already committed.</li>
-    </ul>
-  </div>
+<section data-for="sidecar">
+  <p>Two keys arrive in schema 5. An added step's output, tick and note use the keys every step already uses,
+  so evidence, progress and dimming need nothing new.</p>
+  <div class="cmd fig"><pre><code>"added": { "b3a": { "after": "b3", "text": "Check the provider allowlist includes the new pods' egress range.",
+                    "cmd": "curl -s https://provider.example.test/v1/allowlist | grep -c 10.40.2.",
+                    "risk": "ro", "at": "2026-10-01T20:39:02Z" } },
+"todos": { "t1": { "text": "Ask the provider to allowlist 10.40.2.0/24, then re-run b4",
+                   "kind": "do", "ref": "b4", "at": "2026-10-01T20:40:15Z", "done": false } }</code></pre></div>
 </section>
-<section data-for="db">
-  <h3>The two tables that matter</h3>
-  <div class="cmd fig"><pre><code>CREATE TABLE orders (
-  id               uuid PRIMARY KEY,
-  customer_id      uuid NOT NULL,
-  status           text NOT NULL DEFAULT 'PENDING',
-  idempotency_key  text NOT NULL UNIQUE,
-  total_cents      bigint NOT NULL,
-  created_at       timestamptz NOT NULL DEFAULT now()
-);
-CREATE TABLE outbox (
-  id          bigserial PRIMARY KEY,
-  topic       text NOT NULL,
-  payload     jsonb NOT NULL,
-  created_at  timestamptz NOT NULL DEFAULT now(),
-  sent_at     timestamptz
-);
-CREATE INDEX outbox_unsent ON outbox (id) WHERE sent_at IS NULL;</code></pre></div>
-  <p>Replicas serve status reads on a cache miss. Replication lag p99 is 40 ms, well inside the 30 s cache TTL.</p>
+<section data-for="captures">
+  <p>An added step prints between its neighbours with a <code>+</code> where <code>step</code> would be, and its
+  verdict reads <code>CAPTURED</code>: it has no pass rule until it is folded. To-dos follow the playbooks.</p>
+  <div class="cmd fig"><pre><code>step b3    read   PASS      Check the new pods report v2.3 and a configured provider client.
++    b3a   read   CAPTURED  Check the provider allowlist includes the new pods' egress range.
+  added 13:39 PDT in the page, after b3 · not in the source yet
+step b4    read   FAIL      Send one test email end to end and wait up to 30 seconds for delivery.</code></pre></div>
 </section>
-<section data-for="bus">
-  <h3>Topics</h3>
-  <table>
-    <thead><tr><th>Topic</th><th>Producer</th><th>Consumers</th></tr></thead>
-    <tbody>
-      <tr><td><code>order.placed</code></td><td>outbox relay</td><td>payment worker</td></tr>
-      <tr><td><code>payment.captured</code></td><td>payment worker</td><td>order service, notifications</td></tr>
-      <tr><td><code>payment.failed</code></td><td>payment worker</td><td>order service, notifications</td></tr>
-    </tbody>
-  </table>
-  <p>All three are keyed by order id, so every event for one order lands on one partition, in order.</p>
+<section data-for="fold">
+  <p>New in 3.1.0, beside <code>flowviz results</code> and <code>flowviz relabel</code>: it edits the source, backs
+  the sidecar up first, and never renames anything.</p>
+  <div class="cmd fig"><pre><code>$ flowviz fold DEPLOY.src.html
+fold  b3a  after b3 in row b · read
+      wrote li.step b3a; b4 now waits on b3a
+      data-pass / data-fail left as PASS_SIGNAL / FAIL_SIGNAL: the audit blocks until you write them
+sidecar  stamped added.b3a.folded · backup in .flowviz/state-backup/</code></pre></div>
 </section>
-<section data-for="pay">
-  <h3>Retry policy</h3>
-  <ul>
-    <li>3 attempts, backoff 1 s then 4 s, each with a 3 s timeout.</li>
-    <li>The idempotency key is the order id, so attempt 3 can never create a second charge.</li>
-    <li>A hard decline is not retried. Only timeouts and 5xx are.</li>
-  </ul>
-  <div class="cmd fig"><pre><code>charge, err := psp.Charge(ctx, psp.ChargeRequest{
-    Amount:         order.TotalCents,
-    Currency:       "USD",
-    PaymentMethod:  order.PaymentMethodID,
-    IdempotencyKey: order.ID.String(),
-})</code></pre></div>
-</section>
-<section data-for="psp">
-  <h3>How each answer lands</h3>
-  <table>
-    <thead><tr><th>Processor says</th><th>We do</th></tr></thead>
-    <tbody>
-      <tr><td>captured</td><td>publish <code>payment.captured</code></td></tr>
-      <tr><td>declined</td><td>publish <code>payment.failed</code> at once; no retry</td></tr>
-      <tr><td>timeout or 5xx</td><td>retry with the same key; after 3 attempts, publish <code>payment.failed</code></td></tr>
-    </tbody>
-  </table>
-</section>
-<section data-for="cache">
-  <h3>Cache-aside, in five lines</h3>
-  <div class="cmd fig"><pre><code>func Status(id string) (Order, error) {
-    if o, ok := cache.Get("order:" + id); ok { return o, nil }
-    o, err := replica.GetOrder(id)
-    if err == nil { cache.Set("order:"+id, o, 30*time.Second) }
-    return o, err
-}</code></pre></div>
-  <p>Every status change also deletes the key, so the 30 s TTL is a backstop, not the freshness guarantee.</p>
-</section>
-<section data-for="gw">
-  <h3>Rate limit</h3>
-  <p>Token bucket per customer id: 100 requests per second, burst 20. <code>POST /orders</code> has its own bucket of 5 per minute, which stops a stuck retry loop from creating a storm of orders.</p>
-</section>
-<section data-for="edge:order-bus">
-  <h3>Why two lanes</h3>
-  <p>This connection carries traffic both ways. The order service <b>publishes</b> through the outbox relay and <b>consumes</b> payment results to confirm or cancel. Each direction is drawn as its own lane, so the motion never has to lie about direction.</p>
-</section>
-<section data-for="step:p3">
-  <div class="cmd fig"><pre><code>BEGIN;
-INSERT INTO orders (id, customer_id, idempotency_key, total_cents)
-  VALUES ($1, $2, $3, $4);
-INSERT INTO outbox (topic, payload)
-  VALUES ('order.placed', $5);
-COMMIT;</code></pre></div>
-  <p>If either insert fails, both roll back, so an event can never describe an order that does not exist.</p>
-</section>
-<section data-for="step:p4">
-  <h3>Why 202, not 201</h3>
-  <p>The order exists but is not paid. <code>202 Accepted</code> tells the client the work continues; the app shows "Order placed" and polls the status, which is the <b>Check status</b> flow.</p>
-</section>
-<section data-for="step:d2">
-  <h3>Worst case, in time</h3>
-  <p>Three attempts at a 3 s timeout, plus 1 s and 4 s of backoff, is 14 s before <code>payment.failed</code>. The customer left the checkout screen about 13.7 s earlier.</p>
-</section>
-<section data-for="order-outbox/relay">
-  <div class="cmd fig"><pre><code>SELECT id, topic, payload
-  FROM outbox
- WHERE sent_at IS NULL
- ORDER BY id
- LIMIT 100
-   FOR UPDATE SKIP LOCKED;</code></pre></div>
-  <p><code>SKIP LOCKED</code> lets several relay replicas run without publishing the same row twice. A crash after publishing but before <code>sent_at</code> is set produces one duplicate, which consumers already ignore by order id.</p>
-</section>
-<section data-for="order-outbox/api">
-  <h3>Idempotency</h3>
-  <p>The <code>Idempotency-Key</code> header is stored in <code>orders.idempotency_key</code>. A second request with the same key hits the unique index, and the handler returns the first order's 202 instead of creating another.</p>
-</section>
-<section data-for="order-outbox/outbox">
-  <h3>Row lifecycle</h3>
-  <ol>
-    <li>Inserted with <code>sent_at = NULL</code>, inside the order's transaction.</li>
-    <li>Locked and published by the relay.</li>
-    <li><code>sent_at</code> set; rows older than 7 days are deleted nightly.</li>
-  </ol>
+<section data-for="step:s5">
+  <p>The folded step is ordinary markup. The audit's naming check learns one more shape, a row letter, a number
+  and one letter, for a step that came in from a fold.</p>
+  <div class="cmd fig"><pre><code>&lt;li class="step" data-step="b3a" data-risk="ro" data-after="b3"&gt; ... &lt;/li&gt;
+&lt;li class="step" data-step="b4"  data-risk="ro" data-after="b3a"&gt; ... &lt;/li&gt;</code></pre></div>
 </section>
 </div>
 </figure>
+</div>
+
+<div class="ctl">
+  <button id="flowExpand">Expand all</button>
+  <button id="flowCollapse">Collapse all</button>
+  <button id="flowAgentCopy">Copy captures for agent</button>
+  <button id="flowEvidence">Save evidence</button>
+  <span class="hint">nothing is open at load, by design</span>
+</div>
+
+<!-- ══════════════ THE ROWS ══════════════ -->
+<h2 class="sec">Capture it mid-run</h2>
+
+<!-- ─────────── ROW a ─────────── -->
+<details class="row" data-row="a" data-kind="decision">
+<summary><span class="ord">a</span><span class="cl">Four ways to add a step, and all of them write the same record</span><span class="rt">3 min</span></summary>
+<div class="in">
+<p>A step you add mid-run is drawn where it belongs, in violet: the ink flow.css already gives the sidecar key on
+every paste box. It is dashed where the agent's steps are solid, and a proofreader's caret marks where it went in.
+The circled numbers are the four ways in.</p>
+
+<div class="fvm" aria-label="Mockup: a playbook with one added step">
+  <div class="hd">Roll out notify v2.3 to staging <span class="prog">4 / 5 done · <span class="f">1 failed</span></span></div>
+  <div class="fvm-step done"><input type="checkbox" checked disabled aria-label="done">
+    <div class="sm"><span class="n">b2</span><span class="ds">Roll out v2.3 across the three pods and wait for all of them.</span></div>
+    <span class="ctr"><span class="badge w">write</span><span class="vd pass">pass</span></span></div>
+  <div class="fvm-gap"><span class="fv-ins"><span>① + add a step after b2<i>→ b2a</i></span></span></div>
+  <div class="fvm-step done"><input type="checkbox" checked disabled aria-label="done">
+    <div class="sm"><span class="n">b3</span><span class="ds">Check the new pods report v2.3 and a configured provider client.</span></div>
+    <span class="ctr"><span class="badge ro">read</span><span class="vd pass">pass</span></span></div>
+  <div class="fvm-step fv-added done"><input type="checkbox" checked disabled aria-label="done">
+    <div class="sm"><span class="n">b3a</span><span class="ds">Check the provider allowlist includes the new pods' egress range.</span><span class="fv-tag">added 13:39 PDT</span></div>
+    <span class="ctr"><span class="badge ro">read</span><span class="vd saved">captured</span></span></div>
+  <div class="fvm-step"><input type="checkbox" disabled aria-label="done">
+    <div class="sm"><span class="n">b4</span><span class="ds">Send one test email end to end and wait up to 30 seconds for delivery.</span><span class="fv-tdm">1 to-do</span></div>
+    <span class="ctr"><span class="badge ro">read</span><span class="vd fail">fail</span></span>
+    <div class="bd">
+      <div class="fv-miss"><span>③ Was a step missing before b4?</span><span class="fv-fb">+ add it after b3a → b3b</span></div>
+      <div class="fvm-fin"><span class="fv-foot"><span class="fv-fb">② + step after</span><span class="fv-fb">+ to-do</span></span>
+        <span class="vd vdf fail">✕ fail</span><span class="fvm-fd">Done ☐</span></div>
+    </div>
+  </div>
+  <div class="fvm-end"><span class="fv-endbtn">④ + Add a step to this playbook<i>→ b4a</i></span></div>
+</div>
+
+<table>
+<thead><tr><th>Way in</th><th>When it fits</th><th>Cost at rest</th></tr></thead>
+<tbody>
+<tr><td>① a line on every seam, on hover</td><td>you know exactly where the step belongs</td><td>nothing: it appears under the pointer</td></tr>
+<tr><td>② <b>+ step after</b>, at a step's foot</td><td>on a touch screen, or right after finishing the step before</td><td>nothing: it sits inside the step</td></tr>
+<tr><td>③ the prompt under a red or amber chip</td><td>the failure is how you learned what was missing</td><td>nothing: it shows only after <code>fail</code> or <code>error</code></td></tr>
+<tr><td>④ <b>+ Add a step</b>, at the end of a playbook</td><td>one more thing after the last step</td><td>one line per playbook, inside its row</td></tr>
+</tbody>
+</table>
+
+<h3>All four open the same composer</h3>
+<div class="fvm" aria-label="Mockup: the composer, opened from to-do t2">
+  <div class="fv-compose">
+    <div class="fv-ch"><span class="fv-car">‸</span>New step after <span class="fv-lc">b1</span> <span class="fv-nid">b1a</span><span class="fv-hint">from to-do t2 · no other step is renamed</span></div>
+    <div class="fvm-fake">Confirm kubectl points at the staging context before the rollout.<span class="caret"></span></div>
+    <div class="fv-row"><span class="fv-m ok">10 / 20 words</span><span class="fv-m ok">one sentence</span>
+      <span class="fv-seg"><button type="button" tabindex="-1" aria-pressed="true">read</button><button type="button" tabindex="-1" class="w" aria-pressed="false">write</button></span>
+      <span class="fv-hint">it changes nothing</span></div>
+    <span class="fv-lab">Command <span>optional: leave it empty for something done by hand</span></span>
+    <div class="fvm-fake mono">kubectl config current-context | grep -c <mark>’</mark>staging<mark>’</mark></div>
+    <div class="fv-row"><span class="fv-m warn">non-ASCII ’ at 42: a console rejects it <u>fix</u></span><span class="fv-m ok">one line</span></div>
+    <div class="fv-btns"><span class="fv-bp">Add b1a</span><span class="fv-bg">Cancel</span><span class="fv-hint">↵ add · esc cancel</span></div>
+  </div>
+</div>
+<p class="fvm-cap">The audit's own rules, shown while you type: one sentence, 20 words, ASCII, one line. Nothing is
+blocked; the agent tidies the step when it folds it. <b>fix</b> swaps smart quotes and dashes for ASCII.</p>
+
+<div class="box key"><p><b>Recommended: all four.</b> They cost nothing at rest, and they share one composer and one
+record. Pick in row f.</p></div>
+</div>
+</details>
+
+<!-- ─────────── ROW b ─────────── -->
+<details class="row" data-row="b" data-kind="decision">
+<summary><span class="ord">b</span><span class="cl">To-dos live in one section and are captured without losing your place</span><span class="rt">3 min</span></summary>
+<div class="in">
+<p>Three places a to-do list could live:</p>
+
+<div class="fvm-opts">
+  <div class="fvm-opt">
+    <h4><span class="L">A</span>A tray from the pill</h4>
+    <div class="fvm-mini" aria-hidden="true">
+      <div class="ln m"></div><div class="ln"></div><div class="ln s"></div><div class="ln m"></div><div class="ln s"></div>
+      <div class="tray"><div class="k2">To do</div><div class="it"><i>t1</i> Ask the provider…</div><div class="it"><i>t2</i> Add a step that…</div><div class="it"><i>t3</i> Tell #notify…</div></div>
+    </div>
+    <p><b>Reachable from anywhere</b>, and nothing at rest. <b>But</b> it is invisible in print and at a glance, and it is one more drawer.</p>
+  </div>
+  <div class="fvm-opt rec">
+    <h4><span class="L">B</span>A section at the end <span class="rb">pick</span></h4>
+    <div class="fvm-mini" aria-hidden="true">
+      <div class="ln m"></div><div class="ln"></div><div class="ln s"></div>
+      <div class="sec"><span class="k2">To do</span> 2 open · 1 done</div>
+    </div>
+    <p><b>Reads as part of the report</b>, prints as a checklist, and mirrors what the agent reads back. <b>But</b> it sits below the step you are on.</p>
+  </div>
+  <div class="fvm-opt">
+    <h4><span class="L">C</span>On the steps themselves</h4>
+    <div class="fvm-mini" aria-hidden="true">
+      <div class="stp"><b>b1</b> Confirm staging runs… <span class="chipm">1 to-do</span></div>
+      <div class="stp"><b>b2</b> Roll out v2.3…</div>
+      <div class="stp"><b>b3</b> Check the new pods…</div>
+      <div class="stp"><b>b4</b> Send one test email… <span class="chipm">1 to-do</span></div>
+    </div>
+    <p><b>In context</b>: the to-do sits on the step it is about. <b>But</b> there is no overview, and a to-do with no step has nowhere to go.</p>
+  </div>
+</div>
+
+<div class="box key"><p><b>Recommended: B as the home, A's reach, C's markers.</b> The list lives in a section at
+the end, one line at rest. You add from anywhere with <b>t</b> or <b>+ to-do</b> in the pill, tied to the step you
+were on, and the page does not move. Steps and rows carry a small violet count.</p></div>
+
+<div class="fvm fvm-pad" aria-label="Mockup: the pill, quick capture and the to-do section">
+  <div class="fvm-tr"><span class="fvm-pill"><span class="dot"></span>saved 13:45 PDT<span class="sep"></span><span class="t">+ to-do <span class="fv-pc">2</span></span><span class="sep"></span><span class="b">auto · light</span><span class="sep"></span><span class="b">state</span></span></div>
+  <div class="fv-quick">
+    <div class="fv-qh"><span class="fv-k">New to-do · <span class="fv-lc">t4</span></span><span class="fv-qa">after b4<button type="button" tabindex="-1">✕</button></span><span class="fv-lnk">esc</span></div>
+    <div class="fvm-fake">Re-run b4 once the provider confirms the allowlist change<span class="caret"></span></div>
+    <div class="fv-qf"><span class="fv-seg"><button type="button" tabindex="-1" aria-pressed="false">add to write-up</button><button type="button" tabindex="-1" aria-pressed="true">do after</button></span><span class="fv-hint">↵ save · <u>2 open, see all</u></span></div>
+  </div>
+  <div class="fv-todo">
+    <div class="fvm-sumrow"><span class="fv-k">To do</span><span class="fv-cnt"><b>2 open</b> · 1 done</span><span class="fv-add">+ to-do</span></div>
+    <div class="fv-body">
+      <div class="fv-grp">Add to the write-up <em>1</em></div>
+      <ul class="fv-tl">
+        <li class="fv-ti"><input type="checkbox" disabled aria-label="t2 done"><span class="fv-id">t2</span><span class="fv-tx">Add a step that checks kubectl points at staging before b2</span><span class="fv-meta"><span class="fv-anc">after b1</span>13:41 PDT <span class="fv-lnk">make it a step</span></span></li>
+      </ul>
+      <div class="fv-grp">Do after this run <em>1</em></div>
+      <ul class="fv-tl">
+        <li class="fv-ti"><input type="checkbox" disabled aria-label="t1 done"><span class="fv-id">t1</span><span class="fv-tx">Ask the provider to allowlist 10.40.2.0/24, then re-run b4</span><span class="fv-meta"><span class="fv-anc">after b4</span>13:40 PDT</span></li>
+        <li class="fv-ti done"><input type="checkbox" checked disabled aria-label="t3 done"><span class="fv-id">t3</span><span class="fv-tx">Tell #notify-oncall the staging rollout is paused</span><span class="fv-meta">done 13:44 PDT</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Two kinds, in the words you would use mid-run</h3>
+<table>
+<thead><tr><th>Kind</th><th>Means</th><th>Can become</th></tr></thead>
+<tbody>
+<tr><td><b>add to write-up</b></td><td>the write-up is missing something: a step, a warning, a value</td><td>a step: <b>make it a step</b> opens the composer at its anchor, and the to-do closes as <code>→ b1a</code></td></tr>
+<tr><td><b>do after</b></td><td>a task for once the run is over, outside this playbook</td><td>a Next item: <code>flowviz results</code> offers every open one</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<h2 class="sec">Hand it back</h2>
+
+<!-- ─────────── ROW c ─────────── -->
+<details class="row" data-row="c" data-kind="context">
+<summary><span class="ord">c</span><span class="cl">An inserted step is named b3a, so no id ever moves</span><span class="rt">2 min</span></summary>
+<div class="in">
+<p>Ids are join keys: what you paste is filed under one. So a step added between b3 and b4 cannot take b4's name,
+and it should not take a number that lies about its place either.</p>
+<table>
+<thead><tr><th>Name it</th><th>What follows</th></tr></thead>
+<tbody>
+<tr><td><b>b3a</b>: the anchor plus the next free letter <span class="badge acc">pick</span></td><td>b4 keeps its name and its output; "look at b3a" means one step; a second insert is b3b; a letter is never handed out twice</td></tr>
+<tr><td>b5: the next free number</td><td>the numbers stop matching the order, and the audit fails the report for it</td></tr>
+<tr><td>renumber b4 to b5 with <code>flowviz relabel</code></td><td>every capture moves, a tab left open gets <code>409</code>, and "look at b4" changes meaning mid-run</td></tr>
+</tbody>
+</table>
+<ul>
+<li>Steps added after b3 queue behind each other: b3a, b3b, b3c. Before the first step of a row the anchor is b0, so the
+first one there is b0a.</li>
+<li>Removing writes a tombstone (<code>gone</code>), never a delete. The load merge is a union, so a deleted key
+would come back from the copy in the other store, and a removed id is never reused.</li>
+<li>The audit's naming check learns one shape, a row letter, a number and one letter, for steps a fold brought in.
+It fails nothing it passes today, so this is a minor version.</li>
+<li>Carried values work unchanged: <code>{{b3a.VER}}</code> already matches the token pattern, once the fold gives
+b3a a <code>data-emit</code>.</li>
+</ul>
+<h3>State schema 5: two keys, both default empty</h3>
+<div class="cmd fig"><pre><code>"added": {
+  "b3a": { "after": "b3", "text": "Check the provider allowlist includes the new pods' egress range.",
+           "cmd": "curl -s https://provider.example.test/v1/allowlist | grep -c 10.40.2.",
+           "risk": "ro", "at": "2026-10-01T20:39:02Z", "folded": "2026-10-01T21:02:11Z" },
+  "b3b": { "after": "b3", "text": "...", "at": "2026-10-01T20:40:51Z", "gone": "2026-10-01T20:41:30Z" }
+},
+"todos": {
+  "t1": { "text": "Ask the provider to allowlist 10.40.2.0/24, then re-run b4", "kind": "do",
+          "ref": "b4", "at": "2026-10-01T20:40:15Z", "done": false },
+  "t2": { "text": "Add a step that checks kubectl points at staging before b2", "kind": "add",
+          "ref": "b1", "at": "2026-10-01T20:41:02Z", "done": true, "became": "b1a" }
+},
+"captures": { "b3a": { "text": "0", "exit": "1", "verdict": "saved", "at": "2026-10-01T20:39:40Z" } },
+"steps":    { "b3a": { "done": true } }</code></pre></div>
+<p>An added step's output, tick and note use the keys every step already uses, so <b>Save evidence</b>, the
+progress count and <code>data-after</code> dimming reach it without new code. Its chip reads <b>captured</b>, not
+<b>no match</b>: there is no pass rule to blame until the fold writes one.</p>
+</div>
+</details>
+
+<!-- ─────────── ROW d ─────────── -->
+<details class="row" data-row="d" data-kind="context">
+<summary><span class="ord">d</span><span class="cl">The agent reads additions back, then folds the steps into the source</span><span class="rt">3 min</span></summary>
+<div class="in">
+<h3>What <code>flowviz captures</code> prints in 3.1.0</h3>
+<div class="cmd fig"><pre><code>playbook  Roll out notify v2.3 to staging
+step b3    read   PASS      Check the new pods report v2.3 and a configured provider client.
++    b3a   read   CAPTURED  Check the provider allowlist includes the new pods' egress range.
+  added 13:39 PDT in the page, after b3 · not in the source yet
+  $ curl -s https://provider.example.test/v1/allowlist | grep -c 10.40.2.
+  exit 1 · note: the new egress range is not on the list, which is why b4 timed out
+  | 0
+step b4    read   FAIL      Send one test email end to end and wait up to 30 seconds for delivery.
+
+to-dos  2 open · 1 done
+  t2  [ ]  add  after b1  Add a step that checks kubectl points at staging before b2
+  t1  [ ]  do   after b4  Ask the provider to allowlist 10.40.2.0/24, then re-run b4
+  t3  [x]  do             Tell #notify-oncall the staging rollout is paused
+
+5 captured · pass 3 · fail 1 · captured 1 · 1 added step · 2 open to-dos</code></pre></div>
+
+<h3>What <code>flowviz fold</code> does with them</h3>
+<div class="cmd fig"><pre><code>$ flowviz fold DEPLOY.src.html
+fold  b3a  after b3 in row b · read · "Check the provider allowlist includes the new pods' egress range."
+      wrote li.step[data-step="b3a"] with data-after="b3"; b4 now waits on b3a
+      data-pass / data-fail left as PASS_SIGNAL / FAIL_SIGNAL: write them, the audit blocks until you do
+skip  b3b  removed in the page (tombstone): nothing to fold
+todo  t2   is "add to write-up" and tied to b1: fold it as a step too with --todo t2
+sidecar  stamped added.b3a.folded · backup in .flowviz/state-backup/
+next: write the regexes, then flowviz build and audit --browser</code></pre></div>
+
+<h3>How each addition ends</h3>
+<div class="dia fvm-life">
+<svg viewBox="0 0 920 372" role="img" aria-label="An added step goes from typed, to saved, to read back, to folded, to audited; it can be removed, or become a next item instead. A to-do goes from open to done, to a step, to a Results next item, or is removed.">
+<defs><marker id="fvmArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--dim)"/></marker></defs>
+<text x="20" y="22" style="font:700 10.5px var(--f-ui);letter-spacing:1.15px;fill:var(--dim2)">AN ADDED STEP</text>
+<rect x="20" y="34" width="150" height="44" rx="5" style="fill:var(--magbg);stroke:var(--mag)"/>
+<text x="32" y="53" style="font:600 12.5px var(--f-ui);fill:var(--fg)">typed in the page</text>
+<text x="32" y="69" style="font:11px var(--f-ui);fill:var(--dim)">you, in violet ink</text>
+<line x1="170" y1="56" x2="198" y2="56" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="200" y="34" width="150" height="44" rx="5" style="fill:var(--panel2);stroke:var(--line2)"/>
+<text x="212" y="53" style="font:600 12.5px var(--f-ui);fill:var(--fg)">saved beside it</text>
+<text x="212" y="69" style="font:11px var(--f-ui);fill:var(--dim)">added.b3a, in the sidecar</text>
+<line x1="350" y1="56" x2="378" y2="56" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="380" y="34" width="150" height="44" rx="5" style="fill:var(--accbg);stroke:var(--acc)"/>
+<text x="392" y="53" style="font:600 12.5px var(--f-ui);fill:var(--fg)">read back</text>
+<text x="392" y="69" style="font:11px var(--f-ui);fill:var(--dim)">flowviz captures</text>
+<line x1="530" y1="56" x2="558" y2="56" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="560" y="34" width="150" height="44" rx="5" style="fill:var(--accbg);stroke:var(--acc)"/>
+<text x="572" y="53" style="font:600 12.5px var(--f-ui);fill:var(--fg)">folded</text>
+<text x="572" y="69" style="font:11px var(--f-ui);fill:var(--dim)">flowviz fold, same id</text>
+<line x1="710" y1="56" x2="738" y2="56" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="740" y="34" width="160" height="44" rx="5" style="fill:var(--okbg);stroke:var(--ok)"/>
+<text x="752" y="53" style="font:600 12.5px var(--f-ui);fill:var(--fg)">audited, rebuilt</text>
+<text x="752" y="69" style="font:11px var(--f-ui);fill:var(--dim)">an authored step now</text>
+<line x1="275" y1="78" x2="275" y2="110" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="200" y="112" width="150" height="40" rx="5" style="fill:none;stroke:var(--dim2);stroke-dasharray:4 3"/>
+<text x="212" y="129" style="font:600 12px var(--f-ui);fill:var(--dim)">removed by you</text>
+<text x="212" y="144" style="font:10.5px var(--f-ui);fill:var(--dim2)">tombstone, id retired</text>
+<line x1="455" y1="78" x2="455" y2="110" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="380" y="112" width="150" height="40" rx="5" style="fill:none;stroke:var(--acc);stroke-dasharray:4 3"/>
+<text x="392" y="129" style="font:600 12px var(--f-ui);fill:var(--fg)">a Next item instead</text>
+<text x="392" y="144" style="font:10.5px var(--f-ui);fill:var(--dim2)">the agent's call</text>
+<text x="20" y="196" style="font:700 10.5px var(--f-ui);letter-spacing:1.15px;fill:var(--dim2)">A TO-DO</text>
+<rect x="20" y="248" width="150" height="44" rx="5" style="fill:var(--magbg);stroke:var(--mag)"/>
+<text x="32" y="267" style="font:600 12.5px var(--f-ui);fill:var(--fg)">open</text>
+<text x="32" y="283" style="font:11px var(--f-ui);fill:var(--dim)">t, + to-do, or the list</text>
+<line x1="170" y1="262" x2="248" y2="224" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<line x1="170" y1="268" x2="248" y2="264" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<line x1="170" y1="274" x2="248" y2="304" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<line x1="170" y1="280" x2="248" y2="344" style="stroke:var(--dim);stroke-width:1.3" marker-end="url(#fvmArr)"/>
+<rect x="250" y="206" width="220" height="36" rx="5" style="fill:var(--okbg);stroke:var(--ok)"/>
+<text x="262" y="228" style="font:600 12px var(--f-ui);fill:var(--fg)">done <tspan style="font-weight:400;fill:var(--dim)">· ticked in the page</tspan></text>
+<rect x="250" y="246" width="220" height="36" rx="5" style="fill:var(--magbg);stroke:var(--mag);stroke-dasharray:4 3"/>
+<text x="262" y="268" style="font:600 12px var(--f-ui);fill:var(--fg)">a step: b1a <tspan style="font-weight:400;fill:var(--dim)">· joins the lane above</tspan></text>
+<rect x="250" y="286" width="220" height="36" rx="5" style="fill:var(--accbg);stroke:var(--acc)"/>
+<text x="262" y="308" style="font:600 12px var(--f-ui);fill:var(--fg)">a Next item <tspan style="font-weight:400;fill:var(--dim)">· flowviz results</tspan></text>
+<rect x="250" y="326" width="220" height="36" rx="5" style="fill:none;stroke:var(--dim2);stroke-dasharray:4 3"/>
+<text x="262" y="348" style="font:600 12px var(--f-ui);fill:var(--dim)">removed <tspan style="font-weight:400;fill:var(--dim2)">· tombstone</tspan></text>
+<text x="560" y="196" style="font:700 10.5px var(--f-ui);letter-spacing:1.15px;fill:var(--dim2)">KEY</text>
+<rect x="560" y="212" width="22" height="14" rx="3" style="fill:var(--magbg);stroke:var(--mag)"/>
+<text x="592" y="224" style="font:12px var(--f-ui);fill:var(--fg)">typed by you, after handover</text>
+<rect x="560" y="240" width="22" height="14" rx="3" style="fill:var(--panel2);stroke:var(--line2)"/>
+<text x="592" y="252" style="font:12px var(--f-ui);fill:var(--fg)">on disk, in the sidecar</text>
+<rect x="560" y="268" width="22" height="14" rx="3" style="fill:var(--accbg);stroke:var(--acc)"/>
+<text x="592" y="280" style="font:12px var(--f-ui);fill:var(--fg)">the agent and its commands</text>
+<rect x="560" y="296" width="22" height="14" rx="3" style="fill:var(--okbg);stroke:var(--ok)"/>
+<text x="592" y="308" style="font:12px var(--f-ui);fill:var(--fg)">finished</text>
+<rect x="560" y="324" width="22" height="14" rx="3" style="fill:none;stroke:var(--dim2);stroke-dasharray:4 3"/>
+<text x="592" y="336" style="font:12px var(--f-ui);fill:var(--fg)">dashed: not the usual path</text>
+</svg>
+</div>
+
+<h3>What changes, where</h3>
+<table>
+<thead><tr><th>File</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td><code>template/flow.js</code></td><td>draw added steps and the to-do section from state; <code>merge()</code> keeps keys it does not know; Copy captures and Save evidence carry both; <b>t</b> and the pill button</td></tr>
+<tr><td><code>template/flow.css</code></td><td>the insertion look, the to-do section, quick capture, print rules</td></tr>
+<tr><td><code>SPEC.md</code> · <code>AGENTS.md</code></td><td>schema 5 (§6), the b3a shape (§1.2b), and a short section for agents: read additions back, then fold, reword or carry them</td></tr>
+<tr><td><code>bin/flowviz-captures.py</code></td><td><code>+</code> lines in place, a to-dos block, both in <code>--json</code></td></tr>
+<tr><td><code>bin/flowviz-fold.py</code> (new)</td><td>write added steps into the source under their ids; stamp them folded; back the sidecar up first</td></tr>
+<tr><td><code>bin/flowviz-results.py</code></td><td>open "do after" to-dos are offered as Next; the archive gate names any still open</td></tr>
+<tr><td><code>bin/flowviz-audit.py</code></td><td>naming accepts b3a; what a human added is left out of the caps; a note when a sidecar beside the page holds unfolded additions</td></tr>
+<tr><td><code>bin/flowviz-serve.py</code></td><td>keep any top-level key a PUT leaves out; the index lists open to-dos per page</td></tr>
+</tbody>
+</table>
+
+<div class="box warn"><p><b>Without the merge fix, a page built before 3.1.0 erases them.</b> flow.js's
+<code>merge()</code> copies only the keys it knows, so an older page's next save writes a sidecar without
+<code>added</code> and <code>todos</code>. Fix it in both places: serve keeps any key a PUT leaves out, and
+<code>merge()</code> keeps keys it does not know. The prototype works around it by reading both stores itself.</p></div>
+</div>
+</details>
+
+<h2 class="sec">Try it, then pick</h2>
+
+<!-- ─────────── ROW e ─────────── -->
+<details class="row" data-row="e" data-kind="test">
+<summary><span class="ord">e</span><span class="cl">The prototype runs the deploy example mid-run, with both features working</span><span class="rt">5 min</span></summary>
+<div class="in">
+<div class="box key"><p>Open <a href="DEPLOY-PROTO.html"><b>DEPLOY-PROTO.html</b></a> beside this page. It is
+<code>examples/deploy</code> caught just as b4 fails, with a demo run loaded: one added step (b3a) and three
+to-dos. <b>start empty</b> and <b>demo run</b> sit at the bottom left. Served, everything you type saves to
+<code>deploy-proto.flow.json</code>.</p></div>
+
+<label class="chk"><input type="checkbox" data-ck="e-seam"><span>Hover the seam between b2 and b3, add a step, and see it named b2a</span></label>
+<label class="chk"><input type="checkbox" data-ck="e-paste"><span>Paste anything into the new step's box, then press Done</span></label>
+<label class="chk"><input type="checkbox" data-ck="e-t"><span>Open b4, press t, and save a to-do without the page moving</span></label>
+<label class="chk"><input type="checkbox" data-ck="e-promote"><span>Open To do at the bottom and make t2 a step</span></label>
+<label class="chk"><input type="checkbox" data-ck="e-reload"><span>Reload: everything you added comes back</span></label>
+<label class="chk"><input type="checkbox" data-ck="e-theme"><span>Switch the theme from the pill, then open print preview</span></label>
+
+<div class="pb" data-pb="e">
+  <div class="hd">
+    <span class="t">See what the prototype saved</span>
+    <span class="prog">0 / 1 done</span>
+  </div>
+  <ol class="steps">
+    <li class="step" data-step="e1" data-risk="ro">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Print the added steps and to-dos the prototype saved beside the page.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/Projects/FLOW_VIZ/mockups/todo-steps/deploy-proto.flow.json'))); print(json.dumps({k: d.get(k) for k in ('added', 'todos')}, indent=1))"</code></pre></div>
+          <p class="expect"><b>Pass:</b> an <code>"added"</code> block whose steps say <code>"after": "b3"</code> or similar &nbsp;·&nbsp;
+            <i>Fail:</i> <code>FileNotFoundError</code>: the folder was never served, so nothing reached disk</p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["e1"]</span></div>
+            <textarea data-cap="e1" data-pass="&quot;after&quot;:\s*&quot;[a-z][0-9]+&quot;" data-fail="\bFileNotFoundError\b|\bNo such file or directory\b"
+              placeholder="paste the JSON it prints"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="e1" placeholder="0"></span>
+              <span data-cnt="e1">empty</span><span data-at="e1"></span>
+              <span class="rn" data-run="e1"></span>
+              <button class="rr" data-rr="e1" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="e1" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>It shows the two new keys exactly as the agent would read them, straight from disk. The
+          page is no proof: it holds no state, and what you typed lives in the sidecar.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="e1">—</span></span>
+    </li>
+  </ol>
+</div>
+</div>
+</details>
+
+<!-- ─────────── ROW f ─────────── -->
+<details class="row" data-row="f" data-kind="decision">
+<summary><span class="ord">f</span><span class="cl">Your ticks here decide what 3.1.0 builds into template/</span><span class="rt">2 min</span></summary>
+<div class="in">
+<p>Tick what should ship. Every tick saves to <code>todo-steps.flow.json</code> beside this page, and I read them
+from there. Anything else: press <b>t</b> on this page and leave it as a to-do.</p>
+
+<h3>Where to-dos live</h3>
+<label class="chk"><input type="checkbox" data-ck="f-home-section"><span>A section at the end, one line at rest (recommended)</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-home-tray"><span>A tray that slides out from the pill instead</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-markers"><span>Violet counts on the steps and rows they belong to (recommended)</span></label>
+
+<h3>Quick capture</h3>
+<label class="chk"><input type="checkbox" data-ck="f-key-t"><span>t anywhere opens a to-do tied to the step you were on (recommended)</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-pill"><span>+ to-do in the pill, with the open count (recommended)</span></label>
+
+<h3>Ways to add a step</h3>
+<label class="chk"><input type="checkbox" data-ck="f-seam"><span>① a line on every seam, on hover</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-foot"><span>② + step after, at each step's foot</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-miss"><span>③ the prompt under a red or amber chip</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-end"><span>④ + Add a step, at the end of each playbook</span></label>
+
+<h3>Names and kinds</h3>
+<label class="chk"><input type="checkbox" data-ck="f-ids"><span>b3a for inserts, t1 for to-dos, tombstones for removals (recommended)</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-kinds"><span>Two kinds of to-do: add to write-up, do after (recommended)</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-seeded"><span>Agents may write known follow-ups into a report as to-dos too</span></label>
+
+<h3>Tooling</h3>
+<label class="chk"><input type="checkbox" data-ck="f-fold"><span>flowviz fold writes added steps into the source (recommended)</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-results"><span>flowviz results offers open "do after" to-dos as Next</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-archive"><span>The archive step's gate names any to-do still open</span></label>
+<label class="chk"><input type="checkbox" data-ck="f-index"><span>flowviz serve's index lists open to-dos for every page it serves</span></label>
+</div>
+</details>
+
 <div class="foot">
-<span class="v">FLOW-VIZ v3.1.0</span> · doc <code>checkout</code> · template <code>drawing@3.1.0</code> · built 2026-10-02 · sha <code>1703a0f</code> · state <code>checkout.flow.json</code>
+<span class="v">FLOW-VIZ v3.1.0</span> · doc <code>todo-steps</code> · template <code>report@3.1.0</code> · built 2026-10-02 · sha <code>1703a0f</code> · state <code>todo-steps.flow.json</code>
 <div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.1.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
 </div>
-</main>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
 <!-- FLOW_VIZ icon sprite. Stroke icons on a 24 grid; draw.js references them as #i-<name>.
      Components (for node "icon"): user devices browser mobile gateway lb cdn cloud globe server
@@ -5853,6 +6450,857 @@ figure.fv-drawing{break-inside:avoid}
   applyStill();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
   else mount();
+})();
+
+</script>
+<script id="fvProtoJs">
+/* ===========================================================================
+   FLOW_VIZ — proto.js · PROTOTYPE LAYER for to-dos and added steps
+   Not part of template/. build.sh injects it after flow.js and draw.js, and it
+   reaches the page only through window.FLOWVIZ (state, save, onHydrate,
+   ptTime), the same contract draw.js uses.
+
+   What it adds to the state (schema 5 in the proposal):
+     added: { b3a: { after:'b3', text, cmd, risk:'ro'|'w', at, edited?, gone? } }
+     todos: { t1:  { text, kind:'add'|'do', ref:'b4'|null, at, done, doneAt?, became?, gone? } }
+   An added step's output, tick and note use the ordinary keys (captures.b3a,
+   steps.b3a), so evidence, progress and dimming treat it like any other step.
+
+   Ids are join keys, so an added step takes its anchor's id plus the next free
+   letter (b3a, b3b) and b4 is never renumbered; a to-do takes the next t<n>.
+   Nothing is deleted: removing writes a tombstone (gone), because the load
+   merge is a union and a missing key would come back from the other store.
+   =========================================================================== */
+(function () {
+  'use strict';
+  var FV = window.FLOWVIZ;
+  /* 3.1.0 shipped this natively (state schema 5): the prototype stands down, and only proto.css stays,
+     for the static mockups in TODO-STEPS */
+  if (!FV || FV.kind === 'drawing' || (FV.state && FV.state.schema >= 5)) return;
+  var st = FV.state, DOC = FV.doc, LSKEY = 'flowviz:' + DOC;
+  var served = /^https?:$/.test(location.protocol);
+  var POSE = (location.search.match(/[?&]pose=([a-z]+)/) || [])[1] || '';
+  var SRC = (location.pathname.split('/').pop() || 'REPORT.html').replace(/\.html$/, '.src.html');
+
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function iso() { return new Date().toISOString(); }
+  function words(s) { return (s || '').trim().split(/\s+/).filter(Boolean).length; }
+  function pt(t, s) { return t ? FV.ptTime(t, s) : ''; }
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+  function live(o) { return Object.keys(o || {}).filter(function (k) { return o[k] && !o[k].gone; }); }
+  function save() { FV.save(); }
+
+  /* ── recover our keys ────────────────────────────────────────────────────
+     flow.js's merge() copies only the keys it knows, so `added` and `todos`
+     reach localStorage and the sidecar but are dropped again on load, and an
+     older build's next save would erase them from disk. The prototype takes
+     them back itself; the real build fixes merge() and makes serve keep the
+     keys a PUT lacks (the proposal, row d). */
+  var localAt = st.savedAt || '';
+  function adopt(d) {
+    if (!d || typeof d !== 'object') return false;
+    var any = false;
+    ['added', 'todos'].forEach(function (k) {
+      if (d[k] && typeof d[k] === 'object') { st[k] = Object.assign(st[k] || {}, d[k]); any = true; }
+    });
+    return any;
+  }
+  try { adopt(JSON.parse(localStorage.getItem(LSKEY) || 'null')); } catch (e) {}
+  if (!st.added || typeof st.added !== 'object') st.added = {};
+  if (!st.todos || typeof st.todos !== 'object') st.todos = {};
+  if (!st.open || typeof st.open !== 'object') st.open = {};
+  if (served) {
+    fetch('./' + DOC + '.flow.json', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && (!localAt || (d.savedAt || '') > localAt) && adopt(d)) renderAll();
+      })
+      .catch(function () {});
+  }
+
+  /* ── ids ───────────────────────────────────────────────────────────────── */
+  var BASE = /^([a-z])([0-9]+)$/;
+  function isAdded(li) { return li.classList.contains('fv-added'); }
+  function authoredIn(ol) {
+    return $$('li.step', ol).filter(function (li) { return !isAdded(li) && BASE.test(li.dataset.step || ''); });
+  }
+  // the added steps hanging off one authored step, in letter order
+  function groupOf(base) {
+    return live(st.added).filter(function (id) { return st.added[id].after === base; }).sort();
+  }
+  // a new step after `base` is the base plus the next letter never used; a
+  // tombstone counts as used, so a removed b3a is never handed out twice
+  function nextAddedId(base) {
+    for (var c = 97; c < 123; c++) {
+      var id = base + String.fromCharCode(c);
+      if (!st.added[id] && !$('li.step[data-step="' + id + '"]')) return id;
+    }
+    return null;
+  }
+  function baseOf(id) { var m = /^([a-z][0-9]+)/.exec(id || ''); return m ? m[1] : null; }
+  function lastOf(base) { var g = groupOf(base); return g.length ? g[g.length - 1] : base; }
+  function isZero(base) { return /^[a-z]0$/.test(base); }
+  function nextTodoId() {
+    var n = 0;
+    Object.keys(st.todos).forEach(function (k) { var m = /^t([0-9]+)$/.exec(k); if (m) n = Math.max(n, +m[1]); });
+    return 't' + (n + 1);
+  }
+
+  /* ── verdict for a step with no rule ─────────────────────────────────────
+     An added step has no data-pass or data-fail until the agent folds it, so
+     it reads `captured`, never `no match`: there is no pass condition to blame.
+     The interpreter-error tier still applies — a rejected command is evidence
+     about the step, whoever wrote it. Copied from flow.js for the prototype;
+     the real build calls flow.js's own verdictOf(). */
+  var CMD_ERR = [/\bParserError\b/, /\bUnexpected token\b/i, /\bMissing (?:closing|expression|argument|statement)\b/i,
+    /\bstring (?:is )?missing the terminator\b/i, /\bpositional parameter cannot be found\b/i,
+    /\bis not recognized as the name of\b/i, /\bCommandNotFoundException\b/, /\bcommand not found\b/i,
+    /\bsyntax error near unexpected token\b/i, /\bunexpected EOF while looking for matching\b/i,
+    /\b(?:SyntaxError|IndentationError|TabError):/];
+  function verdictOf(v) {
+    if (!v.trim()) return null;
+    return CMD_ERR.some(function (re) { return re.test(v); }) ? 'error' : 'saved';
+  }
+  var VD = { pass: 'pass', fail: 'fail', error: 'error', saved: 'captured' };
+  var GLYPH = { pass: '✓', fail: '✕', error: '⚠', saved: '●' };
+  function cap(id) {
+    var r = (st.captures[id] = st.captures[id] || {});
+    ['text', 'exit', 'note'].forEach(function (k) { if (!(k in r)) r[k] = ''; });
+    if (!('verdict' in r)) r.verdict = null;
+    if (!('at' in r)) r.at = null;
+    if (!Array.isArray(r.runs)) r.runs = [];
+    return r;
+  }
+  function stepRec(id) { return (st.steps[id] = st.steps[id] || { done: false, acked: false }); }
+
+  /* ── an added step, drawn ────────────────────────────────────────────────
+     The same markup as an authored step, so flow.js's own repaint (done,
+     acked, dim, the Done box) and its Save evidence reach it unchanged. */
+  function addedLi(id) {
+    var a = st.added[id], w = a.risk === 'w';
+    var li = el('li', 'step named fv-added');
+    li.setAttribute('data-step', id);
+    li.setAttribute('data-risk', w ? 'w' : 'ro');
+    if (!isZero(a.after)) li.setAttribute('data-after', a.after);
+    li.innerHTML =
+      '<input type="checkbox" class="done" aria-label="done">' +
+      '<details class="sd"><summary><span class="n">' + id + '</span><span class="ds">' + esc(a.text) + '</span>' +
+        '<span class="fv-tag" title="typed into the page at ' + esc(a.at) + ', after handover: not in the source yet">added ' +
+        esc(pt(a.at)) + '</span></summary>' +
+      '<div class="in">' +
+        (w ? '<label class="gate"><input type="checkbox" class="ack"> I accept this writes: ' + esc(a.text) + '</label>' : '') +
+        (a.cmd ? '<div class="cmd"><button class="copy">copy</button><pre><code>' + esc(a.cmd) + '</code></pre></div>'
+               : '<p class="fv-nocmd">No command: something done or checked by hand.</p>') +
+        '<div class="cap"><div class="cl">Paste output <span class="kp">captures["' + id + '"]</span></div>' +
+          '<textarea data-cap="' + id + '" placeholder="paste what it printed — it saves as you type"></textarea>' +
+          '<div class="ft"><span>exit <input class="ec" data-ec="' + id + '" placeholder="0"></span>' +
+            '<span data-cnt="' + id + '">empty</span><span data-at="' + id + '"></span></div>' +
+          '<input class="nt" data-note="' + id + '" placeholder="note for the agent (optional)">' +
+        '</div>' +
+        '<div class="fv-own"><span>Added by you, after <b>' + (isZero(a.after) ? 'the start' : a.after) +
+          '</b>. The agent folds it into the source as <b>' + id + '</b>, so this output stays attached.</span>' +
+          '<span class="fv-acts2"><button type="button" class="fv-lnk" data-fv="edit">edit</button>' +
+          '<button type="button" class="fv-lnk" data-fv="remove">remove</button></span></div>' +
+        '<div class="fin"><span class="vd vdf" data-fvvd="' + id + '" aria-live="polite"></span>' +
+          '<button type="button" class="fd">Done <span class="bx"></span></button></div>' +
+      '</div></details>' +
+      '<span class="ctr"><span class="badge ' + (w ? 'w' : 'ro') + '">' + (w ? 'write' : 'read') + '</span>' +
+        (a.cmd ? '<button class="copy" title="Copy this step’s command without opening the step">⧉</button>' : '') +
+        '<span class="vd" data-fvvd="' + id + '">—</span></span>';
+    var r = st.captures[id] || {}, s = st.steps[id] || {};
+    $('textarea', li).value = r.text || '';
+    $('input.ec', li).value = r.exit || '';
+    $('input.nt', li).value = r.note || '';
+    $('input.done', li).checked = !!s.done;
+    var ak = $('input.ack', li); if (ak) ak.checked = !!s.acked;
+    $('details.sd', li).open = !!st.open['step:' + id];
+    paintAdded(li);
+    return li;
+  }
+  function paintAdded(li) {
+    var id = li.dataset.step, s = st.steps[id] || {}, r = st.captures[id] || {}, v = r.verdict || '';
+    li.classList.toggle('done', !!s.done);
+    li.classList.toggle('acked', !!s.acked);
+    var after = li.dataset.after;
+    if (after) li.classList.toggle('dim', !(st.steps[after] && st.steps[after].done) &&
+                                           !((st.captures[after] || {}).text || '').trim());
+    var b = $('.fin>button.fd', li), bx = b && $('.bx', b);
+    if (b) { b.classList.toggle('on', !!s.done); b.setAttribute('aria-pressed', s.done ? 'true' : 'false'); }
+    if (bx) bx.textContent = s.done ? '✅' : '☐';
+    $$('[data-fvvd]', li).forEach(function (c) {
+      var foot = c.classList.contains('vdf');
+      c.className = 'vd' + (foot ? ' vdf' : '') + (v ? ' ' + v : '');
+      c.textContent = foot ? (v ? GLYPH[v] + ' ' + VD[v] : '· not captured') : (VD[v] || '—');
+      c.title = v === 'saved' ? 'captured: an added step has no pass rule yet; the agent writes one when it folds the step'
+        : v === 'error' ? 'the interpreter rejected this command: the target was never asked' : '';
+    });
+    var ta = $('textarea', li), cnt = $('[data-cnt]', li), at = $('[data-at]', li);
+    if (cnt && ta) cnt.textContent = ta.value.trim() ? ta.value.split('\n').length + ' lines · ' + ta.value.length + ' chars' : 'empty';
+    if (at) { at.textContent = r.at ? 'captured ' + pt(r.at, true) : ''; at.title = r.at || ''; }
+  }
+  // flow.js repaints a playbook's counter only on its own events, so ours does it too, the same way
+  function paintProgress(pb) {
+    if (!pb) return;
+    var lis = $$('li.step', pb), done = 0, fail = 0, err = 0;
+    lis.forEach(function (li) {
+      var id = li.dataset.step, v = (st.captures[id] || {}).verdict;
+      if ((st.steps[id] || {}).done) done++;
+      if (v === 'fail') fail++; else if (v === 'error') err++;
+    });
+    var p = $('.prog', pb);
+    if (p) p.innerHTML = done + ' / ' + lis.length + ' done' + (fail ? ' · <span class="f">' + fail + ' failed</span>' : '') +
+      (err ? ' · <span class="e">' + err + ' errored</span>' : '');
+  }
+
+  /* ── the playbook: added steps in place, an insert line on every seam ───── */
+  function renderSteps() {
+    $$('li.fv-added, li.fv-gap, li.fv-end').forEach(function (n) { n.remove(); });
+    $$('ol.steps').forEach(function (ol) {
+      var steps = authoredIn(ol);
+      if (!steps.length) return;
+      var letter = steps[0].dataset.step.charAt(0);
+      groupOf(letter + '0').forEach(function (id) { ol.insertBefore(addedLi(id), steps[0]); });
+      steps.forEach(function (li, i) {
+        var base = li.dataset.step, last = li;
+        groupOf(base).forEach(function (id) { var a = addedLi(id); last.after(a); last = a; });
+        if (i === steps.length - 1) return;           // the end row covers the last seam
+        var g = el('li', 'fv-gap'), nid = nextAddedId(base);
+        g.innerHTML = '<button type="button" class="fv-ins" data-fv="ins" data-base="' + base + '" ' +
+          'title="Add a step here. It becomes ' + nid + ', and no other step is renamed.">' +
+          '<span>+ add a step after ' + last.dataset.step + '<i>→ ' + nid + '</i></span></button>';
+        last.after(g);
+      });
+      var tb = steps[steps.length - 1].dataset.step;
+      ol.appendChild(el('li', 'fv-end', '<button type="button" class="fv-endbtn" data-fv="ins" data-base="' + tb + '">' +
+        '+ Add a step to this playbook<i>→ ' + nextAddedId(tb) + '</i></button>'));
+    });
+    $$('.pb').forEach(paintProgress);
+  }
+  // every step's foot gains + step after and + to-do, left of the verdict and Done
+  function renderFoot() {
+    $$('li.step').forEach(function (li) {
+      var fin = $('.sd>.in>.fin', li);
+      if (!fin || $('.fv-foot', fin)) return;
+      fin.insertBefore(el('span', 'fv-foot',
+        '<button type="button" class="fv-fb" data-fv="footstep" title="Add a step after this one">+ step after</button>' +
+        '<button type="button" class="fv-fb" data-fv="foottodo" title="Add a to-do tied to this step (t)">+ to-do</button>'), fin.firstChild);
+    });
+  }
+  // a red or amber chip is often how you learn a step was missing: offer it there
+  function prevBase(li) {
+    var ol = li.closest('ol.steps'), steps = authoredIn(ol), i = steps.indexOf(li);
+    return i > 0 ? steps[i - 1].dataset.step : li.dataset.step.charAt(0) + '0';
+  }
+  function paintMiss() {
+    $$('li.step').forEach(function (li) {
+      if (isAdded(li) || !BASE.test(li.dataset.step || '')) return;
+      var inb = $('.sd>.in', li); if (!inb) return;
+      var box = $('.fv-miss', inb), id = li.dataset.step, v = (st.captures[id] || {}).verdict;
+      if (!box) { box = el('div', 'fv-miss'); inb.insertBefore(box, $('.fin', inb)); }
+      box.hidden = !(v === 'fail' || v === 'error');
+      if (box.hidden) return;
+      var prev = prevBase(li), at = isZero(prev) ? 'before ' + id : 'after ' + lastOf(prev);
+      box.innerHTML = '<span>' + (v === 'error' ? 'Rejected before it ran. Was a setup step missing before ' + id + '?'
+        : 'Was a step missing before ' + id + '?') + '</span>' +
+        '<button type="button" class="fv-fb" data-fv="ins" data-base="' + prev + '">+ add it ' + at +
+        ' → ' + nextAddedId(prev) + '</button>';
+    });
+  }
+
+  /* ── the composer: one sentence, read or write, an optional command ────── */
+  var comp = null;
+  function anchorFor(base) {
+    if (!isZero(base)) return { li: $('li.step[data-step="' + lastOf(base) + '"]'), before: false };
+    var g = groupOf(base);
+    if (g.length) return { li: $('li.step[data-step="' + g[g.length - 1] + '"]'), before: false };
+    var first = $$('li.step').filter(function (li) {
+      return !isAdded(li) && (li.dataset.step || '').charAt(0) === base.charAt(0);
+    })[0];
+    return { li: first, before: true };
+  }
+  function openComposer(base, o) {
+    o = o || {};
+    closeComposer();
+    if (!base) return;
+    var an = o.edit ? { li: $('li.step[data-step="' + o.edit + '"]'), before: false } : anchorFor(base);
+    if (!an.li) return;
+    var row = an.li.closest('details.row'); if (row && !row.open) row.open = true;
+    var a = o.edit ? st.added[o.edit] : null, id = o.edit || nextAddedId(base);
+    var where = o.edit ? 'Edit added step' : (an.before ? 'New step before ' : 'New step after ') +
+      '<span class="fv-lc">' + an.li.dataset.step + '</span>';
+    var li = el('li', 'fv-compose');
+    li.innerHTML =
+      '<div class="fv-ch"><span class="fv-car">‸</span>' + where + ' <span class="fv-nid">' + id + '</span>' +
+        (o.edit ? '' : '<span class="fv-hint">no other step is renamed</span>') +
+        (o.todo ? '<span class="fv-hint">from to-do ' + o.todo + '</span>' : '') +
+      '</div>' +
+      '<input class="fv-in" data-k="text" placeholder="One sentence: what this step establishes or changes.">' +
+      '<div class="fv-row"><span class="fv-m" data-m="words"></span><span class="fv-m" data-m="sent"></span>' +
+        '<span class="fv-seg" role="group" aria-label="blast radius"><button type="button" data-fv="risk" data-risk="ro">read</button>' +
+        '<button type="button" data-fv="risk" data-risk="w" class="w">write</button></span>' +
+        '<span class="fv-hint" data-m="riskhint"></span></div>' +
+      '<label class="fv-lab">Command <span>' +
+        'optional: leave it empty for something done by hand</span></label>' +
+      '<textarea class="fv-in mono" data-k="cmd" rows="1" spellcheck="false" placeholder="the command, on one line"></textarea>' +
+      '<div class="fv-row" data-m="lint"></div>' +
+      '<div class="fv-btns"><button type="button" class="fv-bp" data-fv="csave">' + (o.edit ? 'Save ' : 'Add ') + id + '</button>' +
+        '<button type="button" class="fv-bg" data-fv="ccancel">Cancel</button>' +
+        (o.edit || o.todo ? '' : '<button type="button" class="fv-lnk" data-fv="ctodo">or keep it as a to-do</button>') +
+        '<span class="fv-hint">↵ add · esc cancel</span></div>';
+    if (an.before) an.li.parentNode.insertBefore(li, an.li); else an.li.after(li);
+    if (o.edit) an.li.hidden = true;
+    comp = { li: li, base: base, id: id, edit: o.edit || null, todo: o.todo || null, risk: a ? a.risk : 'ro', hid: o.edit ? an.li : null };
+    $('[data-k="text"]', li).value = a ? a.text : (o.text || '');
+    $('[data-k="cmd"]', li).value = a ? (a.cmd || '') : (o.cmd || '');
+    paintComposer();
+    var inp = $('[data-k="text"]', li);
+    if (!POSE) { inp.focus({ preventScroll: true }); inp.setSelectionRange(inp.value.length, inp.value.length); }
+    li.scrollIntoView({ block: 'nearest' });
+  }
+  function closeComposer() {
+    if (!comp) return;
+    if (comp.hid) comp.hid.hidden = false;
+    comp.li.remove(); comp = null;
+  }
+  function meter(n, cls, text) {
+    if (!n) return;
+    n.className = 'fv-m' + (cls ? ' ' + cls : '');
+    n.innerHTML = text; n.hidden = !text;
+  }
+  function paintComposer() {
+    if (!comp) return;
+    var li = comp.li, text = $('[data-k="text"]', li).value, cmd = $('[data-k="cmd"]', li).value;
+    var n = words(text), multi = (text.trim().replace(/[.!?]$/, '').match(/[.!?]\s/g) || []).length > 0;
+    meter($('[data-m="words"]', li), n <= 20 ? 'ok' : 'warn', n ? n + ' / 20 words' : '');
+    meter($('[data-m="sent"]', li), multi ? 'warn' : 'ok',
+      !text.trim() ? '' : multi ? 'two sentences: the agent will split it' : 'one sentence');
+    $$('.fv-seg button', li).forEach(function (b) {
+      b.setAttribute('aria-pressed', b.dataset.risk === comp.risk ? 'true' : 'false');
+    });
+    $('[data-m="riskhint"]', li).textContent = comp.risk === 'w' ? 'it writes, so it gets a gate like every write step'
+      : 'it changes nothing';
+    /* the audit's paste-safety rules, shown while typing: a smart quote from
+       chat or a doc is the one a human pastes in most, and a console rejects it */
+    var out = [];
+    if (cmd.trim()) {
+      var bad = /[^\x00-\x7E]/.exec(cmd);
+      var lines = cmd.replace(/\r/g, '').split('\n').filter(function (l) { return l.trim(); }).length;
+      out.push(bad ? '<span class="fv-m warn">non-ASCII ' + esc(bad[0]) + ' at ' + (bad.index + 1) +
+        ': a console rejects it <button type="button" data-fv="ascii">fix</button></span>'
+        : '<span class="fv-m ok">ASCII</span>');
+      out.push(lines > 1 ? '<span class="fv-m warn">' + lines + ' lines: keep it to one</span>' : '<span class="fv-m ok">one line</span>');
+      if (/^\s*(#|\/\/|<#|rem\b)/i.test(cmd)) out.push('<span class="fv-m warn">starts with a comment: its first character gets dropped</span>');
+    }
+    $('[data-m="lint"]', li).innerHTML = out.join('');
+    $('[data-fv="csave"]', li).disabled = !text.trim();
+  }
+  function asciiFix(s) {
+    return s.replace(/[‘’‚′]/g, "'").replace(/[“”„″]/g, '"')
+      .replace(/[–—−]/g, '-').replace(/…/g, '...').replace(/[   ]/g, ' ');
+  }
+  function saveComposer() {
+    if (!comp) return;
+    var li = comp.li;
+    var text = $('[data-k="text"]', li).value.trim().replace(/\s+/g, ' ');
+    var cmd = $('[data-k="cmd"]', li).value.replace(/\r/g, '').trim();
+    if (!text) return;
+    var c = comp, id = c.id;
+    if (c.edit) {
+      var a = st.added[id]; a.text = text; a.cmd = cmd; a.risk = c.risk; a.edited = iso();
+    } else {
+      st.added[id] = { after: c.base, text: text, cmd: cmd, risk: c.risk, at: iso() };
+      st.open['step:' + id] = true;
+    }
+    if (c.todo && st.todos[c.todo]) {
+      var t = st.todos[c.todo]; t.became = id; t.done = true; t.doneAt = iso();
+    }
+    closeComposer();
+    save(); renderAll();
+    var nli = $('li.step[data-step="' + id + '"]');
+    if (nli) {
+      flashEl(nli);
+      var ta = !c.edit && $('textarea', nli);
+      if (ta) ta.focus({ preventScroll: true });
+    }
+    toast((c.edit ? 'Saved ' : 'Added ') + id + (c.todo ? ' from ' + c.todo : '') + ': in the sidecar, not yet in the source');
+  }
+
+  /* ── to-dos ──────────────────────────────────────────────────────────────
+     Two kinds, in the words a human uses mid-run: something the write-up is
+     missing (it can become a step), and something to do once the run is over. */
+  var KIND = { add: ['Add to the write-up', 'add to write-up'], do: ['Do after this run', 'do after'] };
+  var lastStep = null, newKind = (st.ui && st.ui.fvKind) || 'add', rbOpen = false;
+  function setKind(k) { newKind = k === 'do' ? 'do' : 'add'; st.ui = st.ui || {}; st.ui.fvKind = newKind; }
+  function addTodo(text, kind, ref) {
+    text = (text || '').trim().replace(/\s+/g, ' ');
+    if (!text) return null;
+    var id = nextTodoId();
+    st.todos[id] = { text: text, kind: kind === 'do' ? 'do' : 'add', ref: ref || null, at: iso(), done: false };
+    save(); renderTodos(); renderMarkers(); renderPill();
+    return id;
+  }
+  function byOrder(a, b) {
+    var ta = st.todos[a], tb = st.todos[b];
+    if (!!ta.done !== !!tb.done) return ta.done ? 1 : -1;
+    return (+a.slice(1) || 0) - (+b.slice(1) || 0);
+  }
+  function todoLi(id) {
+    var t = st.todos[id];
+    var anc = t.ref ? '<button type="button" class="fv-anc" data-fv="go" data-go="' + t.ref + '" title="go to ' + t.ref + '">after ' + t.ref + '</button>' : '';
+    var became = t.became ? '<button type="button" class="fv-became" data-fv="go" data-go="' + t.became +
+      '" title="this to-do became step ' + t.became + '">→ ' + t.became + '</button>' : '';
+    var promote = !t.done && t.kind === 'add' && t.ref ? '<button type="button" class="fv-lnk" data-fv="promote">make it a step</button>' : '';
+    var when = t.done ? 'done ' + pt(t.doneAt) : pt(t.at);
+    return '<li class="fv-ti' + (t.done ? ' done' : '') + '" data-tid="' + id + '">' +
+      '<input type="checkbox" class="fv-tck"' + (t.done ? ' checked' : '') + ' aria-label="' + id + ' done">' +
+      '<span class="fv-id">' + id + '</span><span class="fv-tx">' + esc(t.text) + '</span>' +
+      '<span class="fv-meta">' + anc + became + '<span title="' + esc(t.done ? t.doneAt : t.at) + '">' + esc(when) + '</span>' +
+      '<span class="fv-acts">' + promote + '<button type="button" class="fv-lnk" data-fv="tedit">edit</button>' +
+      '<button type="button" class="fv-lnk" data-fv="tdel">remove</button></span></span></li>';
+  }
+  function stepOptions(sel) {
+    return '<option value="">no step</option>' + $$('li.step').map(function (li) {
+      var id = li.dataset.step;
+      return '<option value="' + id + '"' + (id === sel ? ' selected' : '') + '>after ' + id + '</option>';
+    }).join('');
+  }
+  function renderTodos() {
+    var sec = $('#fvTodo');
+    if (!sec) {
+      sec = el('section', 'fv-todo');
+      sec.id = 'fvTodo';
+      sec.setAttribute('data-fv-live', '');
+      sec.innerHTML = '<details><summary><span class="fv-k">To do</span><span class="fv-cnt"></span>' +
+        '<span class="fv-peek"></span><button type="button" class="fv-add" data-fv="tnew">+ to-do</button></summary>' +
+        '<div class="fv-body"></div></details>';
+      var foot = $('.foot');
+      if (foot) foot.parentNode.insertBefore(sec, foot); else document.body.appendChild(sec);
+      var d = $('details', sec);
+      d.open = !!st.open['fv:todo'];
+      d.addEventListener('toggle', function () { st.open['fv:todo'] = d.open; save(); });
+    }
+    var ids = live(st.todos), open = ids.filter(function (id) { return !st.todos[id].done; }).sort(byOrder);
+    $('.fv-cnt', sec).innerHTML = ids.length ? '<b>' + open.length + ' open</b> · ' + (ids.length - open.length) + ' done'
+      : 'nothing yet · press <b>t</b> anywhere';
+    $('.fv-peek', sec).textContent = open.length ? open[0] + '  ' + st.todos[open[0]].text : '';
+    var h = '';
+    ['add', 'do'].forEach(function (k) {
+      var list = ids.filter(function (id) { return st.todos[id].kind === k; }).sort(byOrder);
+      if (!list.length) return;
+      var n = list.filter(function (id) { return !st.todos[id].done; }).length;
+      h += '<div class="fv-grp">' + KIND[k][0] + ' <em>' + n + '</em></div><ul class="fv-tl">' + list.map(todoLi).join('') + '</ul>';
+    });
+    if (!ids.length) h += '<div class="fv-empty">Something this write-up is missing, or something to do once the run is over. ' +
+      'Press <b>t</b> anywhere, or <b>+ to-do</b> in the pill, and it lands here without moving the page.</div>';
+    h += '<div class="fv-new"><input class="fv-in" data-k="ttext" placeholder="Something to add to this write-up, or to do after the run">' +
+      '<span class="fv-seg" role="group" aria-label="kind">' +
+        '<button type="button" data-fv="tkind" data-kind="add">add to write-up</button>' +
+        '<button type="button" data-fv="tkind" data-kind="do">do after</button></span>' +
+      '<select data-k="tref" aria-label="tie it to a step">' + stepOptions(lastStep) + '</select>' +
+      '<button type="button" class="fv-bp" data-fv="tadd">Add</button></div>';
+    h += '<details class="more fv-rb"' + (rbOpen ? ' open' : '') + '><summary>what the agent reads back</summary><div class="in">' +
+      '<div class="cmd fig"><pre><code data-fv-rb></code></pre></div>' +
+      '<div class="fv-btns"><button type="button" class="fv-bg" data-fv="copyagent">Copy additions for agent</button>' +
+      '<span class="fv-hint">in 3.1.0 this rides along in Copy captures for agent</span></div></div></details>';
+    $('.fv-body', sec).innerHTML = h;
+    $$('[data-fv="tkind"]', sec).forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.kind === newKind ? 'true' : 'false'); });
+    var rb = $('.fv-rb', sec);
+    rb.addEventListener('toggle', function () { rbOpen = rb.open; });
+    renderReadBack();
+  }
+  function renderMarkers() {
+    $$('.fv-tdm, .fv-rm').forEach(function (n) { n.remove(); });
+    var byRef = {};
+    live(st.todos).forEach(function (id) {
+      var t = st.todos[id];
+      if (!t.done && t.ref) (byRef[t.ref] = byRef[t.ref] || []).push(id);
+    });
+    Object.keys(byRef).forEach(function (ref) {
+      var ds = $('li.step[data-step="' + ref + '"] .sd>summary .ds');
+      if (!ds) return;
+      var c = el('span', 'fv-tdm');
+      c.setAttribute('data-fv', 'gotodo');
+      c.setAttribute('data-tid', byRef[ref][0]);
+      c.textContent = byRef[ref].length + ' to-do';
+      c.title = byRef[ref].map(function (id) { return id + ': ' + st.todos[id].text; }).join('\n');
+      ds.after(c);
+    });
+    // at rest the rows are shut: say on the row where the human added something
+    $$('details.row').forEach(function (row) {
+      var ids = $$('li.step', row).map(function (li) { return li.dataset.step; });
+      var nAdd = $$('li.fv-added', row).length, nTodo = 0;
+      live(st.todos).forEach(function (id) {
+        var t = st.todos[id];
+        if (!t.done && t.ref && ids.indexOf(t.ref) >= 0) nTodo++;
+      });
+      if (!nAdd && !nTodo) return;
+      var s = $('summary', row);
+      var m = el('span', 'fv-rm');
+      m.textContent = [nAdd ? '+' + nAdd + ' added' : '', nTodo ? nTodo + ' to-do' : ''].filter(Boolean).join(' · ');
+      m.title = 'typed into the page after handover: the agent reads these back';
+      s.insertBefore(m, $('.rt', s));
+    });
+  }
+  function renderPill() {
+    var txt = $('#flowPillTxt');
+    if (!txt) return;
+    var b = $('#fvTodoBtn');
+    if (!b) {
+      b = el('button');
+      b.id = 'fvTodoBtn'; b.type = 'button';
+      b.setAttribute('data-fv', 'quick');
+      b.title = 'Add a to-do without losing your place (t)';
+      txt.after(el('span', 'sep'), b);
+    }
+    var n = live(st.todos).filter(function (id) { return !st.todos[id].done; }).length;
+    b.innerHTML = '+ to-do' + (n ? '<span class="fv-pc">' + n + '</span>' : '');
+  }
+
+  /* ── what the agent reads back: a mock of flowviz captures in 3.1.0 ─────── */
+  function trunc(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+  function pad(s, n) { s = String(s); return s + new Array(Math.max(1, n - s.length + 1)).join(' '); }
+  function readBackText() {
+    var L = [], adds = live(st.added);
+    L.push('$ flowviz captures ' + SRC.replace('.src.html', '.html') + '        # as 3.1.0 would print it');
+    $$('.pb').forEach(function (pb) {
+      if (!$('li.fv-added', pb)) return;
+      var t = $('.hd .t', pb);
+      L.push('playbook  ' + (t ? t.textContent.trim() : '(untitled)'));
+      $$('li.step', pb).forEach(function (li) {
+        var id = li.dataset.step, r = st.captures[id] || {}, v = (r.verdict || '');
+        var vd = v === 'saved' ? (isAdded(li) ? 'CAPTURED' : 'NO MATCH') : v ? v.toUpperCase() : '-';
+        var risk = li.dataset.risk === 'w' ? 'WRITE' : 'read';
+        var ds = $('.ds', li), sentence = ds ? ds.textContent : '';
+        if (!isAdded(li)) { L.push('step ' + pad(id, 6) + pad(risk, 7) + pad(vd, 10) + trunc(sentence.trim(), 64)); return; }
+        var a = st.added[id];
+        L.push('+    ' + pad(id, 6) + pad(risk, 7) + pad(vd, 10) + a.text);
+        L.push('  added ' + pt(a.at) + ' in the page, after ' + (isZero(a.after) ? 'the start' : a.after) + ' · not in the source yet');
+        if (a.cmd) L.push('  $ ' + a.cmd);
+        if ((r.text || '').trim()) {
+          L.push('  exit ' + (r.exit === '' || r.exit == null ? '-' : r.exit) + ' · captured ' + pt(r.at) + (r.note ? ' · note: ' + r.note : ''));
+          r.text.split('\n').slice(0, 4).forEach(function (x) { L.push('  | ' + x); });
+        }
+      });
+    });
+    var ids = live(st.todos).sort(byOrder), open = ids.filter(function (id) { return !st.todos[id].done; }).length;
+    if (ids.length) {
+      L.push('');
+      L.push('to-dos  ' + open + ' open · ' + (ids.length - open) + ' done');
+      ids.forEach(function (id) {
+        var t = st.todos[id];
+        L.push('  ' + pad(id, 4) + (t.done ? '[x]  ' : '[ ]  ') + pad(t.kind, 5) + pad(t.ref ? 'after ' + t.ref : '', 10) + t.text +
+          (t.became ? '  -> became ' + t.became : ''));
+      });
+    }
+    if (adds.length) {
+      L.push('');
+      L.push('fold with: flowviz fold ' + SRC + '   (' + adds.join(', ') + ' keep their ids)');
+    }
+    if (L.length === 1) L.push('(nothing added yet)');
+    return L.join('\n');
+  }
+  function renderReadBack() {
+    var c = $('[data-fv-rb]');
+    if (c) c.textContent = readBackText();
+  }
+  function agentJson() {
+    var added = {};
+    live(st.added).forEach(function (id) {
+      var a = st.added[id], r = st.captures[id] || {};
+      added[id] = { after: a.after, text: a.text, cmd: a.cmd || '', risk: a.risk, at: a.at,
+                    done: !!(st.steps[id] || {}).done };
+      if ((r.text || '').trim()) added[id].capture = { text: r.text, exit: r.exit, verdict: r.verdict, at: r.at, note: r.note || '' };
+    });
+    var todos = {};
+    live(st.todos).forEach(function (id) { todos[id] = st.todos[id]; });
+    return '```json\n' + JSON.stringify({ doc: DOC, flowviz: FV.version + '+proto', at: iso(), added: added, todos: todos }, null, 2) + '\n```';
+  }
+
+  /* ── quick capture: a to-do from anywhere, without losing your place ───── */
+  var quick = null, qref = null;
+  function openQuick(ref) {
+    if (!quick) {
+      quick = el('div', 'fv-quick');
+      quick.id = 'fvQuick';
+      quick.setAttribute('data-fv-live', '');
+      quick.setAttribute('role', 'dialog');
+      quick.setAttribute('aria-label', 'New to-do');
+      document.body.appendChild(quick);
+    }
+    qref = ref !== undefined ? ref : lastStep;
+    var open = live(st.todos).filter(function (id) { return !st.todos[id].done; }).length;
+    quick.innerHTML = '<div class="fv-qh"><span class="fv-k">New to-do · <span class="fv-lc">' + nextTodoId() + '</span></span>' +
+      (qref ? '<span class="fv-qa" title="tied to the step you were on">after ' + qref +
+        '<button type="button" data-fv="qnoref" title="not tied to a step">✕</button></span>' : '') +
+      '<button type="button" class="fv-lnk" data-fv="qclose">esc</button></div>' +
+      '<input class="fv-in" data-k="qtext" placeholder="Add to the write-up, or do after the run">' +
+      '<div class="fv-qf"><span class="fv-seg" role="group" aria-label="kind">' +
+        '<button type="button" data-fv="qkind" data-kind="add">add to write-up</button>' +
+        '<button type="button" data-fv="qkind" data-kind="do">do after</button></span>' +
+        '<span class="fv-hint">↵ save · <a href="#fvTodo" data-fv="qall">' + open + ' open, see all</a></span></div>';
+    $$('[data-fv="qkind"]', quick).forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.kind === newKind ? 'true' : 'false'); });
+    quick.hidden = false;
+    if (!POSE) $('[data-k="qtext"]', quick).focus();
+  }
+  function closeQuick() { if (quick) quick.hidden = true; }
+  function saveQuick() {
+    var inp = quick && $('[data-k="qtext"]', quick);
+    if (!inp || !inp.value.trim()) return;
+    var id = addTodo(inp.value, newKind, qref);
+    closeQuick();
+    var b = $('#fvTodoBtn'); if (b) flashEl(b);
+    toast(id + ' saved' + (qref ? ' · after ' + qref : '') + ' · it waits in To do at the bottom');
+  }
+
+  /* ── small things ──────────────────────────────────────────────────────── */
+  var toastEl = null, toastT = null;
+  function toast(t) {
+    if (!toastEl) { toastEl = el('div', 'fv-toast'); toastEl.setAttribute('aria-live', 'polite'); document.body.appendChild(toastEl); }
+    toastEl.textContent = t; toastEl.classList.add('on');
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { toastEl.classList.remove('on'); }, 2600);
+  }
+  function flashEl(n) { n.classList.remove('fv-flash'); void n.offsetWidth; n.classList.add('fv-flash'); }
+  function goStep(id) {
+    var li = $('li.step[data-step="' + id + '"]');
+    if (!li) return;
+    var row = li.closest('details.row'); if (row && !row.open) row.open = true;
+    li.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    flashEl(li);
+  }
+  function goTodo(tid) {
+    var sec = $('#fvTodo'); if (!sec) return;
+    var d = $('details', sec); if (d && !d.open) d.open = true;
+    var li = $('li.fv-ti[data-tid="' + tid + '"]', sec) || sec;
+    li.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    flashEl(li);
+  }
+  function copy(text, btn, label) {
+    navigator.clipboard.writeText(text).then(function () { FV.flash(btn, label); }, function () { FV.flash(btn, 'clipboard blocked'); });
+  }
+  function renderProtoTag() {
+    if ($('#fvProto')) return;
+    var p = el('div', 'fv-proto');
+    p.id = 'fvProto';
+    p.innerHTML = '<b>prototype</b><span>to-dos and added steps · not in template/</span>' +
+      (window.FVPROTO_SEED ? '<button type="button" data-fv="reset" title="clear everything typed into this page">start empty</button>' +
+        '<button type="button" data-fv="demo" title="put the demo run back">demo run</button>' : '');
+    document.body.appendChild(p);
+  }
+  function replaceState(src) {
+    ['vars', 'checks', 'open', 'steps', 'captures', 'notes', 'emits', 'added', 'todos'].forEach(function (k) {
+      st[k] = JSON.parse(JSON.stringify((src && src[k]) || {}));
+    });
+    save();
+    toast('reloading…');
+    setTimeout(function () { location.reload(); }, 1300);
+  }
+
+  function renderAll() {
+    renderSteps(); renderFoot(); paintMiss(); renderTodos(); renderMarkers(); renderPill();
+  }
+
+  /* ── events: delegated, because every element here is drawn after flow.js
+     bound its own handlers, and is redrawn whenever the structure changes ── */
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (comp && comp.li.contains(t)) { paintComposer(); return; }
+    var li = t.closest('li.fv-added');
+    if (li) {
+      var id = li.dataset.step;
+      if (t.matches('textarea[data-cap]')) {
+        var r = cap(id);
+        r.text = t.value; r.at = t.value.trim() ? iso() : null; r.verdict = verdictOf(t.value);
+        paintAdded(li); paintProgress(li.closest('.pb'));
+      } else if (t.matches('input[data-ec]')) cap(id).exit = t.value;
+      else if (t.matches('input[data-note]')) cap(id).note = t.value;
+      save(); renderReadBack();
+      return;
+    }
+    // an authored step's paste can turn its chip red: offer the missing step there
+    if (t.matches('textarea[data-cap]')) { paintMiss(); renderReadBack(); }
+  });
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    var li = t.closest('li.fv-added');
+    if (li && t.matches('input.done')) { setDone(li, t.checked, true); return; }
+    if (li && t.matches('input.ack')) { stepRec(li.dataset.step).acked = t.checked; paintAdded(li); save(); return; }
+    var ti = t.closest('li.fv-ti');
+    if (ti && t.matches('.fv-tck') && ti.closest('[data-fv-live]')) {
+      var td = st.todos[ti.dataset.tid];
+      td.done = t.checked; td.doneAt = t.checked ? iso() : null;
+      save(); renderTodos(); renderMarkers(); renderPill();
+    }
+    if (t.matches('select[data-k="tref"]')) lastStep = t.value || lastStep;
+  });
+  function setDone(li, on, collapse) {
+    stepRec(li.dataset.step).done = on;
+    var dn = $('input.done', li); if (dn) dn.checked = on;
+    paintAdded(li); paintProgress(li.closest('.pb')); save(); renderReadBack();
+    if (on && collapse) { var sd = $('details.sd', li); if (sd && sd.open) sd.open = false; }
+  }
+  // toggle does not bubble: listen in the capture phase
+  document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (!d.matches || !d.matches('details.sd')) return;
+    var li = d.closest('li.step'); if (!li) return;
+    if (d.open) lastStep = li.dataset.step;
+    if (isAdded(li)) { st.open['step:' + li.dataset.step] = d.open; save(); }
+  }, true);
+  document.addEventListener('focusin', function (e) {
+    var li = e.target.closest && e.target.closest('li.step');
+    if (li) lastStep = li.dataset.step;
+  });
+
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (quick && !quick.hidden && !quick.contains(t) && !t.closest('#fvTodoBtn')) closeQuick();
+    var li = t.closest('li.fv-added'), done = t.closest('.fin>button.fd');
+    if (li && done) {
+      var on = !(st.steps[li.dataset.step] || {}).done;
+      setDone(li, on, false);
+      var bx = $('.bx', done);
+      if (on && bx) { bx.classList.remove('pop'); void bx.offsetWidth; bx.classList.add('pop'); }
+      if (on) setTimeout(function () { var sd = $('details.sd', li); if (sd) sd.open = false; }, 300);
+      return;
+    }
+    var b = t.closest('[data-fv]');
+    if (!b || b.closest('.fvm')) return;                 // the proposal's static mockups never act
+    var act = b.getAttribute('data-fv'), stepLi = b.closest('li.step'), ti = b.closest('li.fv-ti');
+    if (act === 'ins') { e.preventDefault(); openComposer(b.dataset.base); }
+    else if (act === 'footstep') openComposer(baseOf(stepLi.dataset.step));
+    else if (act === 'foottodo') openQuick(stepLi.dataset.step);
+    else if (act === 'risk' && comp) { comp.risk = b.dataset.risk; paintComposer(); }
+    else if (act === 'ascii' && comp) { var ci = $('[data-k="cmd"]', comp.li); ci.value = asciiFix(ci.value); paintComposer(); }
+    else if (act === 'csave') saveComposer();
+    else if (act === 'ccancel') closeComposer();
+    else if (act === 'ctodo' && comp) {
+      var tx = $('[data-k="text"]', comp.li).value, ref = lastOf(comp.base);
+      closeComposer();
+      var nid = addTodo(tx, 'add', isZero(ref) ? null : ref);
+      if (nid) toast(nid + ' saved as a to-do · make it a step whenever you like');
+    }
+    else if (act === 'edit' && stepLi) openComposer(st.added[stepLi.dataset.step].after, { edit: stepLi.dataset.step });
+    else if (act === 'remove' && stepLi) {
+      if (!b.classList.contains('fv-sure')) {
+        b.classList.add('fv-sure'); b.textContent = 'remove ' + stepLi.dataset.step + '?';
+        setTimeout(function () { b.classList.remove('fv-sure'); b.textContent = 'remove'; }, 3000);
+        return;
+      }
+      st.added[stepLi.dataset.step].gone = iso();         // a tombstone, never a delete
+      save(); renderAll(); toast(stepLi.dataset.step + ' removed · its id is never reused');
+    }
+    else if (act === 'go') { e.preventDefault(); goStep(b.dataset.go); }
+    else if (act === 'gotodo') { e.preventDefault(); e.stopPropagation(); goTodo(b.dataset.tid); }
+    else if (act === 'tnew') { e.preventDefault(); openQuick(); }
+    else if (act === 'quick') { if (quick && !quick.hidden) closeQuick(); else openQuick(); }
+    else if (act === 'qclose') closeQuick();
+    else if (act === 'qnoref') { qref = null; var qa = b.closest('.fv-qa'); if (qa) qa.remove(); $('[data-k="qtext"]', quick).focus(); }
+    else if (act === 'qkind' || act === 'tkind') {
+      setKind(b.dataset.kind);
+      $$('[data-fv="' + act + '"]').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.kind === newKind ? 'true' : 'false'); });
+    }
+    else if (act === 'qall') { e.preventDefault(); closeQuick(); goTodo(''); }
+    else if (act === 'tadd') {
+      var sec = $('#fvTodo'), inp = $('[data-k="ttext"]', sec), sel = $('[data-k="tref"]', sec);
+      var id2 = addTodo(inp.value, newKind, sel.value || null);
+      if (id2) { var again = $('[data-k="ttext"]', sec); if (again) again.focus(); toast(id2 + ' saved'); }
+    }
+    else if (act === 'promote' && ti) {
+      var td = st.todos[ti.dataset.tid];
+      openComposer(baseOf(td.ref), { todo: ti.dataset.tid, text: td.text });
+    }
+    else if (act === 'tedit' && ti) {
+      var tx2 = $('.fv-tx', ti), tid = ti.dataset.tid;
+      tx2.innerHTML = '<input class="fv-in fv-edit" data-k="tedit" value="' + esc(st.todos[tid].text) + '">';
+      var ei = $('input', tx2); ei.focus(); ei.select();
+    }
+    else if (act === 'tdel' && ti) {
+      if (!b.classList.contains('fv-sure')) {
+        b.classList.add('fv-sure'); b.textContent = 'remove ' + ti.dataset.tid + '?';
+        setTimeout(function () { b.classList.remove('fv-sure'); b.textContent = 'remove'; }, 3000);
+        return;
+      }
+      st.todos[ti.dataset.tid].gone = iso();
+      save(); renderTodos(); renderMarkers(); renderPill();
+    }
+    else if (act === 'copyagent') copy(agentJson(), b, 'copied for the agent');
+    else if (act === 'reset') replaceState(null);
+    else if (act === 'demo') replaceState(window.FVPROTO_SEED);
+  });
+  document.addEventListener('keydown', function (e) {
+    var t = e.target || {};
+    if (e.key === 'Escape') {
+      if (quick && !quick.hidden) { closeQuick(); e.preventDefault(); }
+      else if (comp) { closeComposer(); e.preventDefault(); }
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      if (comp && comp.li.contains(t)) { e.preventDefault(); saveComposer(); return; }
+      if (quick && quick.contains(t) && t.matches('[data-k="qtext"]')) { e.preventDefault(); saveQuick(); return; }
+      if (t.matches && t.matches('[data-k="ttext"]')) { e.preventDefault(); var ad = $('[data-fv="tadd"]'); if (ad) ad.click(); return; }
+      if (t.matches && t.matches('[data-k="tedit"]')) {
+        e.preventDefault();
+        var tl = t.closest('li.fv-ti'), v = t.value.trim();
+        if (tl && v) { st.todos[tl.dataset.tid].text = v; st.todos[tl.dataset.tid].edited = iso(); save(); }
+        renderTodos(); renderMarkers();
+        return;
+      }
+    }
+    // t, anywhere you are not typing: a to-do tied to the step you were on
+    if (e.key === 't' && !e.metaKey && !e.ctrlKey && !e.altKey &&
+        !(t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''))) {
+      e.preventDefault();
+      openQuick();
+    }
+  });
+  FV.onHydrate(function () { renderAll(); });
+
+  /* ── poses: fixed views for screenshots, prototype only ─────────────────── */
+  function pose() {
+    if (!POSE) return;
+    /* headless screenshots cannot scroll, so a pose hides what sits above the
+       part it shows instead (html.fv-posing, in proto.css) */
+    document.documentElement.classList.add('fv-posing');
+    var row = $('details.row[data-row="b"]');
+    if (POSE === 'steps' || POSE === 'compose') {
+      if (row) { row.open = true; row.classList.add('fv-keep'); }
+      if (POSE === 'steps') {
+        ['b3a', 'b4'].forEach(function (id) { var d = $('li.step[data-step="' + id + '"] details.sd'); if (d) d.open = true; });
+        var ins = $('.fv-ins[data-base="b2"]'); if (ins) ins.classList.add('fv-pose');
+      } else {
+        openComposer('b1', { todo: 't2' });
+        $('[data-k="text"]', comp.li).value = 'Confirm kubectl points at the staging context before the rollout.';
+        $('[data-k="cmd"]', comp.li).value = 'kubectl config current-context | grep -c \u2019staging\u2019';
+        paintComposer();
+      }
+    } else if (/^row[a-z]$/.test(POSE)) {
+      var pr = $('details.row[data-row="' + POSE.slice(3) + '"]');
+      if (pr) { pr.open = true; pr.classList.add('fv-keep'); }
+    } else if (POSE === 'todo') {
+      var d2 = $('#fvTodo details'); if (d2) d2.open = true;
+      setKind('do');
+      openQuick('b4');
+      $('[data-k="qtext"]', quick).value = 'Re-run b4 once the provider confirms the allowlist change';
+    }
+  }
+
+  renderAll();
+  renderProtoTag();
+  pose();
 })();
 
 </script>
