@@ -7,7 +7,7 @@
 <meta name="flowviz-relabel" content='[{"at":"2026-09-29T17:36:34.236Z","rows":{"chg":"a","ship":"b","back":"c"},"steps":{"pre":"b1","push":"b2","health":"b3","smoke":"b4","rb":"c1","archive":"r1"}}]'>
 <meta name="flowviz-kind" content="report">
 <title>Notify v2.3 is ready for staging behind a one-command rollback</title>
-<script>window.FLOW={"doc": "deploy", "version": "3.1.0", "kind": "report", "built": "2026-10-02T02:14:57Z"};
+<script>window.FLOW={"doc": "deploy", "version": "3.1.1", "kind": "report", "built": "2026-10-04T22:36:50Z"};
 (function(){var h=document.documentElement;h.setAttribute("data-kind",FLOW.kind);try{var q=(location.search.match(/[?&]theme=(light|dark)/)||[])[1];var s=JSON.parse(localStorage.getItem("flowviz:"+FLOW.doc)||"{}"),u=s.ui||{};var t=q||u.theme||"auto";var d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);h.setAttribute("data-theme",d?"dark":"light");if(u.motion===false)h.classList.add("still");}catch(e){h.setAttribute("data-theme","light");}})();</script>
 <style>
 /* ===========================================================================
@@ -440,23 +440,52 @@ li.step.added .vd.vdf.saved{border-color:var(--mag);background:var(--magbg)}
 .lnk:hover{color:var(--fg)}
 .lnk.sure{color:var(--bad);text-decoration-style:solid}
 
-/* the seam between two steps: hover it, and a step goes in there. It overlaps
-   only the steps' own padding, so it never covers a word */
-li.seam{list-style:none;position:relative;height:0;margin:0;padding:0;border:0}
-.seam-add{position:absolute;left:15px;right:15px;top:-9px;height:18px;z-index:3;display:flex;align-items:center;
-  justify-content:center;background:none;border:none;padding:0;cursor:pointer;opacity:0;transition:opacity .12s}
-.seam-add::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1.5px dashed var(--mag)}
-.seam-add span{position:relative;font:600 11px/1 var(--f-ui);color:var(--mag);background:var(--paper);
-  border:1px solid var(--mag);border-radius:999px;padding:4px 10px;white-space:nowrap}
-.seam-add i,.pb-add i{font-style:normal;font-family:var(--f-mono);margin-left:6px;opacity:.8}
-.seam-add:hover,.seam-add:focus-visible{opacity:1}
-.seam-add:focus-visible span{outline:2px solid var(--mag);outline-offset:2px}
 li.pb-end{list-style:none;margin:0;padding:6px 15px 7px}
+.pb-add i{font-style:normal;font-family:var(--f-mono);margin-left:6px;opacity:.8}
 .pb-add{background:none;border:none;padding:2px 0;cursor:pointer;font:600 12px var(--f-ui);color:var(--mag);opacity:.75}
 .pb-add:hover,.pb-add:focus-visible{opacity:1}
 
-/* + step after and + to-do sit at the foot of every step, left of the verdict and Done */
-li.step .in .fin .addfoot{margin-right:auto;display:inline-flex;gap:6px}
+/* the fork: one + at the foot of every step, between the verdict and Done. Pressed, the
+   + turns into × and the ways to add fork out of it to the left, along the foot row,
+   nearest first, while the verdict steps aside (the row's header still shows it). Closed,
+   it is a small violet ring. Enter fast and settle; leave faster; scale from the + side. */
+.fork{position:relative;display:inline-flex;flex:none;z-index:4;
+  --fork-out:cubic-bezier(.23,1,.32,1)}
+.fork-btn{position:relative;width:26px;height:26px;padding:0;border-radius:50%;border:1.5px solid var(--mag);
+  background:var(--paper);color:var(--mag);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+  transition:background .16s ease,color .16s ease,box-shadow .16s ease,transform .12s ease-out}
+.fork-btn:active{transform:scale(.94)}
+.fork-btn i{position:relative;width:12px;height:12px;transition:transform .16s var(--fork-out)}
+.fork-btn i::before,.fork-btn i::after{content:"";position:absolute;left:50%;top:50%;background:currentColor;
+  border-radius:1px;transform:translate(-50%,-50%)}
+.fork-btn i::before{width:12px;height:1.75px}
+.fork-btn i::after{width:1.75px;height:12px}
+.fork-btn:focus-visible{outline:2px solid var(--mag);outline-offset:2px}
+.fork.open .fork-btn{background:var(--mag);color:var(--paper);box-shadow:0 0 0 4px var(--magbg)}
+.fork.open .fork-btn i{transform:rotate(135deg);transition-duration:.24s}
+/* the options sit to the left of the +, right-aligned against it */
+.fork-menu{position:absolute;right:calc(100% + 7px);top:50%;display:flex;gap:6px;transform:translateY(-50%);
+  pointer-events:none}
+.fork.open .fork-menu{pointer-events:auto}
+.fork-opt{white-space:nowrap;cursor:pointer;font:600 11.5px/1 var(--f-ui);color:var(--mag);background:var(--paper);
+  border:1px solid var(--mag);border-radius:999px;padding:6px 12px;transform-origin:right center;
+  opacity:0;visibility:hidden;transform:translateX(10px) scale(.9);
+  transition:transform .14s ease-out,opacity .12s ease-out,visibility 0s linear .14s}
+.fork.open .fork-opt{opacity:1;visibility:visible;transform:none;
+  transition:transform .2s var(--fork-out) calc(40ms + var(--i) * 45ms),opacity .16s ease-out calc(40ms + var(--i) * 45ms),
+  visibility 0s}
+.fork.open .fork-opt:active{transform:scale(.97);transition:transform .1s ease-out}
+.fork-opt:focus-visible{background:var(--magbg);outline:none}
+.fork.instant .fork-btn,.fork.instant .fork-btn i,.fork.instant .fork-opt{transition:none!important}
+/* the verdict clears out of the way before the first option lands, and comes back once they have gone */
+li.step .in .fin .vd.vdf{transition:opacity .12s ease-out 80ms,filter .12s ease-out 80ms}
+li.step .in .fin.forked .vd.vdf{opacity:0;filter:blur(2px);transition:opacity 90ms ease-out,filter 90ms ease-out}
+@media (hover:hover) and (pointer:fine){
+  .fork-btn:hover{background:var(--magbg)}
+  .fork.open .fork-btn:hover{background:var(--mag)}
+  .fork-opt:hover{background:var(--magbg)}
+}
+/* + add it, in the prompt under a red or amber chip */
 .addbtn{background:none;border:1px dashed var(--line2);border-radius:var(--r2);cursor:pointer;
   font:600 11px var(--f-ui);color:var(--mag);padding:4px 9px;line-height:1}
 .addbtn:hover,.addbtn:focus-visible{border-color:var(--mag);background:var(--magbg)}
@@ -583,14 +612,18 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 @media print{
   /* paper keeps the work, not the controls: added steps print dashed in place,
      the to-do list prints open, and its boxes can be ticked in pen */
-  li.seam,li.pb-end,.addfoot,.missed,li.composer,.addacts,.todo-acts,.todo-add,.todo-quick,.flow-toast,
+  li.pb-end,.fork,.missed,li.composer,.addacts,.todo-acts,.todo-add,.todo-quick,.flow-toast,
   .todo-new,.todo-peek{display:none!important}
   li.step.added,li.todo-item,section.todo{break-inside:avoid}
   section.todo{background:var(--print-bg)}
 }
 @media (prefers-reduced-motion:reduce){
   .flashed{animation:none;outline:2px solid var(--mag)}
-  .seam-add,.todo-acts,.flow-toast{transition:none}
+  .todo-acts,.flow-toast{transition:none}
+  /* the fork still fades, but nothing moves or turns */
+  .fork-btn i,.fork-btn{transition:none!important}
+  li.step .in .fin .vd.vdf,li.step .in .fin.forked .vd.vdf{filter:none;transition:opacity .15s ease}
+  .fork-opt,.fork.open .fork-opt{transform:none!important;transition:opacity .15s ease,visibility 0s!important}
 }
 @media (max-width:700px){
   li.todo-item{grid-template-columns:18px 30px 1fr}
@@ -598,10 +631,10 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
   .todo-acts{opacity:1}
   .todo-new{grid-template-columns:1fr 1fr}
   .todo-new .cmp-in{grid-column:1/3}
-  /* the foot gets its own line above the verdict and Done, so nothing overlaps */
-  li.step .in .fin{flex-wrap:wrap}
-  li.step .in .fin .addfoot{flex:1 0 100%;margin:0 0 4px}
 }
+/* motion off in the pill: the fork still fades, but nothing moves or turns */
+.still .fork-btn,.still .fork-btn i{transition:none!important}
+.still .fork-opt,.still .fork.open .fork-opt{transform:none!important;transition:opacity .15s ease,visibility 0s!important}
 
 /* ── footer stamp ─────────────────────────────────────────────────────────── */
 .foot{margin-top:36px;padding-top:13px;border-top:1px solid var(--line2);
@@ -1613,8 +1646,8 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 </details>
 
 <div class="foot">
-<span class="v">FLOW-VIZ v3.1.0</span> · doc <code>deploy</code> · template <code>report@3.1.0</code> · built 2026-10-02 · sha <code>1703a0f</code> · state <code>deploy.flow.json</code>
-<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.1.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
+<span class="v">FLOW-VIZ v3.1.1</span> · doc <code>deploy</code> · template <code>report@3.1.1</code> · built 2026-10-04 · sha <code>9116ffd</code> · state <code>deploy.flow.json</code>
+<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.1.1</code><button class="copy" data-for="flowRb">copy</button></span></div>
 </div>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
 <!-- FLOW_VIZ icon sprite. Stroke icons on a 24 grid; draw.js references them as #i-<name>.
@@ -1841,9 +1874,9 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 .fvx li.step.added>.sd>summary .n{color:var(--mag)}
 .fvx li.step.added .vd.saved{color:var(--mag)}
 .fvx li.step.added .vd.vdf.saved{border-color:var(--mag);background:var(--magbg)}
-.fvx li.seam{list-style:none;position:relative;height:0;margin:0;padding:0;border:0}
 .fvx li.pb-end{list-style:none;margin:0;padding:6px 15px 7px}
-.fvx li.step .in .fin .addfoot{margin-right:auto;display:inline-flex;gap:6px}
+.fvx li.step .in .fin .vd.vdf{transition:opacity .12s ease-out 80ms,filter .12s ease-out 80ms}
+.fvx li.step .in .fin.forked .vd.vdf{opacity:0;filter:blur(2px);transition:opacity 90ms ease-out,filter 90ms ease-out}
 .fvx li.composer{list-style:none;margin:0;padding:12px 15px 13px;background:var(--paper);border-top:1px solid var(--mag);
   border-bottom:1px solid var(--mag);border-left:3px solid var(--mag)}
 .fvx ul.todo-list{list-style:none;margin:0;padding:0}
@@ -1852,10 +1885,9 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 .fvx li.todo-item>input{margin:0;transform:translateY(2px);cursor:pointer;accent-color:var(--mag)}
 .fvx li.todo-item.done .todo-tx{color:var(--dim2);text-decoration:line-through}
 .fvx li.todo-item:hover .todo-acts,.fvx li.todo-item:focus-within .todo-acts{opacity:1}
+@media (prefers-reduced-motion:reduce){.fvx li.step .in .fin .vd.vdf,.fvx li.step .in .fin.forked .vd.vdf{filter:none;transition:opacity .15s ease}}
 @media (max-width:700px){.fvx li.todo-item{grid-template-columns:18px 30px 1fr}
-.fvx li.todo-item .todo-meta{grid-column:3;flex-wrap:wrap;white-space:normal}
-.fvx li.step .in .fin{flex-wrap:wrap}
-.fvx li.step .in .fin .addfoot{flex:1 0 100%;margin:0 0 4px}}
+.fvx li.todo-item .todo-meta{grid-column:3;flex-wrap:wrap;white-space:normal}}
 @media print{.fvx thead{display:table-header-group}
 .fvx li.step[data-risk="w"]:not(.acked) .cmd pre{filter:none;user-select:auto}
 .fvx a{color:inherit;text-decoration:none}}
@@ -3518,9 +3550,9 @@ figure.fv-drawing{break-inside:avoid}
     paintCapture(id);
   }
 
-  /* the playbook: added steps in place, a line on every seam, one more at the end */
+  /* the playbook: added steps in place, and one more step at the end */
   function renderSteps() {
-    $$('li.step.added, li.seam, li.pb-end').forEach(function (n) { n.remove(); });
+    $$('li.step.added, li.pb-end').forEach(function (n) { n.remove(); });
     $$('ol.steps').forEach(function (ol) {
       var anchors = anchorsIn(ol);
       if (!anchors.length) return;
@@ -3536,36 +3568,54 @@ figure.fv-drawing{break-inside:avoid}
         else ol.insertBefore(li, stepEl(a.after.charAt(0) + '1'));
         bindStep(li); bindCaptureIn(li); fillStep(li);
       });
-      anchors.forEach(function (li, i) {
-        var base = li.dataset.step, last = stepEl(lastOf(base)) || li, nid = nextAddedId(base);
-        var g = document.createElement('li');
-        if (i < anchors.length - 1) {
-          g.className = 'seam';
-          g.innerHTML = '<button type="button" class="seam-add" data-add="insert" data-base="' + base + '" ' +
-            'title="Add a step here. It becomes ' + nid + ', and no other step is renamed.">' +
-            '<span>+ add a step after ' + last.dataset.step + '<i>→ ' + nid + '</i></span></button>';
-          last.after(g);
-        } else {
-          g.className = 'pb-end';
-          g.innerHTML = '<button type="button" class="pb-add" data-add="insert" data-base="' + base + '">' +
-            '+ Add a step to this playbook<i>→ ' + nid + '</i></button>';
-          ol.appendChild(g);
-        }
-      });
+      var base = anchors[anchors.length - 1].dataset.step, g = document.createElement('li');
+      g.className = 'pb-end';
+      g.innerHTML = '<button type="button" class="pb-add" data-add="insert" data-base="' + base + '">' +
+        '+ Add a step to this playbook<i>→ ' + nextAddedId(base) + '</i></button>';
+      ol.appendChild(g);
     });
   }
-  // every step's foot gains + step after and + to-do, left of the verdict and Done
-  function renderFoot() {
+
+  /* ── the fork: one + at the foot of every step, between the verdict and Done.
+     Pressed, the + turns into × and the ways to add fork out of it to the left,
+     along the foot row, nearest first: + step after, + to-do. They take the
+     verdict's place while open (the row's header still shows it), so they never
+     cover the step above or move the page. One quiet control at rest instead of a
+     row of buttons and a line on every seam; a new way to add joins the row. ── */
+  function renderFork() {
     $$('li.step').forEach(function (li) {
-      if (li.closest('section.results') || !/^[a-z][0-9]+[a-z]?$/.test(li.dataset.step || '')) return;
-      var fin = $('.sd>.in>.fin', li);
-      if (!fin || $('.addfoot', fin)) return;
+      if (li.closest('section.results')) return;
+      var fin = $('.sd>.in>.fin', li), done = fin && $('button.fd', fin);
+      if (!done || $('.fork', fin)) return;
+      var id = li.dataset.step || '', opts = [];
+      if (/^[a-z][0-9]+[a-z]?$/.test(id)) opts.push(['after', '+ step after', 'Add a step after ' + id]);
+      opts.push(['todo', '+ to-do', 'Add a to-do tied to ' + id + ' (t)']);
       var f = document.createElement('span');
-      f.className = 'addfoot';
-      f.innerHTML = '<button type="button" class="addbtn" data-add="after" title="Add a step after this one">+ step after</button>' +
-        '<button type="button" class="addbtn" data-add="todo" title="Add a to-do tied to this step (t)">+ to-do</button>';
-      fin.insertBefore(f, fin.firstChild);
+      f.className = 'fork';
+      f.innerHTML = '<button type="button" class="fork-btn" data-add="fork" aria-haspopup="menu" aria-expanded="false" ' +
+        'aria-label="Add after ' + escHtml(id) + '" title="Add a step or a to-do after this one"><i></i></button>' +
+        '<span class="fork-menu" role="menu" aria-label="Add after ' + escHtml(id) + '">' + opts.map(function (o, i) {
+          // nearest the + goes first, so the options cascade outward from it
+          return '<button type="button" class="fork-opt" role="menuitem" tabindex="-1" data-add="' + o[0] + '" ' +
+            'title="' + escHtml(o[2]) + '" style="--i:' + (opts.length - 1 - i) + '">' + o[1] + '</button>';
+        }).join('') + '</span>';
+      fin.insertBefore(f, done);
     });
+  }
+  function setFork(f, open, instant) {
+    f.classList.toggle('instant', !!instant);          // from the keyboard: no motion, ever
+    f.classList.toggle('open', open);
+    f.parentNode.classList.toggle('forked', open);     // the verdict steps aside while it is open
+    $('.fork-btn', f).setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  function closeForks(except) {
+    $$('.fork.open').forEach(function (f) { if (f !== except) setFork(f, false, f.classList.contains('instant')); });
+  }
+  function toggleFork(f, byKey) {
+    var open = !f.classList.contains('open');
+    closeForks(f);
+    setFork(f, open, byKey);
+    if (open && byKey) { var first = $('.fork-opt', f); if (first) first.focus(); }
   }
   // a red or amber chip is often how a missing step is found: offer it there
   function paintMissed() {
@@ -3880,7 +3930,7 @@ figure.fv-drawing{break-inside:avoid}
   function renderAdditions() {
     if (KIND === 'drawing') return;
     if (st.ui && st.ui.todoKind) todoKind = st.ui.todoKind === 'do' ? 'do' : 'add';
-    renderSteps(); renderFoot(); renderTodos(); renderMarkers(); renderPill();
+    renderSteps(); renderFork(); renderTodos(); renderMarkers(); renderPill();
     repaintAll();
   }
 
@@ -3913,15 +3963,18 @@ figure.fv-drawing{break-inside:avoid}
     document.addEventListener('focusin', function (e) {
       var li = e.target.closest && e.target.closest('li.step');
       if (li && !li.closest('section.results')) lastStep = li.dataset.step;
+      if (e.target.closest && !e.target.closest('.fork.open')) closeForks();
     });
     document.addEventListener('click', function (e) {
       var t = e.target;
       if (!t || !t.closest) return;
       if (quick && !quick.hidden && !quick.contains(t) && !t.closest('#flowTodo, [data-add="todo"], [data-add="quick"]')) closeQuick();
+      if (!t.closest('.fork-btn')) closeForks();           // a choice, or a click anywhere else, folds it back
       var b = t.closest('[data-add]');
       if (!b) return;
       var act = b.getAttribute('data-add'), li = b.closest('li.step'), ti = b.closest('li.todo-item');
-      if (act === 'insert') { e.preventDefault(); openComposer(b.dataset.base); }
+      if (act === 'fork') { e.preventDefault(); toggleFork(b.closest('.fork'), e.detail === 0); }
+      else if (act === 'insert') { e.preventDefault(); openComposer(b.dataset.base); }
       else if (act === 'after' && li) openComposer(baseOf(li.dataset.step));
       else if (act === 'todo' && li) openQuick(li.dataset.step);
       else if (act === 'risk' && comp) { comp.risk = b.dataset.risk; paintComposer(); }
@@ -3984,8 +4037,18 @@ figure.fv-drawing{break-inside:avoid}
     document.addEventListener('keydown', function (e) {
       var t = e.target || {};
       if (e.key === 'Escape') {
-        if (quick && !quick.hidden) { closeQuick(); e.preventDefault(); }
+        var fk = $('.fork.open');
+        if (fk) { closeForks(); $('.fork-btn', fk).focus(); e.preventDefault(); }
+        else if (quick && !quick.hidden) { closeQuick(); e.preventDefault(); }
         else if (comp && comp.li.contains(t)) { closeComposer(); e.preventDefault(); }
+        return;
+      }
+      // arrows move between the options a fork holds open
+      if (/^Arrow(Up|Down|Left|Right)$/.test(e.key) && t.classList && t.classList.contains('fork-opt')) {
+        var all = $$('.fork-opt', t.closest('.fork-menu')), k = all.indexOf(t);
+        var step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1;  // in reading order, wrapping
+        all[(k + step + all.length) % all.length].focus();
+        e.preventDefault();
         return;
       }
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
