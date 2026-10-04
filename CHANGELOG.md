@@ -3,6 +3,18 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.1.1 — 2026-10-04 · one + at the foot of a step
+
+The line on every seam between steps is gone, and so is the row of **+ step after** and **+ to-do** buttons
+at each step's foot. In their place, one small violet **+** sits between the verdict and **Done**. Pressed, it
+turns into × and forks out **+ step after** and **+ to-do** along the row, nearest first, while the verdict
+steps aside (the row's header still shows it); a choice, Esc or a click anywhere else folds it back. Opened
+from the keyboard it does not animate, focus lands on the first option, and the arrow keys move between
+them. With reduced motion, or Motion off in the pill, it fades without moving. The prompt under a red chip
+and **+ Add a step** at the end of a playbook are unchanged.
+
+Patch: no cap, state or audit changed.
+
 ## 3.1.0 — 2026-10-01 · steps and to-dos the human adds mid-run
 
 **Added steps.** A playbook no longer has to be right the first time. Mid-run the human can add the step

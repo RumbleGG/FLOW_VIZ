@@ -1186,9 +1186,9 @@
     paintCapture(id);
   }
 
-  /* the playbook: added steps in place, a line on every seam, one more at the end */
+  /* the playbook: added steps in place, and one more step at the end */
   function renderSteps() {
-    $$('li.step.added, li.seam, li.pb-end').forEach(function (n) { n.remove(); });
+    $$('li.step.added, li.pb-end').forEach(function (n) { n.remove(); });
     $$('ol.steps').forEach(function (ol) {
       var anchors = anchorsIn(ol);
       if (!anchors.length) return;
@@ -1204,36 +1204,54 @@
         else ol.insertBefore(li, stepEl(a.after.charAt(0) + '1'));
         bindStep(li); bindCaptureIn(li); fillStep(li);
       });
-      anchors.forEach(function (li, i) {
-        var base = li.dataset.step, last = stepEl(lastOf(base)) || li, nid = nextAddedId(base);
-        var g = document.createElement('li');
-        if (i < anchors.length - 1) {
-          g.className = 'seam';
-          g.innerHTML = '<button type="button" class="seam-add" data-add="insert" data-base="' + base + '" ' +
-            'title="Add a step here. It becomes ' + nid + ', and no other step is renamed.">' +
-            '<span>+ add a step after ' + last.dataset.step + '<i>→ ' + nid + '</i></span></button>';
-          last.after(g);
-        } else {
-          g.className = 'pb-end';
-          g.innerHTML = '<button type="button" class="pb-add" data-add="insert" data-base="' + base + '">' +
-            '+ Add a step to this playbook<i>→ ' + nid + '</i></button>';
-          ol.appendChild(g);
-        }
-      });
+      var base = anchors[anchors.length - 1].dataset.step, g = document.createElement('li');
+      g.className = 'pb-end';
+      g.innerHTML = '<button type="button" class="pb-add" data-add="insert" data-base="' + base + '">' +
+        '+ Add a step to this playbook<i>→ ' + nextAddedId(base) + '</i></button>';
+      ol.appendChild(g);
     });
   }
-  // every step's foot gains + step after and + to-do, left of the verdict and Done
-  function renderFoot() {
+
+  /* ── the fork: one + at the foot of every step, between the verdict and Done.
+     Pressed, the + turns into × and the ways to add fork out of it to the left,
+     along the foot row, nearest first: + step after, + to-do. They take the
+     verdict's place while open (the row's header still shows it), so they never
+     cover the step above or move the page. One quiet control at rest instead of a
+     row of buttons and a line on every seam; a new way to add joins the row. ── */
+  function renderFork() {
     $$('li.step').forEach(function (li) {
-      if (li.closest('section.results') || !/^[a-z][0-9]+[a-z]?$/.test(li.dataset.step || '')) return;
-      var fin = $('.sd>.in>.fin', li);
-      if (!fin || $('.addfoot', fin)) return;
+      if (li.closest('section.results')) return;
+      var fin = $('.sd>.in>.fin', li), done = fin && $('button.fd', fin);
+      if (!done || $('.fork', fin)) return;
+      var id = li.dataset.step || '', opts = [];
+      if (/^[a-z][0-9]+[a-z]?$/.test(id)) opts.push(['after', '+ step after', 'Add a step after ' + id]);
+      opts.push(['todo', '+ to-do', 'Add a to-do tied to ' + id + ' (t)']);
       var f = document.createElement('span');
-      f.className = 'addfoot';
-      f.innerHTML = '<button type="button" class="addbtn" data-add="after" title="Add a step after this one">+ step after</button>' +
-        '<button type="button" class="addbtn" data-add="todo" title="Add a to-do tied to this step (t)">+ to-do</button>';
-      fin.insertBefore(f, fin.firstChild);
+      f.className = 'fork';
+      f.innerHTML = '<button type="button" class="fork-btn" data-add="fork" aria-haspopup="menu" aria-expanded="false" ' +
+        'aria-label="Add after ' + escHtml(id) + '" title="Add a step or a to-do after this one"><i></i></button>' +
+        '<span class="fork-menu" role="menu" aria-label="Add after ' + escHtml(id) + '">' + opts.map(function (o, i) {
+          // nearest the + goes first, so the options cascade outward from it
+          return '<button type="button" class="fork-opt" role="menuitem" tabindex="-1" data-add="' + o[0] + '" ' +
+            'title="' + escHtml(o[2]) + '" style="--i:' + (opts.length - 1 - i) + '">' + o[1] + '</button>';
+        }).join('') + '</span>';
+      fin.insertBefore(f, done);
     });
+  }
+  function setFork(f, open, instant) {
+    f.classList.toggle('instant', !!instant);          // from the keyboard: no motion, ever
+    f.classList.toggle('open', open);
+    f.parentNode.classList.toggle('forked', open);     // the verdict steps aside while it is open
+    $('.fork-btn', f).setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  function closeForks(except) {
+    $$('.fork.open').forEach(function (f) { if (f !== except) setFork(f, false, f.classList.contains('instant')); });
+  }
+  function toggleFork(f, byKey) {
+    var open = !f.classList.contains('open');
+    closeForks(f);
+    setFork(f, open, byKey);
+    if (open && byKey) { var first = $('.fork-opt', f); if (first) first.focus(); }
   }
   // a red or amber chip is often how a missing step is found: offer it there
   function paintMissed() {
@@ -1548,7 +1566,7 @@
   function renderAdditions() {
     if (KIND === 'drawing') return;
     if (st.ui && st.ui.todoKind) todoKind = st.ui.todoKind === 'do' ? 'do' : 'add';
-    renderSteps(); renderFoot(); renderTodos(); renderMarkers(); renderPill();
+    renderSteps(); renderFork(); renderTodos(); renderMarkers(); renderPill();
     repaintAll();
   }
 
@@ -1581,15 +1599,18 @@
     document.addEventListener('focusin', function (e) {
       var li = e.target.closest && e.target.closest('li.step');
       if (li && !li.closest('section.results')) lastStep = li.dataset.step;
+      if (e.target.closest && !e.target.closest('.fork.open')) closeForks();
     });
     document.addEventListener('click', function (e) {
       var t = e.target;
       if (!t || !t.closest) return;
       if (quick && !quick.hidden && !quick.contains(t) && !t.closest('#flowTodo, [data-add="todo"], [data-add="quick"]')) closeQuick();
+      if (!t.closest('.fork-btn')) closeForks();           // a choice, or a click anywhere else, folds it back
       var b = t.closest('[data-add]');
       if (!b) return;
       var act = b.getAttribute('data-add'), li = b.closest('li.step'), ti = b.closest('li.todo-item');
-      if (act === 'insert') { e.preventDefault(); openComposer(b.dataset.base); }
+      if (act === 'fork') { e.preventDefault(); toggleFork(b.closest('.fork'), e.detail === 0); }
+      else if (act === 'insert') { e.preventDefault(); openComposer(b.dataset.base); }
       else if (act === 'after' && li) openComposer(baseOf(li.dataset.step));
       else if (act === 'todo' && li) openQuick(li.dataset.step);
       else if (act === 'risk' && comp) { comp.risk = b.dataset.risk; paintComposer(); }
@@ -1652,8 +1673,18 @@
     document.addEventListener('keydown', function (e) {
       var t = e.target || {};
       if (e.key === 'Escape') {
-        if (quick && !quick.hidden) { closeQuick(); e.preventDefault(); }
+        var fk = $('.fork.open');
+        if (fk) { closeForks(); $('.fork-btn', fk).focus(); e.preventDefault(); }
+        else if (quick && !quick.hidden) { closeQuick(); e.preventDefault(); }
         else if (comp && comp.li.contains(t)) { closeComposer(); e.preventDefault(); }
+        return;
+      }
+      // arrows move between the options a fork holds open
+      if (/^Arrow(Up|Down|Left|Right)$/.test(e.key) && t.classList && t.classList.contains('fork-opt')) {
+        var all = $$('.fork-opt', t.closest('.fork-menu')), k = all.indexOf(t);
+        var step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1;  // in reading order, wrapping
+        all[(k + step + all.length) % all.length].focus();
+        e.preventDefault();
         return;
       }
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {

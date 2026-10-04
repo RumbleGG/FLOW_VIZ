@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 3.1.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 3.1.1** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -133,11 +133,11 @@ nothing to enable them.
 
 | Part | Rule |
 |---|---|
-| Add a step | four ways in, one composer: a line on every seam between steps (on hover), **+ step after** at each step's foot, the prompt under a `fail` or `error` chip (*Was a step missing before b4?*), and **+ Add a step** at the end of a playbook. Not in the Results section. |
+| Add a step | three ways in, one composer: the **+** at each step's foot, between its verdict and **Done** — pressed, it turns into × and forks out **+ step after** and **+ to-do** along the row, taking the verdict's place until it closes — the prompt under a `fail` or `error` chip (*Was a step missing before b4?*), and **+ Add a step** at the end of a playbook. Not in the Results section. |
 | The composer | one sentence, read or write, an optional command. It shows the audit's rules as meters while typing — 20 words, one sentence, ASCII, one line, no leading comment, with a **fix** for smart quotes — and refuses nothing: the agent tidies the step when it folds it. |
 | An added step | the template's step, drawn in place in violet (human ink) and dashed: checkbox, gate if it writes, command, paste box, Done. Its output, tick and note use the ordinary keys (`captures.b3a`, `steps.b3a`). With no `data-pass` or `data-fail` its chip reads `captured`, never `no match`. It can be edited, or removed. |
 | To-dos | one section at the end, one line at rest. Two kinds in the words used mid-run: **add to write-up** (something the write-up is missing; **make it a step** opens the composer at its anchor and closes the to-do as `→ b1a`) and **do after** (a task once the run is over; a candidate for Next). Ids `t1`, `t2`…, each optionally tied to a step. |
-| Capture without losing your place | `t` anywhere outside a text field, or **+ to-do** in the pill (with the open count), opens a small form tied to the step you were last in; the page does not move. |
+| Capture without losing your place | `t` anywhere outside a text field, **+ to-do** in the pill (with the open count), or **+ to-do** from a step's **+**, opens a small form tied to that step; the page does not move. |
 | At rest | a violet count on the row (`+1 added · 2 to-do`) and on the step a to-do is tied to. |
 | Removing | writes a tombstone (`gone`), never a delete: the load merge is a union, so a deleted key would come back from the other store. A removed id is never handed out again. |
 | Caps | none apply: this is the human's writing, not the agent's budget. The audit leaves added steps, the markers and the to-do section out of every measure. |
