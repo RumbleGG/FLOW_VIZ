@@ -383,6 +383,19 @@ def extract_steps(root):
     return steps
 
 
+def text_hash(s):
+    """FNV-1a, 32-bit, over the UTF-8 bytes: the same as textHash() in flow.js. It is how an override knows
+    the output changed after it was set; change detection, not evidence (the evidence hash is sha256)."""
+    h = 0x811c9dc5
+    for c in (s or '').encode('utf-8'):
+        h = ((h ^ c) * 0x01000193) & 0xffffffff
+    return '%08x' % h
+
+
+def live_images(cap):
+    return [i for i in (cap or {}).get('images') or [] if isinstance(i, dict) and not i.get('gone')]
+
+
 def step_capture_record(step, captures, stored_emits=None):
     cap = captures.get(step['id']) if step['id'] else None
     has_capture = isinstance(cap, dict)
@@ -393,7 +406,15 @@ def step_capture_record(step, captures, stored_emits=None):
     norule = step['pass_rx'] is None and step['fail_rx'] is None and not step.get('pass_pattern') and not step.get('fail_pattern')
     plain = lambda v: 'captured' if norule and v == 'no match' else v
     text = cap.get('text') or ''
+    images = live_images(cap)
     derived = plain(derive_verdict(text, step['pass_rx'], step['fail_rx']))
+    if derived == 'none' and images:
+        derived = 'captured'                     # an image alone: nothing a rule can match
+    # a verdict set by hand stands beside the derived one, never in its place
+    ov = cap.get('override') if isinstance(cap.get('override'), dict) else None
+    if ov:
+        ov = dict(ov, verdict=normalize_stored_verdict(ov.get('verdict')), was=normalize_stored_verdict(ov.get('was')),
+                  stale=ov.get('textHash') != text_hash(text))
     runs_out = []
     for run in (cap.get('runs') or []):
         if not isinstance(run, dict):
@@ -411,6 +432,7 @@ def step_capture_record(step, captures, stored_emits=None):
         'runs': runs_out, 'has_capture': has_capture,
         'emits': derive_emits(text, step.get('emit_rx') or {}),
         'emits_stored': dict((stored_emits or {}).get(step['id']) or {}),
+        'override': ov, 'effective': ov['verdict'] if ov else derived, 'images': images,
     }
 
 
@@ -489,12 +511,23 @@ def build_notes_list(sidecar_notes, specs):
 
 # ── summary ───────────────────────────────────────────────────────────────
 
+def fmt_size(n):
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return '?'
+    return '%.1f MB' % (n / 1048576.0) if n >= 1048576 else '%d KB' % max(1, round(n / 1024.0))
+
+
 def summarize(records):
     counts = {'pass': 0, 'fail': 0, 'error': 0, 'no match': 0, 'captured': 0}
     captured_n = 0
     any_error = False
+    by_hand = images = 0
     for _step, rec in records:
-        v = rec['verdict']
+        v = rec.get('effective', rec['verdict'])
+        by_hand += 1 if rec.get('override') else 0
+        images += len(rec.get('images') or [])
         if v != 'none':
             captured_n += 1
             if v in counts:
@@ -505,7 +538,7 @@ def summarize(records):
             any_error = True
     summary = {'captured': captured_n, 'pass': counts['pass'], 'fail': counts['fail'],
                'error': counts['error'], 'no_match': counts['no match'], 'no_rule': counts['captured'],
-               'notes': 0, 'added': 0, 'todos_open': 0}
+               'notes': 0, 'added': 0, 'todos_open': 0, 'by_hand': by_hand, 'images': images}
     return summary, any_error
 
 
@@ -515,6 +548,10 @@ def summary_line(summary):
                summary['no_match'], summary['notes'], '' if summary['notes'] == 1 else 's'))
     if summary.get('no_rule'):
         line = line.replace(' · %d note' % summary['notes'], ' · no rule %d · %d note' % (summary['no_rule'], summary['notes']), 1)
+    if summary.get('by_hand'):
+        line += ' · %d set by hand' % summary['by_hand']
+    if summary.get('images'):
+        line += ' · %d image%s' % (summary['images'], '' if summary['images'] == 1 else 's')
     if summary.get('added'):
         line += ' · %d added in the page' % summary['added']
     if summary.get('todos_open'):
@@ -540,7 +577,8 @@ def render_lines(text, limit, show_all, prefix):
 
 def print_step_block(step, rec, show_all, out, folded=None):
     risk_disp = 'WRITE' if step['risk'] == 'w' else 'read'
-    shown = {'none': '—', 'no match': 'NO MATCH'}.get(rec['verdict'], str(rec['verdict']).upper())
+    eff = rec.get('effective', rec['verdict'])
+    shown = {'none': '—', 'no match': 'NO MATCH'}.get(eff, str(eff).upper()) + (' ✎' if rec.get('override') else '')
     if step.get('added'):
         a = step['added']
         out.append('+    %-5s %-5s  %-8s  %s' % (step['id'], risk_disp, shown, step['sentence']))
@@ -557,6 +595,12 @@ def print_step_block(step, rec, show_all, out, folded=None):
     else:
         n_disp = step['n'] if step['n'] is not None else '·'
         out.append('step %s  %-4s %-5s  %-8s  %s' % (n_disp, step['id'], risk_disp, shown, step['sentence']))
+    ov = rec.get('override')
+    if ov:
+        local, iso = fmt_time(ov.get('at'))
+        out.append('  ✎ set by hand %s, derived %s: "%s"%s' % (
+            local or '—', {'none': 'none', 'no match': 'NO MATCH'}.get(rec['verdict'], str(rec['verdict']).upper()),
+            ov.get('reason') or '', '   (the output changed after it was set)' if ov.get('stale') else ''))
     has_text = bool((rec['text'] or '').strip())
     if has_text and rec['verdict_stored'] != rec['verdict']:
         # pasted before the fold gave the step a rule: it was captured then, not a miss
@@ -580,6 +624,16 @@ def print_step_block(step, rec, show_all, out, folded=None):
             out.append('  %s -> %s no longer matches the capture (stored %s)' % (step['id'], name, rec['emits_stored'][name]))
     if rec['note']:
         out.append('  note: %s' % rec['note'])
+    for k, im in enumerate(rec.get('images') or [], 1):
+        where = im.get('path') or im.get('file') or '?'
+        out.append('  image  %s·%d  %s  %sx%s  %s%s%s' % (
+            step['id'], k, where, im.get('w', '?'), im.get('h', '?'), fmt_size(im.get('bytes')),
+            '  "%s"' % im['caption'] if im.get('caption') else '',
+            ('  compressed from %s' % fmt_size((im.get('src') or {}).get('bytes'))) if im.get('src') else ''))
+        if im.get('local'):
+            out.append('         only in the browser that took it: serve the folder and open the page to bring it to disk')
+        elif im.get('path') and not os.path.isfile(im['path']):
+            out.append('         not on disk at that path')
     out.extend(render_lines(rec['text'], 40, show_all, '  | '))
     for i, run in enumerate(rec['runs'], 1):
         rlocal, riso = fmt_time(run['at'])
@@ -630,7 +684,11 @@ def build_json(doc, sidecar_path, sidecar, records, orphan_ids, captures, notes_
         if rec['has_capture']:
             capture_obj = {'text': rec['text'], 'exit': rec['exit'], 'at': rec['at'],
                             'note': rec['note'], 'verdict_stored': rec['verdict_stored'],
-                            'verdict': rec['verdict']}
+                            'verdict': rec['verdict'], 'effective': rec.get('effective', rec['verdict'])}
+            if rec.get('override'):
+                capture_obj['override'] = rec['override']
+            if rec.get('images'):
+                capture_obj['images'] = rec['images']
         entry = {'id': step['id'], 'n': step['n'], 'risk': step['risk'],
                  'sentence': step['sentence'], 'command': step['command'],
                  'capture': capture_obj, 'runs': rec['runs']}
@@ -727,6 +785,10 @@ def main(argv=None):
     notes_list = build_notes_list(sidecar.get('notes') or {}, specs)
 
     records = [(s, step_capture_record(s, captures, sidecar.get('emits') or {})) for s in steps]
+    for _s, rec in records:                      # absolute paths, so the agent can open each image
+        for im in rec.get('images') or []:
+            if im.get('file'):
+                im['path'] = os.path.join(html_dir, im['file'])
     summary, any_error = summarize(records)
     summary['notes'] = len(notes_list)
     summary['added'] = sum(1 for s in steps if s.get('added'))

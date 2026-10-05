@@ -20,8 +20,9 @@ Three ideas carry it:
    words at rest, boxes per canvas, one sentence per step — and `flowviz audit` exits 1 when one is broken.
 2. **Depth moves down a layer; it is never deleted.** The card and the canvas are tight; rows and the drawer
    are unlimited.
-3. **The page is an input device.** Ticks, pasted output, notes on boxes, steps the human found missing and
-   to-dos they remembered mid-run save to `<doc>.flow.json` beside the page when it is served, and
+3. **The page is an input device.** Ticks, pasted output and screenshots, verdicts the human set by hand,
+   notes on boxes, steps they found missing and to-dos they remembered mid-run save beside the page when it
+   is served (`<doc>.flow.json`, and images in `<doc>.assets/`), and
    `flowviz captures` reads them back for the agent; `flowviz fold` writes added steps into the source.
 
 ## Quick start

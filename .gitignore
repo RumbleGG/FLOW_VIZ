@@ -1,9 +1,12 @@
 # per-deliverable history and backups live beside each deliverable
 .flowviz/
-# the human's own state is not toolkit source
+# the human's own state is not toolkit source: what they typed, and the images they attached
 *.flow.json
+*.assets/
 *.tmp
 __pycache__/
 .DS_Store
 # ...except the worked example, whose captures are the point of it
 !examples/deploy/deploy.flow.json
+# finished plans and scratch work, kept locally and out of the toolkit (PARA: Archive)
+Archive/

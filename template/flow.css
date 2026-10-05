@@ -624,6 +624,99 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 .still .fork-btn,.still .fork-btn i{transition:none!important}
 .still .fork-opt,.still .fork.open .fork-opt{transform:none!important;transition:opacity .15s ease,visibility 0s!important}
 
+/* ── evidence: images in a paste box, and verdicts set by hand ─────────────
+   The text box is unchanged. Images sit in a strip under it, numbered b4·1, b4·2,
+   each with a caption; a file dragged over the box says where it will land. A
+   verdict set by hand keeps the violet of everything a human adds: a pencil on
+   every chip that shows it, and one line under the foot saying what it replaced. */
+.cap{position:relative}
+.cap-imgs{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.cap-imgs[hidden]{display:none}
+.cap-img{position:relative;width:168px;margin:0;border:1px solid var(--line);border-radius:var(--r2);background:var(--paper);
+  overflow:hidden}
+.ci-open{display:block;width:100%;padding:0;border:none;background:var(--sunk);cursor:zoom-in}
+.ci-open img{display:block;width:100%;height:78px;object-fit:cover;object-position:left top;border-bottom:1px solid var(--line)}
+.ci-no{position:absolute;top:5px;left:5px;font:700 10px/1 var(--f-mono);color:var(--paper);background:var(--mag);
+  border-radius:3px;padding:3px 5px;pointer-events:none}
+.ci-x{position:absolute;top:5px;right:5px;min-width:18px;height:18px;border-radius:9px;background:var(--paper);
+  border:1px solid var(--line2);font:12px/16px var(--f-ui);text-align:center;color:var(--dim);cursor:pointer;padding:0 4px}
+.ci-x.sure{color:var(--bad);border-color:var(--bad);font-size:10.5px}
+.ci-cap{display:block;width:100%;border:none;border-bottom:1px solid transparent;background:none;padding:5px 8px 0;
+  font:12px/1.35 var(--f-ui);color:var(--fg)}
+.ci-cap:focus{outline:none;border-bottom-color:var(--mag)}
+.ci-cap::placeholder{color:var(--dim2)}
+.ci-mt{display:block;font:10.5px var(--f-mono);color:var(--dim2);padding:2px 8px 6px}
+.ci-note{flex:1 0 100%;font:11.5px var(--f-ui);color:var(--dim2)}
+.ci-note b{color:var(--mag)}
+.ci-note.warn,.ci-note.warn b{color:var(--warn)}
+.cap .ft .ci-add{margin-left:auto}
+.cap .ft .ci-add+.rr{margin-left:0}
+/* a file dragged over the box: the whole box says where it will land */
+.cap .cap-drop{display:none}
+.cap.drag .cap-drop{position:absolute;inset:18px 0 auto 0;height:calc(100% - 18px);min-height:74px;z-index:5;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1.5px dashed var(--mag);
+  border-radius:var(--r2);background:var(--magbg);color:var(--mag);font:600 13px var(--f-ui);pointer-events:none}
+.cap-drop small{font:11px var(--f-ui);color:var(--dim);font-weight:400}
+.cap-drop .cd-g{font:700 18px/1 var(--f-ui)}
+/* one image, open: the picture, then what it is and where it lives */
+.ci-view{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:28px;
+  background:rgba(10,12,16,.62);cursor:zoom-out}
+.ci-view[hidden]{display:none}
+.ci-box{max-width:min(1200px,100%);max-height:100%;display:flex;flex-direction:column;background:var(--paper);
+  border:1px solid var(--line2);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-pop)}
+.ci-box img{display:block;max-width:100%;max-height:calc(100vh - 120px);object-fit:contain;background:var(--sunk)}
+.ci-bar{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:8px 12px;font:12px var(--f-ui);color:var(--dim)}
+.ci-bar b{color:var(--mag)}
+.ci-bar code{font-size:11px}
+.ci-keys{margin-left:auto;color:var(--mag)}
+
+/* the verdict is a button: click it to set it by hand */
+.vd[data-vd][role="button"]{cursor:pointer}
+.vd[data-vd][role="button"]:focus-visible{outline:2px solid var(--mag);outline-offset:2px;border-radius:999px}
+@media (hover:hover) and (pointer:fine){ .vd.vdf[role="button"]:hover{box-shadow:0 0 0 3px var(--magbg)} }
+/* set by hand: a small violet pencil wherever the verdict is shown */
+.vd.hand::after{content:"\270E";margin-left:4px;color:var(--mag);font-weight:700;letter-spacing:0}
+.vd.vdf.hand{position:relative;padding-right:22px}
+.vd.vdf.hand::after{position:absolute;right:-6px;top:-7px;width:17px;height:17px;margin:0;border-radius:50%;
+  background:var(--mag);color:var(--paper);font:700 10px/17px var(--f-ui);text-align:center;box-shadow:0 0 0 2px var(--paper)}
+.vd.vdf.hand.stale::after{background:var(--warn)}
+.pb>.hd .prog .h{color:var(--mag)}
+.handnote{display:flex;gap:6px 10px;align-items:baseline;flex-wrap:wrap;margin-top:9px;padding:6px 10px;
+  border-left:2px solid var(--mag);background:var(--magbg);border-radius:0 var(--r2) var(--r2) 0;
+  font:12px/1.5 var(--f-ui);color:var(--mag)}
+.handnote .hn-was{color:var(--dim)}
+.handnote .hn-was b.fail{color:var(--bad)} .handnote .hn-was b.pass{color:var(--ok)}
+.handnote .hn-was b.error{color:var(--warn)} .handnote .hn-was b.saved{color:var(--dim)}
+.handnote q{color:var(--fg);font-style:italic}
+.handnote .hn-a{margin-left:auto;display:inline-flex;gap:10px}
+.handnote.stale{border-left-color:var(--warn);background:var(--warnbg);color:var(--warn)}
+.handnote.stale .lnk{color:var(--warn)}
+/* the panel the chip opens: inline under the foot, so it covers nothing */
+.ovr{margin-top:10px;padding:11px 13px 12px;border:1px solid var(--mag);border-left:3px solid var(--mag);
+  border-radius:var(--r2);background:var(--paper)}
+.ovr-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font:700 10.5px var(--f-ui);letter-spacing:.9px;
+  text-transform:uppercase;color:var(--mag);margin-bottom:9px}
+.ovr-h span{text-transform:none;letter-spacing:0;font-weight:400;color:var(--dim2)}
+.ovr-o{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.ovr-v{display:inline-flex;align-items:center;gap:6px;font:700 11px var(--f-ui);letter-spacing:.5px;text-transform:uppercase;
+  border:1px solid var(--line2);border-radius:999px;padding:5px 11px;background:var(--panel2);cursor:pointer;color:var(--dim)}
+.ovr-v.pass{color:var(--ok)} .ovr-v.fail{color:var(--bad)}
+.ovr-v[aria-checked="true"].pass{border-color:var(--ok);background:var(--okbg);box-shadow:0 0 0 2px var(--okbg)}
+.ovr-v[aria-checked="true"].fail{border-color:var(--bad);background:var(--badbg);box-shadow:0 0 0 2px var(--badbg)}
+.ovr-v[aria-checked="true"].saved{border-color:var(--dim);background:var(--sunk);box-shadow:0 0 0 2px var(--sunk)}
+.ovr-d{font:600 9.5px var(--f-ui);text-transform:none;letter-spacing:0;color:var(--dim2);border:1px dashed var(--line2);
+  border-radius:3px;padding:0 4px}
+.ovr .hint{font:11.5px var(--f-ui);color:var(--dim2)}
+
+@media print{
+  /* paper is the evidence document: each image full width under its output, with its caption and hash */
+  .ci-add,.ci-x,.ci-note,.ovr,.cap .cap-drop,.handnote .hn-a,.ci-view{display:none!important}
+  .cap-imgs{display:block}
+  .cap-img{width:100%;margin:8px 0;break-inside:avoid}
+  .ci-open img{height:auto;max-height:none;object-fit:contain}
+  .ci-mt::after{content:" · sha256 " attr(data-sha)}
+}
+
 /* ── footer stamp ─────────────────────────────────────────────────────────── */
 .foot{margin-top:36px;padding-top:13px;border-top:1px solid var(--line2);
   font:11.5px/1.8 var(--f-ui);color:var(--dim2)}

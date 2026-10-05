@@ -29,7 +29,7 @@ $F build ~/work/sto/STO.src.html          # 3. one self-contained .html (rebuild
                                           #    output is kept in .flowviz/history/ beside it)
 $F audit --browser ~/work/sto/STO.html    # 4. fix every OVER and FAIL
 $F serve ~/work/sto --open                # 5. hand over, served
-$F captures ~/work/sto/STO.html           # later: what they pasted, every note, every step or to-do they added
+$F captures ~/work/sto/STO.html           # later: what they pasted (text and images), every note and override, every step or to-do they added
 $F fold ~/work/sto/STO.src.html           # the steps they added in the page, into the source, same ids
 $F results ~/work/sto/STO.src.html        # once they have run it all: start the Results section
 $F relabel ~/work/sto/STO.src.html        # an older report onto a, b, c and b1, b2: what was pasted moves too
@@ -399,6 +399,16 @@ CAPTURED …`, captured because it has no rule yet — and the to-dos after the 
   `--todo t2` folds an *add to write-up* to-do the same way, after the step it is tied to.
 - **A step in the wrong words**: fold it, then reword the sentence. Never renumber the steps around it.
 - **A do after**: a Next item when you write Results; `flowviz results` lists the open ones.
+
+**What they showed you.** A capture can hold images as well as text: `captures` prints each one as
+`image  b4·1  <absolute path>  960x330  "caption"`. **Open every image before you conclude** — it is evidence,
+like pasted output, and its caption is their description of it, not a substitute for looking. One marked
+*only in the browser that took it* has not reached disk: ask them to serve the folder and open the page.
+
+**What they decided.** A verdict with a ✎ was set by hand: `captures` prints it with the derived verdict and
+their reason (`✎ set by hand 13:52 PDT, derived FAIL: "…"`). Report it as theirs, with that reason, and say so
+when the evidence does not support it. Never change a rule just so it agrees with an override without saying
+why; *the output changed after it was set* means they have not looked again.
 
 No sidecar means they opened the file from Finder. Don't guess: ask them to `flowviz serve` the folder,
 or to press **Copy captures for agent** and paste the block to you.

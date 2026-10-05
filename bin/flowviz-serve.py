@@ -6,6 +6,7 @@ beyond the local socket.
 Usage: flowviz-serve.py <dir> [--port 8787] [--open [FILE]]
 """
 import argparse
+import hashlib
 import http.server
 import json
 import os
@@ -24,6 +25,10 @@ FLOW_BLOB_RE = re.compile(r'window\.FLOW\s*=\s*\{(.*?)\}', re.S)
 TITLE_RE = re.compile(r'<title[^>]*>(.*?)</title>', re.S | re.I)
 MAX_BODY = 4 * 1024 * 1024  # 4 MB
 PUT_SUFFIX = '_flow/state/'
+# an image a report's paste box took: <page dir>/_flow/asset/<doc>/<sha256>.<ext> -> <doc>.assets/<sha256>.<ext>
+ASSET_SUFFIX = '_flow/asset/'
+ASSET_MAX = 10 * 1024 * 1024       # the page compresses anything larger before it sends it
+ASSET_NAME = re.compile(r'^([0-9a-f]{64})\.(png|jpg|gif|webp)$')
 
 
 def field_from_blob(blob, name):
@@ -251,8 +256,73 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     # ---- PUT sidecar state -----------------------------------------------
 
+    def _target_dir(self, prefix):
+        """The served folder a page lives in, from the part of its PUT path before _flow/, or None."""
+        root = self.server.fv_root
+        dir_part = prefix.strip('/')
+        target = os.path.realpath(os.path.join(root, dir_part)) if dir_part else root
+        if target != root and not target.startswith(root + os.sep):
+            self.send_error(403, 'path escapes the served directory')
+            return None
+        if not os.path.isdir(target):
+            self.send_error(404, 'no such directory: %s' % dir_part)
+            return None
+        return target
+
+    def _put_asset(self, raw_path):
+        """One image, named by its own sha256: checked, then written once beside the page."""
+        prefix, _, rest = raw_path.rpartition(ASSET_SUFFIX)
+        doc, _, name = rest.partition('/')
+        m = ASSET_NAME.match(name or '')
+        if not DOC_RE.match(doc or '') or not m:
+            self.send_error(400, 'an asset is <doc>/<sha256>.<png|jpg|gif|webp>')
+            return
+        try:
+            length = int(self.headers.get('Content-Length') or '')
+        except ValueError:
+            self.send_error(411, 'Content-Length required')
+            return
+        if length < 1 or length > ASSET_MAX:
+            self.send_error(413, 'an image must be 1 byte to 10 MB; the page compresses a larger one first')
+            return
+        body = self.rfile.read(length)
+        if hashlib.sha256(body).hexdigest() != m.group(1):
+            self.send_error(400, 'the image does not match the sha256 it was named by')
+            return
+        ext = m.group(2)
+        ok = (body[:4] == b'RIFF' and body[8:12] == b'WEBP') if ext == 'webp' else body.startswith(
+            {'png': (b'\x89PNG\r\n\x1a\n',), 'jpg': (b'\xff\xd8\xff',), 'gif': (b'GIF87a', b'GIF89a')}[ext])
+        if not ok:
+            self.send_error(415, 'the bytes are not a %s image' % ext)
+            return
+        target_dir = self._target_dir(prefix)
+        if target_dir is None:
+            return
+        adir = os.path.join(target_dir, doc + '.assets')
+        path = os.path.join(adir, name)
+        root = self.server.fv_root
+        with self.server.fv_lock:
+            existed = os.path.exists(path)
+            if not existed:                        # the same picture is the same name: never written twice
+                os.makedirs(adir, exist_ok=True)
+                fd, tmp = tempfile.mkstemp(prefix='.' + name, suffix='.tmp', dir=adir)
+                with os.fdopen(fd, 'wb') as f:
+                    f.write(body)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.chmod(tmp, 0o644)
+                os.replace(tmp, path)
+        print('PUT %s  %s%s' % (os.path.relpath(path, root).replace(os.sep, '/'), fmt_kb(len(body)),
+                                ' · already there' if existed else ''), flush=True)
+        self.send_response(204 if existed else 201)
+        self.send_header('Content-Length', '0')
+        self.end_headers()
+
     def do_PUT(self):
         raw_path = urllib.parse.unquote(self.path.split('?', 1)[0])
+        if ASSET_SUFFIX in raw_path:
+            self._put_asset(raw_path)
+            return
         if PUT_SUFFIX not in raw_path:
             self.send_error(404, 'not a sidecar save path')
             return

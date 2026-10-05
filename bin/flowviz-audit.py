@@ -970,6 +970,12 @@ def additions_notes(a, doc, path):
     opened = sorted((k for k, v in todos.items() if not v.get('done')), key=lambda k: int(k[1:]) if k[1:].isdigit() else 0)
     if opened:
         a.note('author checks', 'open to-dos', '%s — read them with flowviz captures' % ', '.join(opened))
+    word = lambda v: {'saved': 'no match', None: 'none'}.get(v, v)
+    hand = ['%s %s (derived %s)' % (k, word(c['override'].get('verdict')), word(c['override'].get('was')))
+            for k, c in sorted((data.get('captures') or {}).items())
+            if isinstance(c, dict) and isinstance(c.get('override'), dict)]
+    if hand:
+        a.note('author checks', 'verdicts set by hand', '; '.join(hand) + ' — the reasons are in flowviz captures')
 
 
 # ── the browser ──────────────────────────────────────────────────────────────

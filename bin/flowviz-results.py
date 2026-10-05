@@ -85,15 +85,16 @@ def main():
     if not steps:
         die('this report has no checklist steps, so there is nothing to report results on.')
     rows = [(s, m.step_capture_record(s, captures)) for s in steps]
-    count = {'pass': 0, 'fail': 0, 'error': 0, 'no match': 0, 'none': 0, 'skipped': 0}
+    count = {'pass': 0, 'fail': 0, 'error': 0, 'no match': 0, 'captured': 0, 'none': 0, 'skipped': 0}
     for s, r in rows:
-        v = r['verdict']
+        v = r['effective']                       # a verdict set by hand counts as the operator set it
+        r['verdict_used'] = v
         if v == 'none' and kind_of.get(s['id']) == 'rollback':
             v = 'skipped'
         count[v] = count.get(v, 0) + 1
 
     def first(verdict):
-        return next(((s, r) for s, r in rows if r['verdict'] == verdict), None)
+        return next(((s, r) for s, r in rows if r['verdict_used'] == verdict), None)
     def label(s):   # a step is named by its id (b4); an older report's ids fall back to its counter
         return s['id'] if re.match(r'^[a-z][0-9]+$', s['id'] or '') else 'step %s' % s['n']
     hit = first('error')
@@ -102,16 +103,19 @@ def main():
     elif first('fail'):
         hit = first('fail')
         outcome, chip, chip_text = 'fail', 'bad', 'Failed at %s' % label(hit[0])
-    elif count['pass'] and not count['no match'] and not count['none']:
+    elif count['pass'] and not count['no match'] and not count['captured'] and not count['none']:
         outcome, chip, chip_text = 'pass', 'ok', 'Passed %d of %d steps' % (count['pass'], count['pass'])
     else:
-        hit = first('no match') or first('none')
+        hit = first('no match') or first('captured') or first('none')
         outcome, chip = 'inconclusive', 'warn'
-        chip_text = ('No match at %s' % label(hit[0])) if hit and hit[1]['verdict'] == 'no match' \
+        chip_text = ('No match at %s' % label(hit[0])) if hit and hit[1]['verdict_used'] == 'no match' \
+            else ('Not judged at %s' % label(hit[0])) if hit and hit[1]['verdict_used'] == 'captured' \
             else '%d step%s not run' % (count['none'], '' if count['none'] == 1 else 's')
-    words = {'pass': 'pass', 'fail': 'fail', 'error': 'error', 'no match': 'no match', 'none': 'not run',
-             'skipped': 'rollback not needed'}
-    counts = '%d steps: ' % len(rows) + ', '.join('%d %s' % (count[k], w) for k, w in words.items() if count[k])
+    words = {'pass': 'pass', 'fail': 'fail', 'error': 'error', 'no match': 'no match', 'captured': 'captured, not judged',
+             'none': 'not run', 'skipped': 'rollback not needed'}
+    hand = [(s, r) for s, r in rows if r.get('override')]
+    counts = '%d steps: ' % len(rows) + ', '.join('%d %s' % (count[k], w) for k, w in words.items() if count[k]) + (
+        ', %d set by hand' % len(hand) if hand else '')
 
     # the diagram starts from the spine drawing: same boxes, no flows, nothing marked yet
     tpl = open(os.path.join(TEMPLATE, 'results.src.html'), encoding='utf-8').read()
@@ -169,6 +173,10 @@ def main():
     if hit:
         print('  at       %s  %s' % (label(hit[0]), hit[0]['sentence']))
     print('  archive  %s' % cmd)
+    for s, r in hand:                            # never counted silently: each one, with what it replaced
+        o = r['override']
+        print('  by hand  %s %s, derived %s: "%s"%s' % (label(s), o['verdict'].upper(), r['verdict'].upper(),
+              o.get('reason') or '', ' (the output changed after it was set)' if o.get('stale') else ''))
     # what the human added in the page: the outcome above is the plan's, so say what it left out
     in_html = {x['id'] for x in steps}
     live = lambda d: {k: v for k, v in (d or {}).items() if isinstance(v, dict) and not v.get('gone')}

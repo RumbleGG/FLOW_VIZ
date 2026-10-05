@@ -58,7 +58,9 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
                         anchor every verdict literal: \bFull\b, never Full
                         a value an earlier step printed: data-emit="VER=VERSION ([0-9.]+)" on its textarea,
                         {{{{b1.VER}}}} in the later command (copy refuses until it resolves) · never PASTE_...
-  STATE    <doc>.flow.json beside the html. Ids are join keys: never rename one after handover.
+  STATE    <doc>.flow.json beside the html; images they attach in <doc>.assets/, named by sha256.
+           A verdict they set by hand (✎) sits beside the derived one: report it as theirs.
+           Ids are join keys: never rename one after handover.
            A step the human adds after b3 is b3a (then b3b); to-dos are t1, t2. Neither moves another id.
            $F relabel <NAME>.src.html moves an older report onto a / b1 naming, pasted state included.
   EXAMPLES ~/Projects/FLOW_VIZ/PLAN.html (a report with a drawing spine)

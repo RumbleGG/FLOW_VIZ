@@ -56,7 +56,7 @@ drawing without a template change, and a fix to any asset reaches everything on 
 ```js
 window.FLOWVIZ = {
   doc, version, kind,          // from window.FLOW
-  state,                       // the live state object, schema 5 (SPEC §6). Mutate, then save().
+  state,                       // the live state object, schema 6 (SPEC §6). Mutate, then save().
   save(),                      // debounced 700 ms: localStorage always, PUT to the sidecar when served
   onHydrate(fn),               // fn() after a sidecar load merged newer state into `state`
   auditHooks: [],              // push fn(add); add(label, actual, capText, ok) adds a ?audit=1 row
@@ -126,6 +126,13 @@ instance variable `--flow`, set on the figure — never `--acc`, which is the pa
 - **What the human adds is never the agent's budget.** `buildAudit()` in `flow.js` leaves out
   `li.step.added`, `.row-mark` and `section.todo`; anything new the page draws from state must be left
   out the same way, or a busy run pushes a clean report over its caps.
+- **A verdict has two values once a human sets one.** `verdict` is derived from the rules and re-derived on
+  every load; `override.verdict` is the human's. Everything that judges a step reads the effective one
+  (`effective()` in `flow.js`, `effective` from `step_capture_record()` in captures, which results uses), and
+  everything that shows it shows both. `textHash` is FNV-1a over UTF-8, in `flow.js` and in captures: change both.
+- **Pixels never go in the sidecar.** Images go to `PUT _flow/asset/<doc>/<sha256>.<ext>` and live in
+  `<doc>.assets/`, named by hash, so no id names a file and nothing has to move when an id does. The page
+  compresses anything over 10 MB before sending it; serve refuses anything over 10 MB, mislabelled or misnamed.
 - **State keys are additive and never dropped.** `merge()` keeps keys it does not know, and serve carries
   over top-level keys a PUT leaves out. A removal is a tombstone (`gone`), because the merge is a union.
 - **The unfilled-slot check compares against the templates.** Change a template's placeholder words and

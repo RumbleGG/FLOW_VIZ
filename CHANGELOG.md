@@ -3,6 +3,36 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.2.0 — 2026-10-05 · screenshots in a paste box, and verdicts set by hand
+
+**Images.** Every paste box takes an image as well as text: paste one, drop a file on the box, or **+ image**
+beside **re-run**. The text box is unchanged — text on the clipboard still pastes as text — and only text is
+matched against the rules; a capture that is only images reads `captured`. Images sit in a strip under the box,
+numbered `b4·1`, `b4·2`, captioned, and open full size with their hash. Served, each one is sent on its own
+to `PUT _flow/asset/<doc>/<sha256>.<ext>` and written once to `<doc>.assets/`, named by its hash: `flowviz
+serve` checks the type from the bytes, the 10 MB limit and the hash, and the sidecar holds only the reference.
+Not yet on disk, an image is kept in the tab (and the browser's IndexedDB, where it answers) under an amber
+*only in this browser* line, and sent when the page next reaches its server. **An image over 10 MB is
+compressed in the page** first: WebP (JPEG where WebP is unavailable) at a high quality, scaled down only if
+that is not enough, with the original's type, size and pixels recorded; a 17 MB screenshot lands as about
+4 MB at full resolution. Re-run keeps images with their attempt; removing one keeps its record and its file.
+
+**Verdicts set by hand.** The verdict chip is a button. It opens a panel under the step's foot with pass, fail
+and no match, the derived one marked, and a required one-line reason. The derived verdict is kept and still
+re-derived on every load; the one set by hand drives the chips, progress and outcome. A violet ✎ marks it on
+both chips, one line under the foot gives the time, the derived verdict, the reason and **back to derived**,
+and the playbook counts it (`1 set by hand`). If the output changes afterwards, that line turns amber.
+
+**Back to the agent.** State schema 6 adds a capture's `images` and `override`, nothing at the top level, so
+relabel and fold move them with their step for free. `flowviz captures` prints each image with its absolute
+path and each override with its reason and the derived verdict, and counts both; Copy captures for agent and
+Save evidence carry them, with sha256 per image; each image prints full width under its step, so print to PDF
+is a complete evidence document. `flowviz results` works the outcome out from the verdicts as set and names
+every one set by hand. The audit notes them. AGENTS.md: open every image before concluding, and report a
+verdict set by hand as the operator's call.
+
+Minor: no cap changed. Decided from a plan with mockups, now kept in the local, untracked `Archive/`.
+
 ## 3.1.1 — 2026-10-04 · one + at the foot of a step
 
 The line on every seam between steps is gone, and so is the row of **+ step after** and **+ to-do** buttons

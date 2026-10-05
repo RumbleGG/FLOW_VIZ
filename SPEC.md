@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 3.1.1** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 3.2.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -100,7 +100,7 @@ A playbook step is **a checkbox, its id, and one sentence.** That is all that is
 | Id | `<row letter><n>` (§1.2b), shown where the counter was. |
 | Prereqs | `data-after="<id>"` dims the step until that one is done or captured. |
 | Carried value | `data-emit` on the producer's textarea, `{{<step>.<NAME>}}` in a later command (§1.3a). |
-| Capture | Every step has a textarea, an exit-code field, a one-line note, and its sidecar key shown beside it. |
+| Capture | Every step has a textarea, an exit-code field, a one-line note, and its sidecar key shown beside it. The textarea also takes images (§1.3c); only its text is matched against the rules. |
 | Verdict | `data-pass` / `data-fail` regexes flip the chip on paste. Every literal is **word-anchored** (`\bFull\b`, never `Full`). |
 | Re-run | Files the current capture into `runs[]` and clears the box. A second attempt never destroys the first. |
 | Injected, never written | The `Done ☐` button at the foot of every step, the second verdict chip beside it, the status pill, and every displayed time. `flow.js` adds them, so a rebuild gives old reports new affordances. |
@@ -149,6 +149,24 @@ reworded step, or a next action. An open **do after** to-do is offered as Next b
 **Time.** Stored as ISO-8601 UTC everywhere (sidecar, exports, snapshot names). Shown in
 `America/Los_Angeles`, labelled `PDT`/`PST`, with the ISO value on `title`. No report hand-formats a time.
 
+### 1.3c Evidence: images in a paste box, and verdicts set by hand
+
+Text output is not always the evidence: a dashboard, a dialog, a page that rendered wrong. And a rule can be
+wrong about one run while the human can see what happened. Both are captured where the step is.
+
+| Part | Rule |
+|---|---|
+| Attach an image | paste one into the paste box (text on the clipboard still pastes as text), drop a file on the box, or **+ image** beside **re-run** (the way in on a phone). Images sit in a strip under the box, numbered `b4·1`, `b4·2`, each with a caption the human can edit; one opens full size with its hash. The text box itself is unchanged. |
+| Where it lives | served: one file per image in `<doc>.assets/` beside the page, named by its sha256, sent before the state that refers to it; `flowviz serve` checks the type, the size and the hash, and writes each name once. The capture holds only the reference — pixels never go in the sidecar. Not yet on disk (opened from Finder, or the server was down): kept in this tab and, where the browser allows, its IndexedDB, under an amber *only in this browser* line, and sent the next time the page reaches its server. A page opened from Finder is a different origin from the served one, so, like its text, what it holds stays in that browser. |
+| Over 10 MB | compressed in the page before it goes anywhere: re-encoded as WebP (JPEG where WebP is not available) at a high quality first, scaled down only if that is not enough. The original's type, size and pixels are recorded with it. A type the page does not keep (HEIC, BMP) is converted where the browser can read it; an animated GIF over the limit keeps its first frame. |
+| Verdicts | images never change the derived verdict: rules match text. A capture that is only images reads `captured`. |
+| Re-run · remove | re-run moves the images with the attempt into `runs[]`. Removing one keeps its record with `gone`, and the file stays on disk. |
+| Set a verdict by hand | the verdict chip is a button. It opens a panel under the step's foot — it covers nothing — with **pass**, **fail** and **no match**, the derived one marked, and a one-line reason, which is required. The derived verdict is kept beside it and still re-derived on every load. |
+| What shows it | a violet ✎ on the row's chip and a ✎ badge on the foot chip; one line under the foot with the time, the derived verdict, the reason and **back to derived**; the playbook's counter (`1 set by hand`). If the output changes afterwards, the line turns amber until it is set again or taken back. |
+| What reads it | the effective verdict (the one set by hand, else the derived one) drives the chips, progress, the missing-step prompt and the outcome `flowviz results` works out; every surface that shows it — Copy captures for agent, `flowviz captures`, Save evidence, Results — shows the derived verdict and the reason beside it. |
+
+Caps do not apply: the images and the panel live inside a step, below the layer the caps measure.
+
 ### 1.4 The verdict vocabulary
 
 Tested in this order; the earlier a tier, the less it presumes.
@@ -159,7 +177,8 @@ Tested in this order; the earlier a tier, the less it presumes.
 | `fail` | `fail`, `--bad` | the command ran and the target said no | the system under test |
 | `pass` | `pass`, `--ok` | `data-pass` matched and nothing above did | nothing |
 | `saved` | `no match`, `--dim` | captured, matched neither regex | the step's pass condition |
-| `saved`, no rule | `captured` | captured by a step with no `data-pass` or `data-fail` — one added in the page, until it is folded | nothing: there is no rule to miss |
+| `saved`, no rule | `captured` | captured by a step with no `data-pass` or `data-fail` — one added in the page, until it is folded — or only images | nothing: there is no rule to miss |
+| any, set by hand | the verdict, with a violet ✎ | the operator decided it (§1.3c); the derived verdict is kept beside it | the operator's judgment: report it as theirs, with their reason |
 | `null` | `—` | nothing pasted yet | — |
 
 The `error` tier is deliberately narrow — these signatures and nothing else:
@@ -219,10 +238,12 @@ A rollback step that was never needed counts as "not needed", not as missing.
 
 **Save evidence** writes one plain-text turnover record: every step in DOM order with id, blast radius,
 verdict, sentence, command, capture, SHA-256 of the capture (secure context only), exit code, time,
-note and superseded runs — a step added in the page marked as such — then every note left on a drawing
+note and superseded runs, a verdict set by hand with its reason and the derived verdict, every image with its
+file, size, sha256 and caption — a step added in the page marked as such — then every note left on a drawing
 and every to-do. **Print** is a mode of the one stylesheet:
 `flow.js` forces light, opens every `<details>`, grows every textarea on `beforeprint`, and restores all
-three after. Print CSS carries pagination only.
+three after; each image prints full width under its step with its caption and hash, so print to PDF is a
+complete evidence document. Print CSS carries pagination and that only.
 
 ---
 
@@ -448,7 +469,7 @@ Nothing a human types is stored in the HTML. It goes to `<doc>.flow.json` beside
 
 ```json
 {
-  "schema": 5, "doc": "checkout", "flowviz": "3.1.0", "savedAt": "2026-09-28T21:14:08Z",
+  "schema": 6, "doc": "checkout", "flowviz": "3.2.0", "savedAt": "2026-09-28T21:14:08Z",
   "ui": { "theme": "auto", "motion": true,
           "draw": { "checkout": { "flow": 0, "view": "map", "labels": false, "times": false, "key": false } } },
   "vars": { "host": "app-vm-01" },
@@ -458,7 +479,13 @@ Nothing a human types is stored in the HTML. It goes to `<doc>.flow.json` beside
   "captures": { "b3": { "text": "Hash : 4F2C…", "exit": "0", "verdict": "pass",
                           "at": "2026-09-28T21:13:57Z", "note": "share needed remapping first",
                           "runs": [ { "text": "Unexpected token '}'", "exit": "", "verdict": "error",
-                                      "at": "2026-09-28T21:09:02Z" } ] } },
+                                      "at": "2026-09-28T21:09:02Z" } ] },
+                "b4": { "text": "{\"status\":\"failed\", …}", "exit": "0", "verdict": "fail", "at": "…",
+                          "override": { "verdict": "pass", "was": "fail", "at": "…", "textHash": "9c1e44a0",
+                                        "reason": "the provider's log shows m-8812 delivered" },
+                          "images": [ { "sha256": "5e0c…a91b", "file": "checkout.assets/5e0c…a91b.png",
+                                        "type": "image/png", "w": 960, "h": 330, "bytes": 29006,
+                                        "caption": "provider delivery log", "at": "…" } ] } },
   "notes": { "checkout/node:order": { "text": "the cache is write-through, not cache-aside",
                                       "at": "2026-09-28T21:15:40Z" },
              "checkout/order-outbox/node:relay": { "text": "…", "at": "…" } },
@@ -475,7 +502,9 @@ Nothing a human types is stored in the HTML. It goes to `<doc>.flow.json` beside
 }
 ```
 
-`added` and `todos` arrived in schema 5, `emits` in 4, `notes` in 3, `note` and `runs` in 2. Every addition
+A capture's `images` and `override` arrived in schema 6 (`textHash` is FNV-1a of the output, for change
+detection only; the evidence hash is sha256), `added` and `todos` in 5, `emits` in 4, `notes` in 3, `note` and
+`runs` in 2. Every addition
 defaults empty, so an older sidecar loads unchanged. A build keeps any key it does not know rather than
 dropping it, and `flowviz serve` carries over any top-level key a save leaves out, so a page built before a
 key existed can never erase it from disk. A removed step or to-do keeps its key with `gone` set: the merge
@@ -516,7 +545,7 @@ server answers `409` to a tab still carrying the old ids instead of letting it w
 | Bump | Means |
 |---|---|
 | patch | CSS, wording, bug fix |
-| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page) |
+| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand) |
 | major | a cap changes, or the card or spine shape changes, or the audit starts failing reports it passed (1.0.0 labelled every row; 2.0.0 made flows optional; 3.0.0 named rows and steps by letter and number) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then
