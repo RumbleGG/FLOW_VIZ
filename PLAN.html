@@ -7,7 +7,7 @@
 <meta name="flowviz-relabel" content='[{"at":"2026-09-29T17:36:04.324Z","rows":{"r1":"a","r2":"b","r4":"c","r5":"d","r3":"e","r6":"f"},"steps":{"sv":"e1","cs":"e2","ap":"e3","ac":"e4","sc":"e5","rb":"e6"}}]'>
 <meta name="flowviz-kind" content="report">
 <title>FLOW_VIZ now draws systems as well as it writes reports</title>
-<script>window.FLOW={"doc": "flowviz-plan", "version": "3.1.1", "kind": "report", "built": "2026-10-04T22:36:50Z"};
+<script>window.FLOW={"doc": "flowviz-plan", "version": "3.2.0", "kind": "report", "built": "2026-10-05T16:44:49Z"};
 (function(){var h=document.documentElement;h.setAttribute("data-kind",FLOW.kind);try{var q=(location.search.match(/[?&]theme=(light|dark)/)||[])[1];var s=JSON.parse(localStorage.getItem("flowviz:"+FLOW.doc)||"{}"),u=s.ui||{};var t=q||u.theme||"auto";var d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);h.setAttribute("data-theme",d?"dark":"light");if(u.motion===false)h.classList.add("still");}catch(e){h.setAttribute("data-theme","light");}})();</script>
 <style>
 /* ===========================================================================
@@ -635,6 +635,99 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 /* motion off in the pill: the fork still fades, but nothing moves or turns */
 .still .fork-btn,.still .fork-btn i{transition:none!important}
 .still .fork-opt,.still .fork.open .fork-opt{transform:none!important;transition:opacity .15s ease,visibility 0s!important}
+
+/* ── evidence: images in a paste box, and verdicts set by hand ─────────────
+   The text box is unchanged. Images sit in a strip under it, numbered b4·1, b4·2,
+   each with a caption; a file dragged over the box says where it will land. A
+   verdict set by hand keeps the violet of everything a human adds: a pencil on
+   every chip that shows it, and one line under the foot saying what it replaced. */
+.cap{position:relative}
+.cap-imgs{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.cap-imgs[hidden]{display:none}
+.cap-img{position:relative;width:168px;margin:0;border:1px solid var(--line);border-radius:var(--r2);background:var(--paper);
+  overflow:hidden}
+.ci-open{display:block;width:100%;padding:0;border:none;background:var(--sunk);cursor:zoom-in}
+.ci-open img{display:block;width:100%;height:78px;object-fit:cover;object-position:left top;border-bottom:1px solid var(--line)}
+.ci-no{position:absolute;top:5px;left:5px;font:700 10px/1 var(--f-mono);color:var(--paper);background:var(--mag);
+  border-radius:3px;padding:3px 5px;pointer-events:none}
+.ci-x{position:absolute;top:5px;right:5px;min-width:18px;height:18px;border-radius:9px;background:var(--paper);
+  border:1px solid var(--line2);font:12px/16px var(--f-ui);text-align:center;color:var(--dim);cursor:pointer;padding:0 4px}
+.ci-x.sure{color:var(--bad);border-color:var(--bad);font-size:10.5px}
+.ci-cap{display:block;width:100%;border:none;border-bottom:1px solid transparent;background:none;padding:5px 8px 0;
+  font:12px/1.35 var(--f-ui);color:var(--fg)}
+.ci-cap:focus{outline:none;border-bottom-color:var(--mag)}
+.ci-cap::placeholder{color:var(--dim2)}
+.ci-mt{display:block;font:10.5px var(--f-mono);color:var(--dim2);padding:2px 8px 6px}
+.ci-note{flex:1 0 100%;font:11.5px var(--f-ui);color:var(--dim2)}
+.ci-note b{color:var(--mag)}
+.ci-note.warn,.ci-note.warn b{color:var(--warn)}
+.cap .ft .ci-add{margin-left:auto}
+.cap .ft .ci-add+.rr{margin-left:0}
+/* a file dragged over the box: the whole box says where it will land */
+.cap .cap-drop{display:none}
+.cap.drag .cap-drop{position:absolute;inset:18px 0 auto 0;height:calc(100% - 18px);min-height:74px;z-index:5;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1.5px dashed var(--mag);
+  border-radius:var(--r2);background:var(--magbg);color:var(--mag);font:600 13px var(--f-ui);pointer-events:none}
+.cap-drop small{font:11px var(--f-ui);color:var(--dim);font-weight:400}
+.cap-drop .cd-g{font:700 18px/1 var(--f-ui)}
+/* one image, open: the picture, then what it is and where it lives */
+.ci-view{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:28px;
+  background:rgba(10,12,16,.62);cursor:zoom-out}
+.ci-view[hidden]{display:none}
+.ci-box{max-width:min(1200px,100%);max-height:100%;display:flex;flex-direction:column;background:var(--paper);
+  border:1px solid var(--line2);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-pop)}
+.ci-box img{display:block;max-width:100%;max-height:calc(100vh - 120px);object-fit:contain;background:var(--sunk)}
+.ci-bar{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:8px 12px;font:12px var(--f-ui);color:var(--dim)}
+.ci-bar b{color:var(--mag)}
+.ci-bar code{font-size:11px}
+.ci-keys{margin-left:auto;color:var(--mag)}
+
+/* the verdict is a button: click it to set it by hand */
+.vd[data-vd][role="button"]{cursor:pointer}
+.vd[data-vd][role="button"]:focus-visible{outline:2px solid var(--mag);outline-offset:2px;border-radius:999px}
+@media (hover:hover) and (pointer:fine){ .vd.vdf[role="button"]:hover{box-shadow:0 0 0 3px var(--magbg)} }
+/* set by hand: a small violet pencil wherever the verdict is shown */
+.vd.hand::after{content:"\270E";margin-left:4px;color:var(--mag);font-weight:700;letter-spacing:0}
+.vd.vdf.hand{position:relative;padding-right:22px}
+.vd.vdf.hand::after{position:absolute;right:-6px;top:-7px;width:17px;height:17px;margin:0;border-radius:50%;
+  background:var(--mag);color:var(--paper);font:700 10px/17px var(--f-ui);text-align:center;box-shadow:0 0 0 2px var(--paper)}
+.vd.vdf.hand.stale::after{background:var(--warn)}
+.pb>.hd .prog .h{color:var(--mag)}
+.handnote{display:flex;gap:6px 10px;align-items:baseline;flex-wrap:wrap;margin-top:9px;padding:6px 10px;
+  border-left:2px solid var(--mag);background:var(--magbg);border-radius:0 var(--r2) var(--r2) 0;
+  font:12px/1.5 var(--f-ui);color:var(--mag)}
+.handnote .hn-was{color:var(--dim)}
+.handnote .hn-was b.fail{color:var(--bad)} .handnote .hn-was b.pass{color:var(--ok)}
+.handnote .hn-was b.error{color:var(--warn)} .handnote .hn-was b.saved{color:var(--dim)}
+.handnote q{color:var(--fg);font-style:italic}
+.handnote .hn-a{margin-left:auto;display:inline-flex;gap:10px}
+.handnote.stale{border-left-color:var(--warn);background:var(--warnbg);color:var(--warn)}
+.handnote.stale .lnk{color:var(--warn)}
+/* the panel the chip opens: inline under the foot, so it covers nothing */
+.ovr{margin-top:10px;padding:11px 13px 12px;border:1px solid var(--mag);border-left:3px solid var(--mag);
+  border-radius:var(--r2);background:var(--paper)}
+.ovr-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font:700 10.5px var(--f-ui);letter-spacing:.9px;
+  text-transform:uppercase;color:var(--mag);margin-bottom:9px}
+.ovr-h span{text-transform:none;letter-spacing:0;font-weight:400;color:var(--dim2)}
+.ovr-o{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.ovr-v{display:inline-flex;align-items:center;gap:6px;font:700 11px var(--f-ui);letter-spacing:.5px;text-transform:uppercase;
+  border:1px solid var(--line2);border-radius:999px;padding:5px 11px;background:var(--panel2);cursor:pointer;color:var(--dim)}
+.ovr-v.pass{color:var(--ok)} .ovr-v.fail{color:var(--bad)}
+.ovr-v[aria-checked="true"].pass{border-color:var(--ok);background:var(--okbg);box-shadow:0 0 0 2px var(--okbg)}
+.ovr-v[aria-checked="true"].fail{border-color:var(--bad);background:var(--badbg);box-shadow:0 0 0 2px var(--badbg)}
+.ovr-v[aria-checked="true"].saved{border-color:var(--dim);background:var(--sunk);box-shadow:0 0 0 2px var(--sunk)}
+.ovr-d{font:600 9.5px var(--f-ui);text-transform:none;letter-spacing:0;color:var(--dim2);border:1px dashed var(--line2);
+  border-radius:3px;padding:0 4px}
+.ovr .hint{font:11.5px var(--f-ui);color:var(--dim2)}
+
+@media print{
+  /* paper is the evidence document: each image full width under its output, with its caption and hash */
+  .ci-add,.ci-x,.ci-note,.ovr,.cap .cap-drop,.handnote .hn-a,.ci-view{display:none!important}
+  .cap-imgs{display:block}
+  .cap-img{width:100%;margin:8px 0;break-inside:avoid}
+  .ci-open img{height:auto;max-height:none;object-fit:contain}
+  .ci-mt::after{content:" · sha256 " attr(data-sha)}
+}
 
 /* ── footer stamp ─────────────────────────────────────────────────────────── */
 .foot{margin-top:36px;padding-top:13px;border-top:1px solid var(--line2);
@@ -1770,8 +1863,8 @@ push to it, send me their GitHub username.</p></div>
 </details>
 
 <div class="foot">
-<span class="v">FLOW-VIZ v3.1.1</span> · doc <code>flowviz-plan</code> · template <code>report@3.1.1</code> · built 2026-10-04 · sha <code>9116ffd</code> · state <code>flowviz-plan.flow.json</code>
-<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.1.1</code><button class="copy" data-for="flowRb">copy</button></span></div>
+<span class="v">FLOW-VIZ v3.2.0</span> · doc <code>flowviz-plan</code> · template <code>report@3.2.0</code> · built 2026-10-05 · sha <code>2aa488b</code> · state <code>flowviz-plan.flow.json</code>
+<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.2.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
 </div>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
 <!-- FLOW_VIZ icon sprite. Stroke icons on a 24 grid; draw.js references them as #i-<name>.
@@ -2493,14 +2586,14 @@ figure.fv-drawing{break-inside:avoid}
    A deliverable declares, before this script (the build writes it):
      window.FLOW = { doc:'api-500-rootcause', version:'0.6.0', kind:'report', built:'…' }
 
-   State shape (also the on-disk sidecar <doc>.flow.json), schema 5:
-     { schema:5, doc, flowviz, savedAt,
+   State shape (also the on-disk sidecar <doc>.flow.json), schema 6:
+     { schema:6, doc, flowviz, savedAt,
        ui:{theme:'auto'|'light'|'dark', motion, draw:{<drawingId>:{…}}},
        vars:{host:'app-vm-01'},          // data-var inputs
        checks:{'<id>':true},                 // label.chk checkboxes
        open:{'<rowid>':true},                // which rows were expanded
        steps:{'<id>':{done,acked}},
-       captures:{'<id>':{text,exit,verdict,at,note,runs:[{text,exit,verdict,at}]}},
+       captures:{'<id>':{text,exit,verdict,at,note,images:[…],override:{…},runs:[{text,exit,verdict,at,images?,override?}]}},
        notes:{'<drawingId>/[<segment>/]<node|edge|step>:<id>':{text,at}},
        emits:{'<stepId>':{'<NAME>':'<value>'}},        // derived, never typed
        added:{'b3a':{after,text,cmd,risk,at,folded?,gone?}},   // steps typed into the page
@@ -2512,8 +2605,8 @@ figure.fv-drawing{break-inside:avoid}
      fail   the command ran and said no — evidence about the target
      saved  captured, matched neither regex (the chip reads "no match")
 
-   schema 1–4 load unchanged: note, runs (2), notes (3), emits (4), added and
-   todos (5) are additive and default empty. emits are re-derived from the
+   schema 1–5 load unchanged: note, runs (2), notes (3), emits (4), added and
+   todos (5), a capture's images and override (6) are additive and default empty. emits are re-derived from the
    captures on every load, so a stored value is a cache, never a source. A key
    this build does not know is kept, not dropped, so an older page never erases
    what a newer one saved.
@@ -2533,7 +2626,7 @@ figure.fv-drawing{break-inside:avoid}
   var served = /^https?:$/.test(location.protocol);
 
   var st = {
-    schema: 5, doc: DOC, flowviz: VER, savedAt: null,
+    schema: 6, doc: DOC, flowviz: VER, savedAt: null,
     ui: { theme: 'auto' }, vars: {}, checks: {}, open: {}, steps: {}, captures: {}, notes: {},
     emits: {}, added: {}, todos: {}
   };
@@ -2674,9 +2767,7 @@ figure.fv-drawing{break-inside:avoid}
 
   function noteText(n) { return typeof n === 'string' ? n : ((n && n.text) || ''); }
   function hasContent() {
-    var any = Object.keys(st.captures).some(function (k) {
-      return (st.captures[k].text || '').trim();
-    });
+    var any = Object.keys(st.captures).some(function (k) { return hasEvidence(st.captures[k]); });
     var notesAny = Object.keys(st.notes || {}).some(function (k) {
       return noteText(st.notes[k]).trim();
     });
@@ -2690,7 +2781,7 @@ figure.fv-drawing{break-inside:avoid}
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (d && (!st.savedAt || (d.savedAt || '') > st.savedAt)) {
-          live = false; merge(upgrade(d)); renderAdditions(); hydrate(); applyTheme(); live = true;
+          live = false; merge(upgrade(d)); renderAdditions(); hydrate(); applyTheme(); live = true; sendKept();
           loadedFrom = 'sidecar';
           try { localStorage.setItem(LSKEY, JSON.stringify(st)); } catch (e) {}
           setPill('disk', 'loaded from disk');
@@ -3115,17 +3206,20 @@ figure.fv-drawing{break-inside:avoid}
     /* a step with no data-pass and no data-fail — one typed into the page,
        until the agent folds it — has no rule to miss, so it reads `captured`,
        never `no match`, which would blame a pass condition that is not there */
-    var norule = !!ta && !ta.dataset.pass && !ta.dataset.fail;
+    var norule = !!ta && !ta.dataset.pass && !ta.dataset.fail, full = st.captures[id] || {}, o = full.override;
     $$('[data-vd="' + id + '"]').forEach(function (chip) {
       var foot = chip.classList.contains('vdf');
-      var was = chip.dataset.v, now = r.verdict || '';
-      var plain = now === 'saved' && norule;
-      chip.className = 'vd' + (foot ? ' vdf' : '') + (now ? ' ' + now : '');
+      var was = chip.dataset.v, now = effective(full) || '';
+      // an image alone, or a step with no rule, is captured: there is nothing to have missed
+      var plain = now === 'saved' && !o && (norule || !(r.text || '').trim());
+      chip.className = 'vd' + (foot ? ' vdf' : '') + (now ? ' ' + now : '') + (o ? ' hand' : '') + (o && isStale(full) ? ' stale' : '');
       chip.textContent = foot
         ? (now ? (plain ? '● captured' : VD_GLYPH[now] + ' ' + VD_LABEL[now]) : '· not captured')
         : (plain ? 'captured' : VD_LABEL[now] || '—');
-      chip.title = (plain ? 'captured: this step has no pass rule yet, so there is nothing to match' : VD_HINT[now]) ||
-        (foot ? 'paste the output above — this then reads pass, fail, error or no match' : '');
+      chip.title = (o ? 'set by hand at ' + ptTime(o.at) + ', derived ' + (VD_LABEL[o.was] || 'none') + ': ' + o.reason + ' (click to change)'
+        : (plain ? 'captured: there is nothing here a rule can match' : VD_HINT[now]) ||
+        (foot ? 'paste the output above — this then reads pass, fail, error or no match' : '')) +
+        (o ? '' : now ? ' · click to set it by hand' : '');
       chip.dataset.v = now;
       // a verdict that just changed under your cursor gets one pulse, once
       if (foot && live && was !== undefined && was !== now && now) {
@@ -3145,7 +3239,9 @@ figure.fv-drawing{break-inside:avoid}
     var rn = $('[data-run="' + id + '"]');
     if (rn) rn.textContent = r.runs.length ? 'run ' + (r.runs.length + 1) : '';
     var rr = $('[data-rr="' + id + '"]');
-    if (rr) rr.disabled = !(r.text || '').trim();
+    if (rr) rr.disabled = !((r.text || '').trim() || liveImgs(full).length);
+    paintImgs(id);
+    paintHand(id);
   }
   function paintStep(li) {
     var id = li.dataset.step, s = step(id);
@@ -3154,24 +3250,25 @@ figure.fv-drawing{break-inside:avoid}
     paintFin(li);
     var after = li.dataset.after;
     if (after) {
-      var blocked = !(st.steps[after] && st.steps[after].done) &&
-                    !((st.captures[after] || {}).text || '').trim();
+      var blocked = !(st.steps[after] && st.steps[after].done) && !hasEvidence(st.captures[after]);
       li.classList.toggle('dim', blocked);
     }
   }
   function paintProgress(pb) {
     var lis = $$('li.step', pb);
-    var done = 0, fail = 0, err = 0;
+    var done = 0, fail = 0, err = 0, hand = 0;
     lis.forEach(function (li) {
       if (step(li.dataset.step).done) done++;
-      var v = (st.captures[li.dataset.step] || {}).verdict;
+      var r = st.captures[li.dataset.step] || {}, v = effective(r);
       if (v === 'fail') fail++;
       else if (v === 'error') err++;
+      if (r.override) hand++;
     });
     var p = $('.prog', pb);
     if (p) p.innerHTML = done + ' / ' + lis.length + ' done' +
       (fail ? ' · <span class="f">' + fail + ' failed</span>' : '') +
-      (err ? ' · <span class="e">' + err + ' errored</span>' : '');
+      (err ? ' · <span class="e">' + err + ' errored</span>' : '') +
+      (hand ? ' · <span class="h">' + hand + ' set by hand</span>' : '');
   }
   function repaintAll() {
     $$('li.step').forEach(paintStep);
@@ -3265,8 +3362,8 @@ figure.fv-drawing{break-inside:avoid}
     ta.addEventListener('input', function () {
       var id = ta.dataset.cap, r = cap(id);
       r.text = ta.value;
-      r.at = ta.value.trim() ? new Date().toISOString() : null;
-      r.verdict = verdictOf(ta, ta.value);
+      r.at = ta.value.trim() ? new Date().toISOString() : (liveImgs(r).length ? r.at : null);
+      r.verdict = derivedVerdict(ta, r);
       deriveEmits(ta);
       paintCapture(id);
       paintSubs();
@@ -3287,9 +3384,12 @@ figure.fv-drawing{break-inside:avoid}
   $$('[data-rr]', root).forEach(function (b) {
     b.addEventListener('click', function () {
       var id = b.dataset.rr, r = cap(id);
-      if (!(r.text || '').trim()) return;
-      r.runs.push({ text: r.text, exit: r.exit, verdict: r.verdict, at: r.at });
-      r.text = ''; r.exit = ''; r.verdict = null; r.at = null;
+      if (!((r.text || '').trim() || liveImgs(r).length)) return;
+      var run = { text: r.text, exit: r.exit, verdict: r.verdict, at: r.at };
+      if ((r.images || []).length) run.images = r.images;          // each attempt keeps its own evidence
+      if (r.override) run.override = r.override;
+      r.runs.push(run);
+      r.text = ''; r.exit = ''; r.verdict = null; r.at = null; r.images = []; delete r.override;
       var ta = $('textarea[data-cap="' + id + '"]'); if (ta) { ta.value = ''; ta.focus(); }
       var ec = $('input[data-ec="' + id + '"]'); if (ec) ec.value = '';
       if (ta) deriveEmits(ta); else delete st.emits[id];
@@ -3314,15 +3414,27 @@ figure.fv-drawing{break-inside:avoid}
   var ac = $('#flowAgentCopy');
   if (ac) ac.addEventListener('click', function () {
     var out = { doc: DOC, flowviz: VER, at: new Date().toISOString(),
-                vars: st.vars, captures: {}, done: [] };
+                vars: st.vars, captures: {}, done: [] }, nim = 0;
     var labels = stepLabels();
     Object.keys(st.captures).forEach(function (k) {
       var r = st.captures[k];
-      if ((r.text || '').trim()) {
+      if (hasEvidence(r)) {
         out.captures[k] = { text: r.text, exit: r.exit, verdict: r.verdict, at: r.at };
         if (labels[k]) out.captures[k].step = labels[k];
         if (r.note) out.captures[k].note = r.note;
         if (r.runs && r.runs.length) out.captures[k].priorRuns = r.runs.length;
+        // a verdict set by hand travels with the one it replaced, and whether the output moved since
+        if (r.override) out.captures[k].override = Object.assign({ stale: isStale(r) }, r.override);
+        var im = liveImgs(r);
+        if (im.length) {
+          nim += im.length;
+          out.captures[k].images = im.map(function (i, n) {
+            var o2 = { n: k + '·' + (n + 1), file: i.file, caption: i.caption || '', w: i.w, h: i.h, bytes: i.bytes, sha256: i.sha256 };
+            if (i.src) o2.compressedFrom = i.src;
+            if (i.local) o2.onlyInThisBrowser = true;
+            return o2;
+          });
+        }
       }
     });
     Object.keys(st.steps).forEach(function (k) { if (st.steps[k].done) out.done.push(k); });
@@ -3349,7 +3461,8 @@ figure.fv-drawing{break-inside:avoid}
       .then(function () {
         flash(ac, n + ' capture' + (n === 1 ? '' : 's') +
           (nn ? ' · ' + nn + ' note' + (nn === 1 ? '' : 's') : '') +
-          (na ? ' · ' + na + ' added' : '') + (nt ? ' · ' + nt + ' to-do' + (nt === 1 ? '' : 's') : '') + ' copied');
+          (na ? ' · ' + na + ' added' : '') + (nt ? ' · ' + nt + ' to-do' + (nt === 1 ? '' : 's') : '') +
+          (nim ? ' · ' + nim + ' image' + (nim === 1 ? '' : 's') : '') + ' copied');
       }, function () { flash(ac, 'clipboard blocked'); });
   });
 
@@ -3391,8 +3504,9 @@ figure.fv-drawing{break-inside:avoid}
     var MK = String.fromCharCode(0xE000), MKE = String.fromCharCode(0xE001);
     function line(s) { L.push(s); }
     function emitCapture(id, n, sentence, risk, cmd, how) {
-      var r = peek(id);
-      var vd = ((how && how.norule && r.verdict === 'saved' ? 'captured' : VD_LABEL[r.verdict]) || 'not captured').toUpperCase();
+      var r = peek(id), full = st.captures[id] || {}, o = full.override;
+      var vd = ((how && how.norule && r.verdict === 'saved' && !o ? 'captured' : VD_LABEL[effective(full)]) || 'not captured').toUpperCase();
+      if (o) vd += ', SET BY HAND (DERIVED ' + (VD_LABEL[o.was] || 'none').toUpperCase() + ')';
       line(bar);
       line('step ' + (n === id ? id : n + ' · ' + id) + ' · ' + (risk === 'w' ? 'WRITE' : 'read') + ' · ' + vd +
            (how && how.added ? ' · ADDED IN THE PAGE' : ''));
@@ -3417,6 +3531,16 @@ figure.fv-drawing{break-inside:avoid}
         line('captured   —  (no output recorded)');
       }
       if (r.note) line('note       ' + r.note);
+      if (o) {
+        line('override   ' + VD_LABEL[o.verdict] + ' at ' + o.at + (isStale(full) ? '   (the output changed after it was set)' : ''));
+        line('reason     ' + o.reason);
+      }
+      liveImgs(full).forEach(function (i, k) {
+        line('image ' + pad(k + 1, 5) + i.file + (i.local ? '   (only in the browser that took it)' : ''));
+        line('           ' + i.w + 'x' + i.h + '  ' + kb(i.bytes) + '  sha256 ' + i.sha256 +
+             (i.src ? '  compressed from ' + i.src.w + 'x' + i.src.h + ', ' + kb(i.src.bytes) : ''));
+        if (i.caption) line('           ' + i.caption);
+      });
       r.runs.forEach(function (p, i) {
         line('');
         line('  superseded run ' + (i + 1) + '  ' + (p.at || '—') +
@@ -3493,8 +3617,8 @@ figure.fv-drawing{break-inside:avoid}
      report owns the rule. Returns true if anything moved, so it gets saved.   */
   function reverdict(ta, r) {
     var moved = false;
-    if ((r.text || '').trim()) {
-      var v = verdictOf(ta, r.text);
+    if ((r.text || '').trim() || liveImgs(r).length) {
+      var v = derivedVerdict(ta, r);
       if (v !== r.verdict) { r.verdict = v; moved = true; }
     }
     (r.runs || []).forEach(function (p) {
@@ -3746,7 +3870,7 @@ figure.fv-drawing{break-inside:avoid}
     if (KIND === 'drawing' || !ANCHOR) return;
     $$('li.step').forEach(function (li) {
       if (isAdded(li) || li.closest('section.results') || !ANCHOR.test(li.dataset.step || '')) return;
-      var inb = $('.sd>.in', li), id = li.dataset.step, v = (st.captures[id] || {}).verdict;
+      var inb = $('.sd>.in', li), id = li.dataset.step, v = effective(st.captures[id]);
       if (!inb) return;
       var box = $('.missed', inb);
       if (v !== 'fail' && v !== 'error') { if (box) box.hidden = true; return; }
@@ -4054,7 +4178,7 @@ figure.fv-drawing{break-inside:avoid}
   function renderAdditions() {
     if (KIND === 'drawing') return;
     if (st.ui && st.ui.todoKind) todoKind = st.ui.todoKind === 'do' ? 'do' : 'add';
-    renderSteps(); renderFork(); renderTodos(); renderMarkers(); renderPill();
+    renderSteps(); renderFork(); renderTodos(); renderMarkers(); renderPill(); renderEvidence();
     repaintAll();
   }
 
@@ -4196,6 +4320,453 @@ figure.fv-drawing{break-inside:avoid}
     });
   }
 
+  /* ── evidence: images in a paste box, and verdicts set by hand (schema 6) ──
+     A paste box takes a screenshot as well as text: paste one, drop one, or
+     choose one. Text still pastes as text, and only text is matched against the
+     rules. Each image is saved as a file beside the page, named by its sha256
+     (<doc>.assets/<sha256>.<ext>), and the capture holds only the reference:
+       captures.b4.images: [{ sha256, file, type, w, h, bytes, caption, at,
+                              src?, local?, gone? }]
+     `src` records the original when it was over 10 MB and compressed; `local`
+     marks one kept in this browser (IndexedDB) until the page is served, when it
+     goes up. A removed image keeps its record with `gone`: evidence leaves the
+     page, never the disk. And a verdict can be set by hand, beside the derived
+     one, never instead of it:
+       captures.b4.override: { verdict:'pass'|'fail'|'saved', was, reason, at, textHash }
+     `textHash` (FNV-1a of the output, also in flowviz-captures.py) is how the page
+     knows the output changed after the override: it is kept, and flagged.     */
+  var IMG_MAX = 10 * 1024 * 1024;
+  var IMG_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' };
+  var HAND = { pass: '✓ pass', fail: '✕ fail', saved: '? no match' };
+  var imgUrl = {}, viewer = null, viewAt = null;
+  function liveImgs(r) { return ((r && r.images) || []).filter(function (i) { return i && !i.gone; }); }
+  function hasEvidence(r) {
+    return !!r && (!!(r.text || '').trim() || liveImgs(r).length > 0 || !!r.override);
+  }
+  // what the chips show: the operator's verdict when they set one, else the rules'
+  function effective(r) { return (r && r.override && r.override.verdict) || (r && r.verdict) || null; }
+  function textHash(s) {
+    var b = new TextEncoder().encode(s || ''), h = 0x811c9dc5;
+    for (var i = 0; i < b.length; i++) { h ^= b[i]; h = Math.imul(h, 0x01000193) >>> 0; }
+    return ('0000000' + h.toString(16)).slice(-8);
+  }
+  function isStale(r) { return !!(r && r.override) && r.override.textHash !== textHash(r.text || ''); }
+  // the derived verdict: from the text, by the rules; an image alone is captured, with nothing to match
+  function derivedVerdict(ta, r) {
+    var t = (r && r.text) || '';
+    if (t.trim()) return ta ? verdictOf(ta, t) : (r.verdict || 'saved');
+    return liveImgs(r).length ? 'saved' : null;
+  }
+  function kb(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+
+  /* ── images: where the pixels live ──────────────────────────────────────── */
+  var idbP = null;
+  function idb() {
+    if (!idbP) idbP = new Promise(function (ok, no) {
+      try {
+        var q = indexedDB.open('flowviz-assets', 1);
+        q.onupgradeneeded = function () { q.result.createObjectStore('blobs'); };
+        q.onsuccess = function () { ok(q.result); };
+        q.onerror = function () { no(q.error); };
+      } catch (e) { no(e); }
+    });
+    return idbP;
+  }
+  function idbDo(mode, fn) {
+    return idb().then(function (db) {
+      return new Promise(function (ok, no) {
+        var tx = db.transaction('blobs', mode), req = fn(tx.objectStore('blobs'));
+        tx.oncomplete = function () { ok(req && req.result); };
+        tx.onerror = function () { no(tx.error); };
+      });
+    });
+  }
+  /* the browser's own store is a second copy, never a dependency: some browsers refuse it, or never
+     answer, so every call gives up after a moment and the copy held in memory carries on */
+  var memBlobs = {};
+  function patient(p) {
+    return Promise.race([p, new Promise(function (ok, no) { setTimeout(function () { no(new Error('no answer')); }, 1500); })]);
+  }
+  function idbPut(sha, blob) { return patient(idbDo('readwrite', function (s) { return s.put(blob, sha); })); }
+  function idbGet(sha) { return patient(idbDo('readonly', function (s) { return s.get(sha); })); }
+  function idbDel(sha) { return patient(idbDo('readwrite', function (s) { return s.delete(sha); })).catch(function () {}); }
+  function keptBlob(sha) { return memBlobs[sha] ? Promise.resolve(memBlobs[sha]) : idbGet(sha).catch(function () { return null; }); }
+  function sha256hex(buf) {
+    if (!(window.crypto && crypto.subtle)) return Promise.reject(new Error('no sha256 in this browser'));
+    return crypto.subtle.digest('SHA-256', buf).then(function (b) {
+      return Array.prototype.map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+    });
+  }
+  // served: the image goes up on its own, before the state that refers to it
+  function upload(rec, blob) {
+    if (!served) return Promise.resolve(false);
+    return fetch('_flow/asset/' + DOC + '/' + rec.sha256 + '.' + IMG_EXT[rec.type], {
+      method: 'PUT', headers: { 'Content-Type': rec.type }, body: blob
+    }).then(function (r) { return r.ok; }).catch(function () { return false; });
+  }
+  // a page served at last sends up what it kept while opened from Finder
+  function sendKept() {
+    if (!served) return;
+    Object.keys(st.captures).forEach(function (id) {
+      liveImgs(st.captures[id]).filter(function (i) { return i.local; }).forEach(function (rec) {
+        keptBlob(rec.sha256).then(function (blob) {
+          if (!blob) return;
+          return upload(rec, blob).then(function (ok) {
+            if (!ok) return;
+            delete rec.local; save(); paintImgs(id); idbDel(rec.sha256);
+          });
+        }).catch(function () {});
+      });
+    });
+  }
+  function srcFor(rec, img) {
+    if (!rec.local) { img.src = rec.file; return; }
+    if (imgUrl[rec.sha256]) { img.src = imgUrl[rec.sha256]; return; }
+    keptBlob(rec.sha256).then(function (blob) {
+      if (!blob) return;
+      imgUrl[rec.sha256] = URL.createObjectURL(blob);
+      img.src = imgUrl[rec.sha256];
+    }).catch(function () {});
+  }
+
+  /* An image over 10 MB is compressed here, before it goes anywhere: re-encoded
+     (WebP where the browser can, else JPEG) at a high quality first, and only
+     scaled down if that is not enough, because text in a screenshot survives a
+     quality step better than a smaller size. The original's type, size and pixels
+     are recorded with it. A type the page does not keep (HEIC, BMP) is converted
+     when the browser can decode it. An animated GIF over the limit keeps its first
+     frame, and says so. */
+  function decode(file) {
+    if (window.createImageBitmap) return createImageBitmap(file);
+    return new Promise(function (ok, no) {
+      var u = URL.createObjectURL(file), im = new Image();
+      im.onload = function () { ok(im); }; im.onerror = function () { no(new Error('cannot read')); };
+      im.src = u;
+    });
+  }
+  function encode(bmp, w, h, type, q) {
+    var c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
+    var g = c.getContext('2d');
+    if (type !== 'image/png') { g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); }
+    g.drawImage(bmp, 0, 0, c.width, c.height);
+    return new Promise(function (ok) { c.toBlob(function (b) { ok(b); }, type, q); });
+  }
+  function prepare(file) {
+    return decode(file).then(function (bmp) {
+      var w = bmp.width, h = bmp.height;
+      if (IMG_EXT[file.type] && file.size <= IMG_MAX) return { blob: file, type: file.type, w: w, h: h };
+      var src = { type: file.type || 'unknown', bytes: file.size, w: w, h: h };
+      var first = file.size <= IMG_MAX ? 'image/png' : 'image/webp';
+      function attempt(type, q, scale) {
+        return encode(bmp, w * scale, h * scale, type, q).then(function (b) {
+          if (!b) throw new Error('cannot encode');
+          if (type === 'image/webp' && b.type !== 'image/webp') return attempt('image/jpeg', 0.92, scale);
+          if (b.size <= IMG_MAX) return { blob: b, type: b.type, w: Math.round(w * scale), h: Math.round(h * scale), src: src,
+                                          note: file.type === 'image/gif' ? 'first frame of an animated GIF' : '' };
+          if (type === 'image/png') return attempt('image/webp', 0.92, scale);
+          if (q > 0.76) return attempt(type, q - 0.08, scale);
+          if (Math.max(w, h) * scale * 0.8 < 640) throw new Error('too large even when compressed');
+          return attempt(type, 0.84, scale * 0.8);
+        });
+      }
+      return attempt(first, 0.92, 1);
+    });
+  }
+  function attach(id, files, how) {
+    files = Array.prototype.slice.call(files || []).filter(function (f) { return f && /^image\//.test(f.type || ''); });
+    if (!files.length) { toast('Only images can be attached to a step'); return; }
+    var chain = Promise.resolve();
+    files.forEach(function (f) {
+      chain = chain.then(function () {
+        var big = f.size > IMG_MAX;
+        if (big) toast('Compressing ' + (f.name || 'the image') + ' (' + kb(f.size) + ')…');
+        return prepare(f).then(function (p) {
+          return p.blob.arrayBuffer().then(sha256hex).then(function (sha) {
+            var r = cap(id);
+            if (!Array.isArray(r.images)) r.images = [];
+            if (liveImgs(r).some(function (i) { return i.sha256 === sha; })) { toast('That image is already on ' + id); return; }
+            var rec = { sha256: sha, file: DOC + '.assets/' + sha + '.' + IMG_EXT[p.type], type: p.type, w: p.w, h: p.h,
+                        bytes: p.blob.size, caption: (f.name && !/^image\.\w+$/.test(f.name) ? f.name.replace(/\.[^.]+$/, '') : how),
+                        at: new Date().toISOString(), local: true };
+            if (p.src) { rec.src = p.src; if (p.note) rec.src.note = p.note; }
+            memBlobs[sha] = p.blob;
+            idbPut(sha, p.blob).catch(function () {});      // a second copy, for a reload before it reaches disk
+            return Promise.resolve().then(function () {
+              r.images.push(rec);
+              if (!(r.text || '').trim()) { r.verdict = 'saved'; r.at = r.at || rec.at; }
+              save(); paintCapture(id); repaintAll();
+              return upload(rec, p.blob).then(function (ok) {
+                if (ok) { delete rec.local; save(); paintImgs(id); idbDel(sha); }
+                toast(id + ' · image ' + liveImgs(r).length + (p.src ? ', compressed from ' + kb(p.src.bytes) + ' to ' + kb(rec.bytes) : '') +
+                      (ok ? '' : served ? ' · could not reach disk yet' : ' · kept in this browser until served'));
+              });
+            });
+          });
+        }).catch(function (e) { toast('Not attached: ' + (e && e.message || 'that image could not be read')); });
+      });
+    });
+  }
+
+  /* the strip under the paste box: a thumbnail per image, numbered, captioned */
+  function stripFor(ta) {
+    var s = ta.parentNode.querySelector('.cap-imgs[data-imgs="' + ta.dataset.cap + '"]');
+    if (!s) {
+      s = document.createElement('div');
+      s.className = 'cap-imgs';
+      s.setAttribute('data-imgs', ta.dataset.cap);
+      ta.after(s);
+    }
+    return s;
+  }
+  function paintImgs(id) {
+    var ta = $('textarea[data-cap="' + id + '"]');
+    if (!ta) return;
+    var r = st.captures[id] || {}, imgs = liveImgs(r), s = stripFor(ta);
+    var sig = imgs.map(function (i) { return i.sha256 + (i.local ? '*' : ''); }).join(',');
+    if (s.dataset.sig === sig) return;
+    s.dataset.sig = sig;
+    if (!imgs.length) { s.innerHTML = ''; s.hidden = true; return; }
+    s.hidden = false;
+    var kept = imgs.filter(function (i) { return i.local; }).length;
+    s.innerHTML = imgs.map(function (rec, k) {
+      var meta = rec.w + '×' + rec.h + ' · ' + kb(rec.bytes) + (rec.src ? ' · from ' + kb(rec.src.bytes) : '');
+      return '<figure class="cap-img" data-sha="' + rec.sha256 + '">' +
+        '<button type="button" class="ci-open" data-ev="open" title="Open full size"><img alt="' + escHtml(rec.caption || '') + '"></button>' +
+        '<span class="ci-no">' + id + '·' + (k + 1) + '</span>' +
+        '<button type="button" class="ci-x" data-ev="drop" title="Remove from this step (the file stays on disk)" aria-label="remove">×</button>' +
+        '<input class="ci-cap" data-ev="caption" value="' + escHtml(rec.caption || '') + '" placeholder="caption" aria-label="caption for ' + id + '·' + (k + 1) + '">' +
+        '<span class="ci-mt" data-sha="' + rec.sha256 + '" title="sha256 ' + rec.sha256 + (rec.src ? '; compressed from ' + rec.src.w + '×' + rec.src.h + ', ' + kb(rec.src.bytes) + (rec.src.note ? '; ' + rec.src.note : '') : '') + '">' + meta + '</span>' +
+        '</figure>';
+    }).join('') + '<div class="ci-note' + (kept ? ' warn' : '') + '">' + (kept
+      ? '<b>' + kept + ' image' + (kept === 1 ? '' : 's') + ' only in this browser</b> · serve the folder to keep ' + (kept === 1 ? 'it' : 'them')
+      : '<b>' + imgs.length + ' image' + (imgs.length === 1 ? '' : 's') + '</b> · beside the page in <code>' + escHtml(DOC) + '.assets/</code> · click one to open it') + '</div>';
+    $$('figure.cap-img', s).forEach(function (fig, k) { srcFor(imgs[k], $('img', fig)); });
+  }
+  function openViewer(id, k) {
+    var imgs = liveImgs(st.captures[id]);
+    if (!imgs.length) return;
+    k = (k + imgs.length) % imgs.length;
+    viewAt = { id: id, k: k };
+    if (!viewer) {
+      viewer = document.createElement('div');
+      viewer.className = 'ci-view';
+      viewer.setAttribute('role', 'dialog');
+      viewer.setAttribute('aria-modal', 'true');
+      document.body.appendChild(viewer);
+    }
+    var rec = imgs[k];
+    viewer.innerHTML = '<div class="ci-box"><img alt="' + escHtml(rec.caption || '') + '">' +
+      '<div class="ci-bar"><b>' + id + '·' + (k + 1) + '</b><span>' + escHtml(rec.caption || '') + '</span>' +
+      '<code title="' + rec.sha256 + '">sha256 ' + rec.sha256.slice(0, 6) + '…' + rec.sha256.slice(-4) + '</code>' +
+      '<span>' + rec.w + '×' + rec.h + ' · ' + kb(rec.bytes) + (rec.src ? ', compressed from ' + kb(rec.src.bytes) : '') + ' · ' + ptTime(rec.at) + '</span>' +
+      '<span class="ci-keys">' + (imgs.length > 1 ? '← → · ' : '') + 'esc</span></div></div>';
+    srcFor(rec, $('img', viewer));
+    viewer.hidden = false;
+  }
+  function closeViewer() { if (viewer) viewer.hidden = true; viewAt = null; }
+
+  /* ── the verdict, set by hand: the chip at a step's foot is a button ─────── */
+  function openOverride(id) {
+    var li = $('li.step[data-step="' + id + '"]'), inb = li && $('.sd>.in', li), fin = inb && $('.fin', inb);
+    if (!fin) return;
+    var row = li.closest('details.row'); if (row && !row.open) row.open = true;
+    var sd = $('details.sd', li); if (sd && !sd.open) sd.open = true;
+    $$('.ovr').forEach(function (p) { p.remove(); });
+    var r = st.captures[id] || {}, ta = $('textarea[data-cap="' + id + '"]'), d = r.verdict;
+    var why = d === 'fail' ? 'it matched <code>' + escHtml(ta && ta.dataset.fail || '') + '</code>'
+      : d === 'pass' ? 'it matched <code>' + escHtml(ta && ta.dataset.pass || '') + '</code>'
+      : d === 'error' ? 'the interpreter rejected the command'
+      : d === 'saved' ? ((r.text || '').trim() ? 'it matched neither rule' : 'an image has nothing to match')
+      : 'nothing has been pasted yet';
+    var p = document.createElement('div');
+    p.className = 'ovr';
+    p.setAttribute('data-ovr', id);
+    p.innerHTML = '<div class="ovr-h">Set the verdict by hand <span>derived: ' + (d ? (VD_LABEL[d] || d) : 'none') + ', ' + why + '</span></div>' +
+      '<div class="ovr-o" role="radiogroup" aria-label="verdict">' + ['pass', 'fail', 'saved'].map(function (v) {
+        return '<button type="button" class="ovr-v ' + v + '" role="radio" data-ev="pick" data-v="' + v + '">' + HAND[v] +
+          (v === d ? ' <span class="ovr-d">derived</span>' : '') + '</button>';
+      }).join('') + '</div>' +
+      '<input class="cmp-in ovr-r" data-ev="reason" placeholder="Why? One line: the agent reads it beside the derived verdict">' +
+      '<div class="cmp-btns"><button type="button" class="btn-p" data-ev="set" disabled>Set</button>' +
+      '<button type="button" class="btn-g" data-ev="cancel">Cancel</button>' +
+      (r.override ? '<button type="button" class="lnk" data-ev="unset">back to derived</button>' : '') +
+      '<span class="hint">a reason is required · ↵ set · esc</span></div>';
+    fin.after(p);
+    p.dataset.pick = (r.override && r.override.verdict) || '';
+    $('.ovr-r', p).value = (r.override && r.override.reason) || '';
+    paintOverride(p);
+    $('.ovr-r', p).focus({ preventScroll: true });
+    p.scrollIntoView({ block: 'nearest' });
+  }
+  function paintOverride(p) {
+    var v = p.dataset.pick, reason = $('.ovr-r', p).value.trim();
+    $$('.ovr-v', p).forEach(function (b) { b.setAttribute('aria-checked', b.dataset.v === v ? 'true' : 'false'); });
+    var set = $('[data-ev="set"]', p);
+    set.disabled = !(v && reason);
+    set.textContent = v ? 'Set ' + (v === 'saved' ? 'no match' : v) : 'Set';
+  }
+  function setOverride(p) {
+    var id = p.dataset.ovr, v = p.dataset.pick, reason = $('.ovr-r', p).value.trim().replace(/\s+/g, ' ');
+    if (!v || !reason) return;
+    var r = cap(id);
+    r.override = { verdict: v, was: r.verdict || null, reason: reason, at: new Date().toISOString(), textHash: textHash(r.text || '') };
+    p.remove(); save(); paintCapture(id); repaintAll();
+  }
+  function unsetOverride(id) {
+    var r = st.captures[id];
+    if (r) delete r.override;
+    $$('.ovr[data-ovr="' + id + '"]').forEach(function (p) { p.remove(); });
+    save(); paintCapture(id); repaintAll();
+  }
+  // the line under the foot: when, what it replaced, why — or that the output moved since
+  function paintHand(id) {
+    var li = $('li.step[data-step="' + id + '"]'), inb = li && $('.sd>.in', li), fin = inb && $('.fin', inb);
+    if (!fin) return;
+    var r = st.captures[id] || {}, o = r.override, n = $('.handnote', inb);
+    if (!o) { if (n) n.remove(); return; }
+    if (!n) { n = document.createElement('div'); fin.after(n); }
+    var stale = isStale(r);
+    n.className = 'handnote' + (stale ? ' stale' : '');
+    n.innerHTML = stale
+      ? '⚠ The output changed after this was set by hand at ' + escHtml(ptTime(o.at)) + '. Set it again, or go back to derived.' +
+        '<span class="hn-a"><button type="button" class="lnk" data-ev="again">set again</button>' +
+        '<button type="button" class="lnk" data-ev="unset">back to derived</button></span>'
+      : '✎ Set by hand · ' + escHtml(ptTime(o.at)) + ' <span class="hn-was">· derived ' + (o.was ? '<b class="' + o.was + '">' +
+        escHtml(VD_GLYPH[o.was] + ' ' + VD_LABEL[o.was]) + '</b>' : 'none') + '</span> · <q>' + escHtml(o.reason) + '</q>' +
+        '<span class="hn-a"><button type="button" class="lnk" data-ev="again">change</button>' +
+        '<button type="button" class="lnk" data-ev="unset">back to derived</button></span>';
+  }
+
+  // every paste box gains + image beside re-run; every verdict chip becomes a button
+  function renderEvidence() {
+    $$('textarea[data-cap]').forEach(function (ta) {
+      if (ta.closest('section.results')) return;
+      var ft = ta.parentNode.querySelector('.ft');
+      if (!ft || $('.ci-add', ft)) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'rr ci-add';
+      b.setAttribute('data-ev', 'add'); b.setAttribute('data-img', ta.dataset.cap);
+      b.title = 'Attach an image: or paste one into the box, or drop one on it';
+      b.textContent = '+ image';
+      ft.insertBefore(b, $('.rr', ft));
+    });
+    $$('.vd[data-vd]').forEach(function (c) {
+      if (c.closest('section.results') || c.hasAttribute('tabindex')) return;
+      c.setAttribute('tabindex', '0');
+      c.setAttribute('role', 'button');
+      c.setAttribute('aria-haspopup', 'dialog');
+    });
+  }
+
+  /* ── events ─────────────────────────────────────────────────────────────── */
+  if (KIND !== 'drawing') {
+    // a picture pasted into a paste box; text on the clipboard still pastes as text
+    document.addEventListener('paste', function (e) {
+      var ta = e.target && e.target.matches && e.target.matches('textarea[data-cap]') && e.target;
+      if (!ta || !e.clipboardData) return;
+      if ((e.clipboardData.getData('text/plain') || '').trim()) return;
+      var files = Array.prototype.slice.call(e.clipboardData.files || []);
+      if (!files.some(function (f) { return /^image\//.test(f.type); })) return;
+      e.preventDefault();
+      attach(ta.dataset.cap, files, 'pasted image');
+    });
+    // a file dropped on a paste box; anywhere else on the page, a dropped file is ignored, not opened
+    var dragCap = null;
+    function capOf(t) { var c = t && t.closest && t.closest('.cap'); return c && $('textarea[data-cap]', c) ? c : null; }
+    function isFiles(e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0; }
+    function showDrop(c) {
+      if (dragCap && dragCap !== c) dragCap.classList.remove('drag');
+      dragCap = c;
+      if (!c) return;
+      c.classList.add('drag');
+      if (!$('.cap-drop', c)) {
+        var o = document.createElement('div');
+        o.className = 'cap-drop';
+        o.innerHTML = '<span class="cd-g">⤓</span>Drop to attach to ' + escHtml($('textarea[data-cap]', c).dataset.cap) +
+          '<small>an image · over 10 MB is compressed</small>';
+        c.appendChild(o);
+      }
+    }
+    document.addEventListener('dragover', function (e) {
+      if (!isFiles(e)) return;
+      e.preventDefault();
+      var c = capOf(e.target);
+      e.dataTransfer.dropEffect = c ? 'copy' : 'none';
+      showDrop(c);
+    });
+    document.addEventListener('dragleave', function (e) {
+      if (dragCap && !dragCap.contains(e.relatedTarget)) showDrop(null);
+    });
+    document.addEventListener('drop', function (e) {
+      if (!isFiles(e)) return;
+      e.preventDefault();
+      var c = capOf(e.target);
+      showDrop(null);
+      if (c) attach($('textarea[data-cap]', c).dataset.cap, e.dataTransfer.files, 'dropped image');
+    });
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      if (viewer && !viewer.hidden && (t === viewer || t.closest('.ci-box'))) { closeViewer(); return; }
+      var chip = t.closest('.vd[data-vd]');
+      if (chip && !chip.closest('section.results')) { openOverride(chip.dataset.vd); return; }
+      var b = t.closest('[data-ev]');
+      if (!b) return;
+      var ev = b.dataset.ev, fig = b.closest('figure.cap-img'), strip = b.closest('.cap-imgs'), p = b.closest('.ovr');
+      var owner = b.closest('li.step'), sid = strip ? strip.dataset.imgs : owner ? owner.dataset.step : null;
+      if (ev === 'add') {
+        var inp = document.createElement('input');
+        inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+        inp.addEventListener('change', function () { attach(b.dataset.img, inp.files, 'chosen image'); });
+        inp.click();
+      }
+      else if (ev === 'open' && fig) {
+        openViewer(sid, $$('figure.cap-img', strip).indexOf(fig));
+      }
+      else if (ev === 'drop' && fig) {
+        if (!b.classList.contains('sure')) {
+          b.classList.add('sure'); b.textContent = 'remove?';
+          setTimeout(function () { b.classList.remove('sure'); b.textContent = '×'; }, 3000);
+          return;
+        }
+        var r = cap(sid), rec = liveImgs(r).filter(function (i) { return i.sha256 === fig.dataset.sha; })[0];
+        if (rec) rec.gone = new Date().toISOString();       // the record stays; the file stays on disk
+        var ta = $('textarea[data-cap="' + sid + '"]');
+        r.verdict = derivedVerdict(ta, r);
+        save(); paintCapture(sid); repaintAll();
+      }
+      else if (ev === 'pick' && p) { p.dataset.pick = b.dataset.v; paintOverride(p); $('.ovr-r', p).focus(); }
+      else if (ev === 'set' && p) setOverride(p);
+      else if (ev === 'cancel' && p) p.remove();
+      else if (ev === 'unset') unsetOverride(p ? p.dataset.ovr : sid);
+      else if (ev === 'again' && sid) openOverride(sid);
+    });
+    document.addEventListener('input', function (e) {
+      var t = e.target;
+      if (t.matches && t.matches('.ci-cap')) {
+        var strip = t.closest('.cap-imgs'), fig = t.closest('figure.cap-img');
+        var rec = liveImgs(st.captures[strip.dataset.imgs]).filter(function (i) { return i.sha256 === fig.dataset.sha; })[0];
+        if (rec) { rec.caption = t.value; save(); }
+      }
+      if (t.matches && t.matches('.ovr-r')) paintOverride(t.closest('.ovr'));
+    });
+    document.addEventListener('keydown', function (e) {
+      var t = e.target || {};
+      if (viewer && !viewer.hidden) {
+        if (e.key === 'Escape') closeViewer();
+        else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') openViewer(viewAt.id, viewAt.k + (e.key === 'ArrowRight' ? 1 : -1));
+        else return;
+        e.preventDefault(); e.stopImmediatePropagation();      // the viewer, not a drawing, owns the keys while open
+        return;
+      }
+      if ((e.key === 'Enter' || e.key === ' ') && t.matches && t.matches('.vd[data-vd]')) { e.preventDefault(); openOverride(t.dataset.vd); return; }
+      var p = t.closest && t.closest('.ovr');
+      if (p && e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); p.remove(); return; }
+      if (p && e.key === 'Enter' && t.matches('.ovr-r')) { e.preventDefault(); setOverride(p); }
+    }, true);
+  }
+
   /* ── print ────────────────────────────────────────────────────────────────
      Force light, open every <details>, and grow the textareas so a capture is
      not clipped to three visible lines on paper. All three are restored after,
@@ -4234,6 +4805,7 @@ figure.fv-drawing{break-inside:avoid}
   });
   renderAdditions();
   hydrate();
+  sendKept();
   live = true;          // from here on, a verdict changing means the human did it
   setPill(served ? 'disk' : '', served ? 'disk-backed' : 'local only');
   if (dl && served) dl.style.display = 'none';
