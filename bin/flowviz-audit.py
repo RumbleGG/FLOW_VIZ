@@ -824,6 +824,11 @@ def page_checks(a, doc, tpl_pages, unfilled):
         a.check(S, 'section letters and step ids', naming)
         if naming:
             a.note(S, 'section letters and step ids', 'fix: flowviz relabel <NAME>.src.html moves every id, and what was pasted, onto the convention')
+        late, down = order_checks(doc)
+        for x in late:
+            a.note(S, 'order: prepares after a write', x)
+        for x in down:
+            a.note(S, 'order: data-after points down', x)
 
 
 
@@ -944,6 +949,59 @@ def naming_checks(doc):
         if id(li) not in placed:
             problems.append('step "%s" sits outside a lettered row or the Results section' % li.attrs.get('data-step'))
     return problems
+
+
+# ── order: the human runs a playbook once, top to bottom ─────────────────────
+# A step that takes a restore point: snapshot, back up, checkpoint, or save the current state.
+RESTORE = re.compile(
+    r'^(?:snapshot|back\s?up|checkpoint)\b'
+    r'|\b(?:take|takes|create|creates|make|makes|capture|captures)\s+(?:an?\s+|the\s+|one\s+)?(?:[\w-]+\s+){0,2}?'
+    r'(?:snapshot|back-?up|checkpoint|restore point)s?\b'
+    r'|\b(?:record|records|save|saves|export|exports)\s+(?:[\w-]+\s+){0,3}?(?:current|existing|installed|running|previous)\b',
+    re.I)
+BEFORE = re.compile(r'\b(?:before|prior to|ahead of)\b(.*)$', re.I)
+ORDER_STOP = set('anything everything something nothing change changes changed this that these those '
+                 'there their them they then with from into what when where which while your'.split())
+
+
+def stems(s):
+    out = set()
+    for w in re.findall(r'[a-z][a-z0-9-]{3,}', s.lower()):
+        if w not in ORDER_STOP:
+            out.add(re.sub(r'(?:ations?|ments?|ings?|ion|ed|es|s)$', '', w) or w)
+    return out
+
+
+def order_checks(doc):
+    """Reported, never blocking. A write's restore point or prerequisite written below the write, and a
+    data-after naming a step below it: either one sends the human back over a change they already made."""
+    steps = []
+    for r in doc.find(lambda e: e.tag == 'details' and e.has('row')):
+        for li in r.find(lambda e: e.tag == 'li' and e.has('step')):
+            ds = li.first(cls('ds'))
+            steps.append((li, r.attrs.get('data-kind'), ds.text() if ds else ''))
+    pos = {li.attrs.get('data-step'): i for i, (li, _, _) in enumerate(steps)}
+    late, down, writes = [], [], []      # writes: (id, stems) of the change steps seen so far
+    for i, (li, kind, text) in enumerate(steps):
+        sid, after = li.attrs.get('data-step'), li.attrs.get('data-after')
+        if after in pos and pos[after] >= i:
+            down.append('%s waits on %s, which comes %s it' % (sid, after, 'after' if pos[after] > i else 'as'))
+        if kind == 'rollback':          # undoing comes after the change by design
+            continue
+        restore = RESTORE.search(text)
+        if writes and restore:
+            late.append('%s takes a restore point below %s, which already writes: move it above the first '
+                        'write it protects' % (sid, writes[0][0]))
+        elif writes:
+            m = BEFORE.search(text)
+            hit = next((w for w, st in writes if stems(m.group(1)) & st), None) if m else None
+            if hit:
+                late.append('%s says "%s", but %s above already does that: move it above %s'
+                            % (sid, m.group(0).strip().rstrip('.')[:48], hit, hit))
+        if li.attrs.get('data-risk') == 'w' and not restore:
+            writes.append((sid, stems(text)))
+    return late, down
+
 
 def additions_notes(a, doc, path):
     """What the human added in the page and the source does not hold yet. Reported, never blocking:

@@ -3,6 +3,37 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.3.0 — 2026-10-08 · playbooks in run order, and which agent does which step
+
+**Why.** In an MSI deploy playbook, the step *take a snapshot of the current version before deployment* came
+after the deploy step. The human had to back-pedal over a change already made, or go on with no restore
+point. A playbook is run once, top to bottom; its order is part of what it says.
+
+**The rule** (SPEC §1.3d, AGENTS.md *Order*). Everything a write needs sits above it: the restore point,
+preconditions, the package staged and verified, dependents stopped. Then the write, the test that proves it,
+and the rollback, which restores from the restore point by id. `data-after` names a step above. A caveat sits
+in or above the step it governs. Before handover the author reads the step sentences top to bottom, as the
+human will, and reorders while the ids are still free to move. The rule is also in the cheat sheet and in the
+row comment every scaffold carries.
+
+**Audited, not blocking.** `flowviz audit` notes a step below a write that takes a restore point (snapshot,
+backup, checkpoint, the current state saved), or says *before X* where a write above already does X, outside
+a rollback row. It also notes a `data-after` that points at a step below. The check reads words, not intent:
+it is a backstop for the read-through, not a replacement.
+
+**Which agent does which step** (AGENTS.md, the cheat sheet, CLAUDE.md). One agent can do all of it; shared
+out, each step goes to the cheapest agent that gets it right the first time. An **Opus agent, or equivalent**,
+is the Lead: it decides what the deliverable says and judges what the human pasted. A **Sonnet agent, or
+equivalent**, is the Builder: it makes the deliverable fit the standard and fixes every OVER and FAIL whose fix
+leaves the meaning unchanged. A **Haiku agent, or equivalent**, is the Runner: it runs the commands as written
+and relays the output verbatim, deciding nothing and never running the human's steps. When a run stops
+behaving (a traceback, a third rebuild naming the same cap, a missing sidecar on a served folder), an Opus
+agent with a different brief, the Supervisor, takes over: it reproduces on the reference builds to tell a
+deliverable fault from a toolkit fault, fixes the one at fault, and never papers over a runtime defect in a
+deliverable. The tiers are Claude's; a model of the same class serves the same role.
+
+Minor: no cap changed, and the audit fails nothing it passed before.
+
 ## 3.2.0 — 2026-10-05 · screenshots in a paste box, and verdicts set by hand
 
 **Images.** Every paste box takes an image as well as text: paste one, drop a file on the box, or **+ image**

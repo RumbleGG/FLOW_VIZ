@@ -98,7 +98,7 @@ A playbook step is **a checkbox, its id, and one sentence.** That is all that is
 | Command | Behind the disclosure. The `⧉` on the collapsed row copies it without opening anything, prompts stripped. |
 | Blast radius | `data-risk="ro"` or `data-risk="w"` on every step. A `w` step blurs its command until the acknowledgement is ticked, and `⧉` refuses to copy it — it opens the step and says *tick the gate*. |
 | Id | `<row letter><n>` (§1.2b), shown where the counter was. |
-| Prereqs | `data-after="<id>"` dims the step until that one is done or captured. |
+| Prereqs | `data-after="<id>"` dims the step until that one is done or captured. It names a step above (§1.3d). |
 | Carried value | `data-emit` on the producer's textarea, `{{<step>.<NAME>}}` in a later command (§1.3a). |
 | Capture | Every step has a textarea, an exit-code field, a one-line note, and its sidecar key shown beside it. The textarea also takes images (§1.3c); only its text is matched against the rules. |
 | Verdict | `data-pass` / `data-fail` regexes flip the chip on paste. Every literal is **word-anchored** (`\bFull\b`, never `Full`). |
@@ -166,6 +166,25 @@ wrong about one run while the human can see what happened. Both are captured whe
 | What reads it | the effective verdict (the one set by hand, else the derived one) drives the chips, progress, the missing-step prompt and the outcome `flowviz results` works out; every surface that shows it — Copy captures for agent, `flowviz captures`, Save evidence, Results — shows the derived verdict and the reason beside it. |
 
 Caps do not apply: the images and the panel live inside a step, below the layer the caps measure.
+
+### 1.3d Order — run once, top to bottom
+
+The human runs a playbook in the order it is written, each step as they reach it. A step that belonged
+earlier — *snapshot the VM before deploying*, found below the deploy — makes them back-pedal over a change
+already made, or go on without a way back. Steps are written in the order the work must happen.
+
+| Rule | Detail |
+|---|---|
+| Run order | Rows run in letter order, steps in number order. No step asks for something a step above should have done. |
+| Before a write | Everything the write needs sits above it: the restore point (snapshot, backup, the current config exported, the installed version recorded), access and preconditions checked, the package staged and verified, dependents stopped. Then the write, the test that proves it, the rollback. |
+| Restore point | Above the first write it protects. The rollback restores from that step by id (`examples/deploy/`: b1 records the version, c1 puts it back). |
+| `data-after` | Names a step above it. |
+| Caveats | A warning that changes whether or how to run a step sits in that step or above it, never in a later row. |
+| Fixed at handover | Reorder before handover. Once the human has pasted, ids are join keys (§1.2b) and a step cannot move. |
+
+The audit reports, without blocking, what it can read from the sentences (§3): a step that takes a restore
+point, or says *before X*, below a write that already does X, and a `data-after` that points down. It reads
+words, not intent, so a clean audit is not a correct order — the read-through is the author's.
 
 ### 1.4 The verdict vocabulary
 
@@ -430,7 +449,10 @@ Not caps — they measure the author, not the layout — and they block handover
 Reported, not blocking: **unused connection** — an edge no flow walks (it is still drawn; walk it in a flow
 or delete it); **emit: ordering** — a token whose producer is neither the step itself nor on its
 `data-after` chain; **PASTE_ placeholder** — a `PASTE_…` word in a command, which the human would have
-to overwrite: use an emit from the producing step instead; **steps added in the page** and **open to-dos**
+to overwrite: use an emit from the producing step instead; **order: prepares after a write** — outside a rollback row, a
+step below a write that takes a restore point (snapshot, backup, checkpoint, the current state saved), or
+says *before X* where a write above already does X (§1.3d); **order: data-after points down** — a step
+that waits on one below it; **steps added in the page** and **open to-dos**
 — read from the sidecar beside the page, when there is one: fold, reword or carry them (§1.3b).
 
 ---
@@ -545,7 +567,7 @@ server answers `409` to a tab still carrying the old ids instead of letting it w
 | Bump | Means |
 |---|---|
 | patch | CSS, wording, bug fix |
-| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand) |
+| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand; 3.3.0 put playbooks in run order) |
 | major | a cap changes, or the card or spine shape changes, or the audit starts failing reports it passed (1.0.0 labelled every row; 2.0.0 made flows optional; 3.0.0 named rows and steps by letter and number) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then

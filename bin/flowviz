@@ -23,7 +23,8 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
   REPORT   a claim, the shape of the argument, evidence, a checklist the human runs and pastes into
     1  $F new report "<claim with a verb>" --dir <work folder> --rows 4 --steps 5
     2  write every slot. Keep the scaffold's ids: rows a, b, c...; a step is its row's letter + number
-       (b1, b2 ... bn), never a word, never two letters.
+       (b1, b2 ... bn), never a word, never two letters. Order steps as the work must run: a snapshot,
+       backup or other prerequisite goes above the write it serves, never after it.
     3  $F build <dir>/<NAME>.src.html
     4  $F audit --browser <dir>/<NAME>.html     fix every OVER and FAIL; split, never raise a cap
     5  parse-check every command yourself: bash -n · python3 -m py_compile · Parser::ParseFile
@@ -58,6 +59,14 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
                         anchor every verdict literal: \bFull\b, never Full
                         a value an earlier step printed: data-emit="VER=VERSION ([0-9.]+)" on its textarea,
                         {{{{b1.VER}}}} in the later command (copy refuses until it resolves) · never PASTE_...
+  AGENTS   one can do it all; shared out, each step goes to the cheapest agent that gets it right first time
+    Opus, or equivalent    Lead: decides what it says (claim, rows, steps, their order and pass conditions,
+                           boxes and zones), judges what was pasted, decides Results. Supervisor: a run that
+                           stops behaving (traceback, 3rd rebuild still failing, sidecar missing when served)
+    Sonnet, or equivalent  Builder: new, fill every slot, anchor regexes, place boxes, fold, relabel; fix
+                           every OVER/FAIL that leaves the meaning unchanged; the rest goes up to the Lead
+    Haiku, or equivalent   Runner: build, audit --browser, parse checks, serve, captures, screenshots,
+                           relayed verbatim; decides nothing, never runs the human's steps
   STATE    <doc>.flow.json beside the html; images they attach in <doc>.assets/, named by sha256.
            A verdict they set by hand (✎) sits beside the derived one: report it as theirs.
            Ids are join keys: never rename one after handover.

@@ -39,6 +39,45 @@ The deliverable lives in **the folder the work is in**; this repository is only 
 installed, nothing is on `PATH`, no network, stdlib Python only. **Serve it** — opened from Finder, what
 the human types stays in their browser and never reaches you.
 
+## Which agent does which step
+
+One agent can do all of it. Shared out, each step goes to the **cheapest agent that gets it right the
+first time**, and everything that decides what the deliverable *says* stays at the top. The tiers are
+Claude's; a model of the same class serves the same role.
+
+| Tier | Role | Does | Never |
+|---|---|---|---|
+| **Opus agent, or equivalent** | **Lead** | decides what to make and what it claims: title, verdict, so-what, vitals, next; the rows, their kinds and their order; every step's sentence, blast radius, pass and fail conditions and run order; a drawing's boxes, zones, segments, and whether it has flows. Reads what the human pasted, opens every image, judges a verdict set by hand, decides the Results | lets the audit decide for it: a split, a dropped row, a reworded claim is the Lead's call |
+| **Sonnet agent, or equivalent** | **Builder** | turns the brief into a deliverable that audits clean: `flowviz new`, every slot written in the template's shape, regexes anchored, emits declared, boxes placed until nothing crosses, depth sections, `fold`, `relabel`; fixes every OVER and FAIL **whose fix leaves the meaning unchanged** | changes a claim, drops a row, splits a report, moves a step after handover, renames an id, or works around the runtime |
+| **Haiku agent, or equivalent** | **Runner** | runs what it is given, exactly as written, and returns the output word for word: `build`, `audit --browser` (`--json` when asked), the parse checks, `serve`, `captures`, screenshots in light, dark and print, counts | decides, summarises, retries with a variation, edits a file, or runs a step of the human's playbook |
+
+A brief going down carries the file paths, the exact commands and what to return. The Builder's brief
+carries the Lead's decisions in the slots they belong in; the Builder returns the audit's result line and
+whatever it could not fix without changing the meaning, which goes back up to the Lead. **If you are the
+only agent, you are the Lead**: the table says where to spend thought, and what a cheaper agent could do
+for you.
+
+### When it stops behaving: the Supervisor
+
+An **Opus agent, or equivalent**, with a different brief from the Lead's: troubleshoot the run, not the
+argument. Hand over to one on the first of these, and stop changing the deliverable:
+
+- a `flowviz` command tracebacks, exits 2, or prints something this file does not describe
+- `--browser` cannot run, or measures a layout cap that no spec change moves
+- the third rebuild still names the same OVER or FAIL
+- `captures` shows `error` on more than one step: the playbook is failing, not the system
+- the folder is served but the sidecar is missing or stale, `serve` answers 409, or something the human
+  typed is gone
+- the fix in front of you would rename an id after handover
+
+The Supervisor is handed the audit output, the sidecar, the source and the last brief. It reproduces first
+on the reference builds (`PLAN.html`, `examples/`) to tell a deliverable fault from a toolkit fault; fixes a
+deliverable fault by naming the exact edit for the Builder; fixes a toolkit fault in `template/` or `bin/`
+under `CLAUDE.md` and rebuilds the reference builds too; then returns what it found, what it changed and the
+clean result line, and the Lead takes the handover from where it stopped. It never papers over a runtime
+defect in a deliverable's markup, and never renames an id. Alone, do the same on the first trigger: stop
+patching and troubleshoot as the Supervisor would.
+
 ---
 
 ## Reports
@@ -163,6 +202,27 @@ reads as an omission.
 the `Done ☐` button at the foot of each step (it ticks, then folds the step away), a second verdict chip
 beside it, the status pill (save state, theme, motion), and every displayed time (Pacific, labelled;
 stored as UTC).
+
+### Order: they run it once, top to bottom
+
+The human does each step as they reach it and never goes back. If *take a snapshot before deploying* turns
+up after the deploy step, they must undo work already done, or carry on with no way back. **Write steps in
+the order the work has to happen, not the order you thought of them.**
+
+- **Everything a write needs goes above it.** That means the restore point (snapshot, backup, the current config exported,
+  the installed version recorded), access and preconditions checked, the package staged and verified, and
+  dependents stopped. Then comes the write, then the test that proves it, then the rollback.
+- **A restore point goes above the first write it protects**, and the rollback restores from it by id.
+  `examples/deploy/` records the running version in b1, writes in b2 and puts b1's version back in c1.
+- **Rows run in letter order too**: look, prepare, change, test, undo.
+- **`data-after` names a step above**, never one below.
+- **A caveat goes in or above the step it governs**, never in a later row, which is read only after the command has run.
+- **Before handover, read the step sentences top to bottom, as the human will.** At each one, ask whether
+  it assumes something no step above has done. A sentence that says *before*, *first* or *make sure* names something
+  that belongs above it. Reorder now: once they have pasted, ids are fixed and a step cannot move.
+
+The audit notes, never fails, a restore point below a write, a *before X* below the step that already
+does X, and a `data-after` that points down.
 
 ### Command blocks must survive a keystroke paste
 

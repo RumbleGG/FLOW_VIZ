@@ -7,6 +7,13 @@ Every change made here is a change to **every** deliverable cut from this toolki
 a detail in one report or drawing, the fix lands in `template/` or `bin/` and reaches the others on a
 plain rebuild. Never fix a single deliverable's markup for something the runtime should do.
 
+That makes changing the toolkit work for an **Opus agent, or equivalent**: one edit reaches every deliverable,
+and the invariants below span several files. The Supervisor that `AGENTS.md` sends in when a run stops
+behaving lands here once it has shown the fault is the runtime's: reproduce on `PLAN.html` and `examples/`
+first, fix in `template/` or `bin/`, rebuild and audit all three, and never patch the deliverable instead. A
+Sonnet agent, or equivalent, may carry out an edit this file spells out and rebuild; a Haiku agent, or
+equivalent, may run the test block at the end and relay it word for word.
+
 ## What lives where
 
 | Path | Owns | Notes |
