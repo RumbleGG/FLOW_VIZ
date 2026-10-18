@@ -9,19 +9,29 @@
      on a drawing page ([data-kind="drawing"]) the canvas/night palette replaces them.
    =========================================================================== */
 
-/* ── component tokens · light ─────────────────────────────────────────────── */
+/* ── component tokens · light ─────────────────────────────────────────────────
+   One palette for every drawing. A kind is five colours: the outline and accent
+   (--client), the box fill (-bg), a soft border (-bd) and two icon paints, main
+   (-p) and light (-l). Icons are ink outlines on flat fills: the ink is --i-ink,
+   the fills are --i1 (deep) --i2 (main) --i3 (light), which every .k-* sets from
+   its kind, plus fixed paints that mean the same in every drawing: green for a
+   lamp or a pass, gold for keys, locks and ideas, metal for hardware, and --iline
+   for an icon stroke that stands alone (ink on light paper, light on dark). */
 :root{
-  --client:#2F6FEB;  --client-bg:#EAF2FF;  --client-bd:#A7C3F4;
-  --edge:#7048E8;    --edge-bg:#F2EDFF;    --edge-bd:#C5B4F4;
-  --service:#16945A; --service-bg:#E7F6EE; --service-bd:#9FD4B8;
-  --data:#D97A0B;    --data-bg:#FFF3E0;    --data-bd:#F0C27E;
-  --stream:#D6336C;  --stream-bg:#FFEBF2;  --stream-bd:#F1A9C4;
-  --ext:#5B6B82;     --ext-bg:#EFF2F6;     --ext-bd:#BAC4D2;
-  --threat:#C92A2A;  --threat-bg:#FFEDED;  --threat-bd:#EC9A9A;
-  --f1:#2F6FEB; --f2:#0C9A8A; --f3:#E0751B;
+  --client:#2F6BE0;  --client-bg:#E6EFFF;  --client-bd:#A9C4F5;  --client-p:#7AA8FF;  --client-l:#CFE0FF;
+  --edge:#7A4FD8;    --edge-bg:#F0EAFF;    --edge-bd:#C9B6F6;    --edge-p:#A98CFB;    --edge-l:#E2D8FF;
+  --service:#1D9A5B; --service-bg:#E0F6E9; --service-bd:#9DD8B6; --service-p:#58CC8C; --service-l:#C3EFD5;
+  --data:#D77A10;    --data-bg:#FFF2DE;    --data-bd:#F2C47F;    --data-p:#FFB547;    --data-l:#FFE2AE;
+  --stream:#D23F7C;  --stream-bg:#FFEAF3;  --stream-bd:#F2AACA;  --stream-p:#FF8AB7;  --stream-l:#FFD3E4;
+  --ext:#56657E;     --ext-bg:#EFF2F7;     --ext-bd:#BAC4D3;     --ext-p:#9DABC2;     --ext-l:#DCE3EE;
+  --threat:#D23B3B;  --threat-bg:#FFECEA;  --threat-bd:#EE9E98;  --threat-p:#FF8178;  --threat-l:#FFD1CC;
+  --f1:#2F6BE0; --f2:#0C9A8A; --f3:#E0751B;
   --on-tint:#FFFFFF;
+  --i-ink:#1B2030; --iline:#1B2030; --iw:#FFFFFF; --ion:#3DD08A; --igold:#FFC53D; --ired:#F2645E;
+  --imetal:#465066; --imetal2:#A3ACBE;
+  --i1:var(--client); --i2:var(--client-p); --i3:var(--client-l);
+  --d-bar:#22B573;
   --d-sh:0 1px 2px rgba(23,32,51,.06),0 6px 18px rgba(23,32,51,.06);
-  --d-node-sh:drop-shadow(0 1px 1px rgba(23,32,51,.07)) drop-shadow(0 4px 8px rgba(23,32,51,.05));
   --d-drawer-sh:-14px 0 40px rgba(10,15,29,.14);
   --d-scrim:rgba(23,32,51,.18);
   --d-ease:cubic-bezier(.22,1,.36,1);
@@ -29,17 +39,19 @@
 
 /* ── component tokens · dark ──────────────────────────────────────────────── */
 [data-theme="dark"]{
-  --client:#72A9FF;  --client-bg:#12213F;  --client-bd:#2D5AA8;
-  --edge:#AC96FF;    --edge-bg:#1E1842;    --edge-bd:#5641B0;
-  --service:#52D597; --service-bg:#0D2A20; --service-bd:#22704D;
-  --data:#FFB54D;    --data-bg:#2E210C;    --data-bd:#86560F;
-  --stream:#FF7DB0;  --stream-bg:#331225;  --stream-bd:#932C59;
-  --ext:#9DAAC3;     --ext-bg:#18202F;     --ext-bd:#3B4966;
-  --threat:#FF6B6B;  --threat-bg:#35151A;  --threat-bd:#A83D45;
+  --client:#6EA2FF;  --client-bg:#11213F;  --client-bd:#2D5AA8;  --client-p:#6E9EF7;  --client-l:#BCD3FF;
+  --edge:#AC8EFF;    --edge-bg:#1D1840;    --edge-bd:#5641B0;    --edge-p:#9C80F2;    --edge-l:#D9CCFF;
+  --service:#4FD495; --service-bg:#0C2A1F; --service-bd:#22704D; --service-p:#4DC284; --service-l:#B6EDCF;
+  --data:#FFB54D;    --data-bg:#2D200B;    --data-bd:#86560F;    --data-p:#F5A93E;    --data-l:#FFDDA3;
+  --stream:#FF7DB0;  --stream-bg:#331226;  --stream-bd:#932C59;  --stream-p:#F37DAB;  --stream-l:#FFCBDF;
+  --ext:#9DAAC3;     --ext-bg:#18202F;     --ext-bd:#3B4966;     --ext-p:#8E9CB4;     --ext-l:#D4DCE8;
+  --threat:#FF6B6B;  --threat-bg:#35151A;  --threat-bd:#A83D45;  --threat-p:#F47870;  --threat-l:#FFC9C3;
   --f1:#6EA6FF; --f2:#36D6C1; --f3:#FFA652;
   --on-tint:#0A0F1D;
+  --i-ink:#0B0E17; --iline:#9AA6BF; --iw:#F4F6FB; --ion:#3DD08A; --igold:#FFC53D; --ired:#F2645E;
+  --imetal:#3A4357; --imetal2:#9AA4B8;
+  --d-bar:#34D399;
   --d-sh:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.35);
-  --d-node-sh:drop-shadow(0 2px 6px rgba(0,0,0,.35));
   --d-drawer-sh:-14px 0 40px rgba(0,0,0,.45);
   --d-scrim:rgba(0,0,0,.45);
 }
@@ -107,8 +119,11 @@
   font:600 12px var(--f-ui);color:var(--dim);transition:border-color .15s,color .15s}
 .fv-tbtn:hover{border-color:var(--line2);color:var(--fg)}
 .fv-tbtn svg{width:14px;height:14px}
-.fv-drawing h1.fv-title{font:700 30px/1.16 var(--f-ui);letter-spacing:-.4px;margin:14px 0 8px;
-  max-width:34ch;text-wrap:balance;color:var(--fg)}
+.fv-drawing h1.fv-title{font:800 30px/1.16 var(--f-ui);letter-spacing:-.5px;margin:14px 0 8px;
+  max-width:34ch;text-wrap:balance;color:var(--fg);position:relative;padding-left:20px}
+/* the title's bar: one stroke of colour that says "a drawing starts here" */
+.fv-drawing h1.fv-title::before{content:"";position:absolute;left:0;top:.12em;bottom:.12em;width:7px;
+  border-radius:4px;background:var(--d-bar)}
 .fv-lede{margin:0;max-width:68ch;color:var(--dim);font:15.5px/1.55 var(--f-body);text-wrap:pretty}
 
 /* figure mode: a caption, not a page header */
@@ -143,8 +158,8 @@
 .fv-stage{position:relative;background:var(--paper);border:1px solid var(--line);
   border-radius:calc(var(--r) + 4px);box-shadow:var(--d-sh);overflow:hidden}
 .fv-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
-.fv-grid{background-image:radial-gradient(color-mix(in srgb,var(--line) 88%,var(--paper)) 1px,transparent 1.2px);
-  background-size:18px 18px;background-position:9px 9px}
+/* the canvas is plain paper: the zones are dotted now, and a dotted ground would fight them */
+.fv-grid{background:none}
 .fv-map,.fv-seq{display:block;width:100%;height:auto;min-width:760px;user-select:none;-webkit-user-select:none}
 .fv-wrap{position:relative;transition:transform .32s var(--d-ease),opacity .32s var(--d-ease)}
 .fv-wrap.zoom-out{opacity:0;transform:scale(1.35)}
@@ -214,80 +229,84 @@
   display:grid;grid-template-columns:44px 1fr;gap:6px 10px;align-items:center;width:250px}
 .fv-key svg{width:44px;height:14px;overflow:visible}
 
-/* ── SVG: zones, boxes, connections ───────────────────────────────────────── */
-.fv-drawing .zone rect{fill:color-mix(in srgb,var(--z) 5%,transparent);stroke:color-mix(in srgb,var(--z) 42%,transparent);
-  stroke-width:1.3;stroke-dasharray:5 5}
-.fv-drawing .zone text{fill:var(--z);font:700 11px var(--f-ui);letter-spacing:.4px}
-.fv-drawing .z-neutral{--z:var(--dim2)} .fv-drawing .z-sync{--z:var(--f1)} .fv-drawing .z-async{--z:var(--stream)}
+/* ── SVG: zones, boxes, connections ─────────────────────────────────────────
+      Outlined and flat: a box is a pale fill inside a 2px outline of its kind,
+      with an illustrated icon in ink; a zone is a dotted container with a solid
+      tag; a connection is ink, ending in an open chevron. No shadows anywhere. */
+.fv-drawing .zone .zbox{fill:color-mix(in srgb,var(--z) 6%,transparent);stroke:color-mix(in srgb,var(--z) 62%,transparent);
+  stroke-width:2;stroke-dasharray:.1 6;stroke-linecap:round}
+.fv-drawing .zone .ztag{fill:var(--zt,var(--z))}
+.fv-drawing .zone text{fill:var(--paper);font:750 11px var(--f-ui);letter-spacing:.3px;dominant-baseline:central}
+.fv-drawing .z-neutral{--z:var(--dim2);--zt:var(--fg)} .fv-drawing .z-sync{--z:var(--f1)} .fv-drawing .z-async{--z:var(--stream)}
 .fv-drawing .z-ext{--z:var(--ext)} .fv-drawing .z-data{--z:var(--data)} .fv-drawing .z-svc{--z:var(--service)}
 
-.k-client{--k:var(--client);--k-bg:var(--client-bg);--k-bd:var(--client-bd)}
-.k-edge{--k:var(--edge);--k-bg:var(--edge-bg);--k-bd:var(--edge-bd)}
-.k-service{--k:var(--service);--k-bg:var(--service-bg);--k-bd:var(--service-bd)}
-.k-data{--k:var(--data);--k-bg:var(--data-bg);--k-bd:var(--data-bd)}
-.k-stream{--k:var(--stream);--k-bg:var(--stream-bg);--k-bd:var(--stream-bd)}
-.k-external{--k:var(--ext);--k-bg:var(--ext-bg);--k-bd:var(--ext-bd)}
+.k-client{--k:var(--client);--k-bg:var(--client-bg);--k-bd:var(--client-bd);--i1:var(--client);--i2:var(--client-p);--i3:var(--client-l)}
+.k-edge{--k:var(--edge);--k-bg:var(--edge-bg);--k-bd:var(--edge-bd);--i1:var(--edge);--i2:var(--edge-p);--i3:var(--edge-l)}
+.k-service{--k:var(--service);--k-bg:var(--service-bg);--k-bd:var(--service-bd);--i1:var(--service);--i2:var(--service-p);--i3:var(--service-l)}
+.k-data{--k:var(--data);--k-bg:var(--data-bg);--k-bd:var(--data-bd);--i1:var(--data);--i2:var(--data-p);--i3:var(--data-l)}
+.k-stream{--k:var(--stream);--k-bg:var(--stream-bg);--k-bd:var(--stream-bd);--i1:var(--stream);--i2:var(--stream-p);--i3:var(--stream-l)}
+.k-external{--k:var(--ext);--k-bg:var(--ext-bg);--k-bd:var(--ext-bd);--i1:var(--ext);--i2:var(--ext-p);--i3:var(--ext-l)}
 /* an adversary: never ours, so never drawn like ours — red, with a broken edge */
-.k-threat{--k:var(--threat);--k-bg:var(--threat-bg);--k-bd:var(--threat-bd)}
-.fv-drawing .node.k-threat .shape{stroke-dasharray:6 3}
+.k-threat{--k:var(--threat);--k-bg:var(--threat-bg);--k-bd:var(--threat-bd);--i1:var(--threat);--i2:var(--threat-p);--i3:var(--threat-l)}
+.fv-drawing .node.k-threat .shape{stroke-dasharray:7 4}
 
 .fv-drawing .node{cursor:pointer;transition:opacity .2s var(--d-ease)}
-.fv-drawing .node .shape{fill:var(--k-bg);stroke:var(--k-bd);stroke-width:1.3;filter:var(--d-node-sh);
-  transition:stroke .15s,stroke-width .15s}
-.fv-drawing .node .tile{fill:var(--k)}
-.fv-drawing .node .ico{color:var(--on-tint)}
-.fv-drawing .node .lbl{fill:var(--fg);font:650 13px var(--f-ui);letter-spacing:-.1px}
-.fv-drawing .node .tech{fill:var(--dim2);font:500 10.5px var(--f-ui);opacity:0;transition:opacity .2s}
+.fv-drawing .node .shape{fill:var(--k-bg);stroke:var(--k);stroke-width:2;transition:stroke .15s,stroke-width .15s}
+.fv-drawing .node .ico{color:var(--i-ink)}
+.fv-drawing .node .lbl{fill:var(--fg);font:700 13px var(--f-ui);letter-spacing:-.15px}
+.fv-drawing .node .tech{fill:var(--dim);font:550 10.5px var(--f-ui);opacity:0;transition:opacity .2s}
 .fv-drawing .node .lblg{transition:transform .22s var(--d-ease)}
 .fv-drawing svg.show-labels .node .tech{opacity:1}
 .fv-drawing svg.show-labels .node.has-tech .lblg{transform:translateY(-6px)}
-.fv-drawing .node:hover .shape,.fv-drawing .node.sel .shape,.fv-drawing .node:focus-visible .shape{stroke:var(--k);stroke-width:2}
+.fv-drawing .node:hover .shape,.fv-drawing .node.sel .shape,.fv-drawing .node:focus-visible .shape{stroke-width:3}
 .fv-drawing .node:focus{outline:none}
-.fv-drawing .node.sel .shape{stroke-width:2.4}
-.fv-drawing .node.land .shape{stroke:var(--flow);stroke-width:2.6}
-.fv-drawing .node.ghost .shape{fill:none;stroke:var(--line2);stroke-dasharray:4 4;filter:none}
-.fv-drawing .node.ghost .tile{fill:var(--panel2)}
-.fv-drawing .node.ghost .ico{color:var(--dim2)}
+.fv-drawing .node.sel .shape{stroke-width:3.4}
+.fv-drawing .node.land .shape{stroke:var(--flow);stroke-width:3.4}
+.fv-drawing .node.ghost{--i1:var(--ext);--i2:var(--ext-p);--i3:var(--ext-l)}
+.fv-drawing .node.ghost .shape{fill:none;stroke:var(--line2);stroke-dasharray:5 5}
+.fv-drawing .node.ghost .ico{opacity:.6}
 .fv-drawing .node.ghost .lbl{fill:var(--dim)}
 .fv-drawing .node .seg{cursor:zoom-in}
-.fv-drawing .node .seg circle{fill:var(--paper);stroke:var(--k);stroke-width:1.4}
-.fv-drawing .node .seg path{stroke:var(--k);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.fv-drawing .node .seg circle{fill:var(--paper);stroke:var(--k);stroke-width:2}
+.fv-drawing .node .seg path{stroke:var(--k);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .fv-drawing .node .seg:hover circle{fill:var(--k)}
 .fv-drawing .node .seg:hover path{stroke:var(--on-tint)}
 
-.fv-drawing .edge .line{fill:none;stroke:var(--line2);stroke-width:1.6;stroke-linecap:round;
+.fv-drawing .edge .line{fill:none;stroke:var(--line2);stroke-width:1.8;stroke-linecap:round;
   transition:stroke .2s,stroke-width .2s,opacity .2s}
 .fv-drawing .edge.m-sync .line{stroke-dasharray:7 6}
-.fv-drawing .edge.m-async .line{stroke-dasharray:.1 7;stroke-width:2.6}
-.fv-drawing .edge .head{fill:var(--line2);transition:fill .2s}
+.fv-drawing .edge.m-async .line{stroke-dasharray:.1 7;stroke-width:2.8}
+.fv-drawing .edge .head{fill:none;stroke:var(--line2);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  transition:stroke .2s}
 .fv-drawing .edgeset .hit{fill:none;stroke:transparent;stroke-width:16;cursor:pointer;pointer-events:stroke}
 .fv-drawing .edge{transition:opacity .2s var(--d-ease)}
-.fv-drawing .edge.live .line{stroke:var(--flow);stroke-width:2}
-.fv-drawing .edge.live.m-async .line{stroke-width:3}
-.fv-drawing .edge.live .head{fill:var(--flow)}
+.fv-drawing .edge.live .line{stroke:var(--flow);stroke-width:2.2}
+.fv-drawing .edge.live.m-async .line{stroke-width:3.2}
+.fv-drawing .edge.live .head{stroke:var(--flow);stroke-width:2.3}
 .fv-drawing .edge.live.m-sync .line{animation:fv-march-s .9s linear infinite}
 .fv-drawing .edge.live.m-async .line{animation:fv-march-a 1.3s linear infinite}
 .fv-drawing .edge.live.rev .line{animation-direction:reverse}
 .fv-drawing .edge.failing .line{stroke:var(--bad)}
-.fv-drawing .edge.failing .head{fill:var(--bad)}
+.fv-drawing .edge.failing .head{stroke:var(--bad)}
 @keyframes fv-march-s{to{stroke-dashoffset:-13}}
 @keyframes fv-march-a{to{stroke-dashoffset:-7.1}}
-.fv-drawing .edgeset.hov .edge .line,.fv-drawing .edgeset.sel .edge .line{stroke-width:2.8}
+.fv-drawing .edgeset.hov .edge .line,.fv-drawing .edgeset.sel .edge .line{stroke-width:3}
 
 .fv-drawing .chiplbl{opacity:0;transition:opacity .18s;pointer-events:none}
-.fv-drawing .chiplbl rect{fill:var(--paper);stroke:var(--line2);stroke-width:1}
-.fv-drawing .chiplbl text{fill:var(--dim);font:600 10.5px var(--f-mono)}
+.fv-drawing .chiplbl rect{fill:var(--paper);stroke:var(--line2);stroke-width:1.4}
+.fv-drawing .chiplbl text{fill:var(--fg);font:650 10.5px var(--f-mono)}
 .fv-drawing svg.show-labels .chiplbl,.fv-drawing svg.show-times .chiplbl{opacity:1}
 .fv-drawing .edgeset.hov .chiplbl,.fv-drawing .edgeset.sel .chiplbl,.fv-drawing svg.focus .edgeset.near .chiplbl{opacity:1}
 .fv-drawing svg.focus .edgeset:not(.near) .chiplbl,.fv-drawing svg.stepping .edgeset:not(.hot) .chiplbl{opacity:0}
 
+/* a step number: a filled disc in the flow's colour, ringed in ink */
 .fv-drawing .stepno{cursor:pointer}
-.fv-drawing .stepno circle{fill:var(--flow);stroke:var(--paper);stroke-width:2.5}
-.fv-drawing .stepno text{fill:var(--on-tint);font:800 10.5px var(--f-ui);letter-spacing:0;text-anchor:middle;
+.fv-drawing .stepno circle{fill:var(--flow);stroke:var(--i-ink);stroke-width:1.8;transform-box:fill-box;transform-origin:center}
+.fv-drawing .stepno text{fill:var(--on-tint);font:800 11px var(--f-ui);letter-spacing:0;text-anchor:middle;
   dominant-baseline:central;pointer-events:none}
 .fv-drawing .stepno.fail circle{fill:var(--bad)}
 .fv-drawing .stepno.now circle{animation:fv-beat 1.2s var(--d-ease) infinite}
-@keyframes fv-beat{0%,100%{stroke-width:2.5}50%{stroke-width:5.5}}
+@keyframes fv-beat{0%,100%{transform:none}50%{transform:scale(1.22)}}
 
 /* focus + context: a hover or a step dims everything it does not touch */
 .fv-drawing svg.focus .node:not(.near),.fv-drawing svg.focus .edge:not(.near),.fv-drawing svg.focus .stepno:not(.near){opacity:.2}
@@ -310,17 +329,17 @@
 @keyframes fv-xin{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
 
 /* ── sequence view ────────────────────────────────────────────────────────── */
-.fv-seq .life{stroke:var(--line2);stroke-width:1.2;stroke-dasharray:3 5}
+.fv-seq .life{stroke:var(--dim2);stroke-width:2;stroke-dasharray:.1 5;stroke-linecap:round}
 .fv-seq .band{fill:transparent}
 .fv-seq .band.now{fill:color-mix(in srgb,var(--flow) 9%,transparent)}
-.fv-seq .msg .line{fill:none;stroke:var(--dim);stroke-width:1.6}
+.fv-seq .msg .line{fill:none;stroke:var(--fg);stroke-width:1.9;stroke-linecap:round}
 .fv-seq .msg.response .line{stroke-dasharray:6 5}
 .fv-seq .msg.event .line{stroke-dasharray:.1 6;stroke-width:2.6;stroke-linecap:round}
-.fv-seq .msg .head{fill:var(--dim)}
-.fv-seq .msg.fail .line{stroke:var(--bad)} .fv-seq .msg.fail .head{fill:var(--bad)}
-.fv-seq .msg text{fill:var(--dim);font:600 11px var(--f-mono);text-anchor:middle}
-.fv-seq .msg.now .line{stroke:var(--flow);stroke-width:2.4}
-.fv-seq .msg.now .head{fill:var(--flow)}
+.fv-seq .msg .head{fill:none;stroke:var(--fg);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fv-seq .msg.fail .line{stroke:var(--bad)} .fv-seq .msg.fail .head{stroke:var(--bad)}
+.fv-seq .msg text{fill:var(--fg);font:650 11.5px var(--f-ui);text-anchor:middle}
+.fv-seq .msg.now .line{stroke:var(--flow);stroke-width:2.6}
+.fv-seq .msg.now .head{stroke:var(--flow)}
 .fv-seq .msg.now text{fill:var(--fg)}
 .fv-seq .msg.now.fail .line{stroke:var(--bad)}
 
@@ -353,6 +372,9 @@
 .fv-drawer .dr-ico{width:40px;height:40px;border-radius:11px;background:var(--k,var(--f1));color:var(--on-tint);
   display:grid;place-items:center;flex:none}
 .fv-drawer .dr-ico svg{width:22px;height:22px}
+/* a box's drawer shows its icon the way the canvas does: ink on its kind */
+.fv-drawer .dr-ico.illus{background:var(--k-bg);border:2px solid var(--k);color:var(--i-ink)}
+.fv-drawer .dr-ico.illus svg{width:30px;height:30px}
 .fv-drawer .dr-ico b{font:800 17px var(--f-ui)}
 .fv-drawer .dr-kind{margin:0;font:700 10px var(--f-ui);letter-spacing:1px;text-transform:uppercase;color:var(--k,var(--dim2))}
 .fv-drawer h2{margin:1px 0 0;font:700 18px/1.2 var(--f-ui);color:var(--fg)}
@@ -417,22 +439,22 @@
 .pill .fv-motion[aria-pressed="false"]{color:var(--dim2)}
 
 /* ── no flows: every connection drifts in its own direction, in ink ────────── */
-.fv-drawing .edge.ink .line{stroke:var(--dim);stroke-width:1.8}
+.fv-drawing .edge.ink .line{stroke:var(--fg);stroke-width:1.9}
 .fv-drawing .edge.ink.m-async .line{stroke-width:2.8}
-.fv-drawing .edge.ink .head{fill:var(--dim)}
+.fv-drawing .edge.ink .head{stroke:var(--fg)}
 .fv-drawing .edge.ink.m-sync .line{animation:fv-march-s 1.6s linear infinite}
 .fv-drawing .edge.ink.m-async .line{animation:fv-march-a 2.2s linear infinite}
 
 /* ── results: passed is green and keeps moving; failed is red, rejected amber,
       and both stand still with their marker where the call stopped ───────── */
 .fv-drawing .edge.r-pass .line{stroke:var(--ok);stroke-width:2.2}
-.fv-drawing .edge.r-pass .head{fill:var(--ok)}
+.fv-drawing .edge.r-pass .head{stroke:var(--ok)}
 .fv-drawing .edge.r-pass:not(.live):not(.ink).m-sync .line{animation:fv-march-s 1.6s linear infinite}
 .fv-drawing .edge.r-pass:not(.live):not(.ink).m-async .line{animation:fv-march-a 2.2s linear infinite}
 .fv-drawing .edge.r-fail .line{stroke:var(--bad);stroke-width:2.2;animation:none!important}
-.fv-drawing .edge.r-fail .head{fill:var(--bad)}
+.fv-drawing .edge.r-fail .head{stroke:var(--bad)}
 .fv-drawing .edge.r-error .line{stroke:var(--warn);stroke-width:2.2;animation:none!important}
-.fv-drawing .edge.r-error .head{fill:var(--warn)}
+.fv-drawing .edge.r-error .head{stroke:var(--warn)}
 .fv-drawing svg.stepping .edge.hot.r-pass .line{stroke:var(--ok)}
 .fv-drawing svg.stepping .edge.hot.r-fail .line{stroke:var(--bad)}
 .fv-drawing svg.stepping .edge.hot.r-error .line{stroke:var(--warn)}
@@ -456,9 +478,9 @@
 .fv-drawing .nres.r-pass .rbg{fill:var(--ok)}
 .fv-drawing .nres.r-fail .rbg{fill:var(--bad)}
 .fv-drawing .nres.r-error .rbg{fill:var(--warn)}
-.fv-drawing .node.r-pass .shape{stroke:var(--ok);stroke-width:2}
-.fv-drawing .node.r-fail .shape{stroke:var(--bad);stroke-width:2}
-.fv-drawing .node.r-error .shape{stroke:var(--warn);stroke-width:2}
+.fv-drawing .node.r-pass .shape{stroke:var(--ok);stroke-width:2.8}
+.fv-drawing .node.r-fail .shape{stroke:var(--bad);stroke-width:2.8}
+.fv-drawing .node.r-error .shape{stroke:var(--warn);stroke-width:2.8}
 
 /* a step's result on its badge, its rail dot, its drawer number and its packet */
 .fv-drawing .stepno.r-pass circle{fill:var(--ok)}
@@ -481,9 +503,9 @@
 .fv-res.r-fail,.fv-peek .res.r-fail{color:var(--bad)}
 .fv-res.r-error,.fv-peek .res.r-error{color:var(--warn)}
 .fv-peek .res{margin:0 0 4px;font:700 12px var(--f-ui)}
-.fv-seq .msg.r-pass .line{stroke:var(--ok)} .fv-seq .msg.r-pass .head{fill:var(--ok)}
+.fv-seq .msg.r-pass .line{stroke:var(--ok)} .fv-seq .msg.r-pass .head{stroke:var(--ok)}
 .fv-seq .msg.error .line{stroke:var(--warn);stroke-dasharray:none;stroke-width:2.2}
-.fv-seq .msg.now.r-pass .line{stroke:var(--ok)} .fv-seq .msg.now.r-pass .head{fill:var(--ok)}
+.fv-seq .msg.now.r-pass .line{stroke:var(--ok)} .fv-seq .msg.now.r-pass .head{stroke:var(--ok)}
 .fv-seq .msg.now.error .line{stroke:var(--warn)}
 
 /* ── the embed: a drawing pasted into a wiki page ─────────────────────────────

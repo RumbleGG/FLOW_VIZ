@@ -29,7 +29,7 @@
   var NS = 'http://www.w3.org/2000/svg';
   /* one grid for every drawing: agents place boxes in cells, never in pixels */
   var G = { cw: 240, ch: 132, nw: 172, nh: 56, px: 22, py: 18, r: 10, lane: 4.5 };
-  var LABEL_ROOM = G.nw - 55 - 12;      // width a box label may use before it shrinks
+  var LABEL_ROOM = G.nw - 54 - 12;      // width a box label may use before it shrinks
   var KIND = { client: 'client', edge: 'edge', service: 'service', data: 'data', stream: 'stream', external: 'ext',
               threat: 'threat' };
   var KIND_NAME = { client: 'Client', edge: 'Edge', service: 'Service', data: 'Data', stream: 'Event stream', external: 'External',
@@ -110,6 +110,14 @@
     var c = z.cols || [0, 0], r = z.rows || [0, 0];
     return { x: G.px + c[0] * G.cw + 8, y: G.py + r[0] * G.ch + 6,
              w: (c[1] - c[0] + 1) * G.cw - 16, h: (r[1] - r[0] + 1) * G.ch - 12 };
+  }
+  /* a zone's tag: a pill tucked into the corner its "tag" names. Text width is
+     measured by the caller; this is where the pill's fixed edge and band sit */
+  var ZPAD = 9, ZTAG_H = 18;
+  function zoneTag(z, r) {
+    var tag = z.tag || 'tl', right = tag[1] === 'r', bottom = tag[0] === 'b';
+    var y0 = bottom ? r.y + r.h - 8 - ZTAG_H : r.y + 8;
+    return { right: right, edge: right ? r.x + r.w - 12 : r.x + 12, y0: y0, y1: y0 + ZTAG_H };
   }
   /* a connection leaves the side that faces its target; bends live in the gutter */
   function plan(e, nodes) {
@@ -506,11 +514,12 @@
     shrunkLabels({ nodes: [] }, host);               // makes sure the scratch svg is mounted in host
     var g = el('g', { class: 'zone' }, scratch), hits = [], segs = segments(L);
     L.zones.forEach(function (zr) {
-      var z = zr.z, r = zr.r, tag = z.tag || 'tl', right = tag[1] === 'r', bottom = tag[0] === 'b';
+      var z = zr.z, r = zr.r, p = zoneTag(z, r);
+      if (!z.label) return;
       var t = el('text', {}, g);
-      t.textContent = z.label || '';
-      var w = t.getComputedTextLength(), base = bottom ? r.y + r.h - 11 : r.y + 20;
-      var x0 = (right ? r.x + r.w - 14 - w : r.x + 14) - 3, x1 = x0 + w + 6, y0 = base - 12, y1 = base + 4;
+      t.textContent = z.label;
+      var w = t.getComputedTextLength() + 2 * ZPAD;
+      var x0 = p.right ? p.edge - w : p.edge, x1 = x0 + w, y0 = p.y0, y1 = p.y1;
       segs.forEach(function (s) {
         var x = span(s.a.x, s.b.x), y = span(s.a.y, s.b.y);
         if (x[1] >= x0 && x[0] <= x1 && y[1] >= y0 && y[0] <= y1) hits.push('zone ' + z.id + ' label × ' + s.id);
@@ -709,25 +718,29 @@
     function drawZone(zr) {
       var z = zr.z, r = zr.r;
       var g = el('g', { class: 'zone z-' + (z.tone || 'neutral') }, S.layer.zones);
-      el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: 16 }, g);
-      var tag = z.tag || 'tl', right = tag[1] === 'r', bottom = tag[0] === 'b';
-      var t = el('text', { x: right ? r.x + r.w - 14 : r.x + 14, y: bottom ? r.y + r.h - 11 : r.y + 20,
-        'text-anchor': right ? 'end' : 'start' }, g);
-      t.textContent = z.label || '';
+      el('rect', { class: 'zbox', x: r.x, y: r.y, width: r.w, height: r.h, rx: 16 }, g);
+      if (!z.label) return;
+      var p = zoneTag(z, r), pill = el('rect', { class: 'ztag', y: p.y0, height: p.y1 - p.y0, rx: (p.y1 - p.y0) / 2 }, g);
+      var t = el('text', { y: (p.y0 + p.y1) / 2 + 0.5, 'text-anchor': 'middle' }, g);
+      t.textContent = z.label;
+      var w = t.getComputedTextLength() || z.label.length * 6.4, x0 = p.right ? p.edge - w - 2 * ZPAD : p.edge;
+      pill.setAttribute('x', f(x0)); pill.setAttribute('width', f(w + 2 * ZPAD));
+      t.setAttribute('x', f(x0 + ZPAD + w / 2));
     }
+    /* an open chevron, drawn in the line's own ink */
     function head(pts, g) {
       var q = pts[pts.length - 1], p = pts[pts.length - 2];
       var dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
-      var tx = q.x - ux * 1.5, ty = q.y - uy * 1.5, bx = tx - ux * 8.5, by = ty - uy * 8.5;
-      el('path', { class: 'head', d: 'M' + f(tx) + ' ' + f(ty) + 'L' + f(bx - uy * 4.6) + ' ' + f(by + ux * 4.6) +
-        'L' + f(bx + uy * 4.6) + ' ' + f(by - ux * 4.6) + 'Z' }, g);
+      var tx = q.x - ux * 2, ty = q.y - uy * 2, bx = tx - ux * 7, by = ty - uy * 7;
+      el('path', { class: 'head', d: 'M' + f(bx - uy * 4.4) + ' ' + f(by + ux * 4.4) + 'L' + f(tx) + ' ' + f(ty) +
+        'L' + f(bx + uy * 4.4) + ' ' + f(by - ux * 4.4) }, g);
     }
     function drawEdge(p) {
       var e = p.e, mode = e.mode === 'async' ? 'async' : 'sync';
       var set = el('g', { class: 'edgeset', 'data-edge': e.id }, S.layer.edges);
       p.lanes.forEach(function (ln) {
         var g = el('g', { class: 'edge m-' + mode, 'data-edge': e.id, 'data-dir': ln.dir }, set);
-        var pts = trimEnd(ln.pts, 7);
+        var pts = trimEnd(ln.pts, 2.5);
         var path = el('path', { class: 'line', d: roundPath(pts, G.r) }, g);
         head(ln.pts, g);
         S.lanes.push({ edge: e, dir: ln.dir, g: g, path: path, pts: pts });
@@ -757,17 +770,16 @@
         'data-node': n.id, tabindex: 0, role: 'button',
         'aria-label': (n.label || n.id) + (n.peek ? '. ' + n.peek : '')
       }, S.layer.nodes);
-      el('rect', { class: 'shape', x: b.x, y: b.y, width: b.w, height: b.h, rx: 14 }, g);
-      el('rect', { class: 'tile', x: b.x + 11, y: b.y + 11, width: 34, height: 34, rx: 10 }, g);
-      el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), x: b.x + 18, y: b.y + 18, width: 20, height: 20 }, g);
+      el('rect', { class: 'shape', x: b.x, y: b.y, width: b.w, height: b.h, rx: 12 }, g);
+      el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), x: b.x + 10, y: b.cy - 18, width: 36, height: 36 }, g);
       var lg = el('g', { class: 'lblg' }, g);
-      var t = el('text', { class: 'lbl', x: b.x + 55, y: b.cy + 4.5 }, lg);
+      var t = el('text', { class: 'lbl', x: b.x + 54, y: b.cy + 4.5 }, lg);
       t.textContent = n.label || n.id;
       fit(t, LABEL_ROOM);
       if (n.tech) {
-        var tt = el('text', { class: 'tech', x: b.x + 55, y: b.cy + 14 }, g);
+        var tt = el('text', { class: 'tech', x: b.x + 54, y: b.cy + 14 }, g);
         tt.textContent = n.tech;
-        fit(tt, b.w - 55 - 10);
+        fit(tt, b.w - 54 - 10);
       }
       if (n.segment && !n.ghost) {
         var sg = el('g', { class: 'seg', role: 'button', 'aria-label': 'Open the inside of ' + (n.label || n.id) }, g);
@@ -920,7 +932,7 @@
           var g = el('g', { class: 'stepno' + (it.st.fail ? ' fail' : '') + (it.res ? ' r-' + it.res : ''), 'data-si': it.si,
             'data-edge': slot.lane.edge.id, tabindex: 0, role: 'button',
             'aria-label': 'Step ' + (it.si + 1) + (it.res ? ', ' + RES[it.res].step : '') + ': ' + (it.st.say || '') }, gb);
-          el('circle', { cx: f(pt.x), cy: f(pt.y), r: 9.5 }, g);
+          el('circle', { cx: f(pt.x), cy: f(pt.y), r: 10.5 }, g);
           var tx = el('text', { x: f(pt.x), y: f(pt.y) + 0.5 }, g);
           tx.textContent = it.si + 1;
           g.addEventListener('click', function (ev) { ev.stopPropagation(); goStep(it.si); });
@@ -979,10 +991,9 @@
         el('line', { class: 'life', x1: x, y1: top + headH, x2: x, y2: H - 8 }, gLife);
         var g = el('g', { class: 'node k-' + (KIND[n.kind] ? n.kind : 'service') + (n.ghost ? ' ghost' : ''), 'data-node': id,
           tabindex: 0, role: 'button', 'aria-label': n.label || id }, gLife);
-        el('rect', { class: 'shape', x: x - w / 2, y: top, width: w, height: headH - 6, rx: 11 }, g);
-        el('rect', { class: 'tile', x: x - w / 2 + 7, y: top + 7, width: 26, height: 26, rx: 8 }, g);
-        el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), x: x - w / 2 + 12, y: top + 12, width: 16, height: 16 }, g);
-        var t = el('text', { class: 'lbl', x: x - w / 2 + 41, y: top + 24.5 }, g);
+        el('rect', { class: 'shape', x: x - w / 2, y: top, width: w, height: headH - 6, rx: 10 }, g);
+        el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), x: x - w / 2 + 7, y: top + 5, width: 30, height: 30 }, g);
+        var t = el('text', { class: 'lbl', x: x - w / 2 + 42, y: top + 24.5 }, g);
         t.textContent = n.label || id;
         if (visible) fit(t, w - 50);
         wireHover(g, 'node', id, g);
@@ -992,20 +1003,21 @@
         var band = el('rect', { class: 'band', x: 6, y: f(y - rowH / 2 + 3), width: W - 12, height: rowH - 6, rx: 9 }, gRows);
         var g = el('g', { class: 'msg ' + r.h.mode + (r.h.result ? ' r-' + r.h.result : '') }, gMsg);
         var xs = x1 + dir * 12;
-        var xe = r.h.mode === 'fail' ? x1 + (x2 - x1) * 0.62 : r.h.mode === 'error' ? x1 + dir * 46 : x2 - dir * 9;
+        var xe = r.h.mode === 'fail' ? x1 + (x2 - x1) * 0.62 : r.h.mode === 'error' ? x1 + dir * 46 : x2 - dir * 3;
         var p = el('path', { class: 'line', d: 'M' + f(xs) + ' ' + y + 'H' + f(xe) }, g);
         if (r.h.mode === 'fail') {
           var xg = el('g', { transform: 'translate(' + f(xe) + ' ' + y + ')' }, g), xm = el('g', { class: 'xmark' }, xg);
           el('circle', { r: 8 }, xm); el('path', { d: 'M-3.2 -3.2L3.2 3.2M3.2 -3.2L-3.2 3.2' }, xm);
         } else if (r.h.mode === 'error') {
           resGlyph(el('g', { class: 'rmark r-error', transform: 'translate(' + f(xe) + ' ' + y + ')' }, g), 'error', 8.5);
-        } else el('path', { class: 'head', d: 'M' + f(x2 - dir * 1.5) + ' ' + y + 'l' + (-dir * 9) + ' -4.8v9.6z' }, g);
+        } else el('path', { class: 'head', d: 'M' + f(x2 - dir * 9.5) + ' ' + (y - 4.6) + 'L' + f(x2 - dir * 2.5) + ' ' + y +
+          'L' + f(x2 - dir * 9.5) + ' ' + (y + 4.6) }, g);
         var tx = el('text', { x: f(r.h.mode === 'error' ? (xs + xe) / 2 : (x1 + x2) / 2), y: y - 8 }, g);
         tx.textContent = r.st.msg || '';
         if (r.h.i === 0) {
           var rr = resultOf(r.st);
           var bg = el('g', { class: 'stepno' + (r.st.fail ? ' fail' : '') + (rr ? ' r-' + rr : ''), 'data-si': r.si }, gMsg);
-          el('circle', { cx: x1, cy: y, r: 9.5 }, bg);
+          el('circle', { cx: x1, cy: y, r: 10.5 }, bg);
           var bt = el('text', { x: x1, y: y + 0.5 }, bg); bt.textContent = r.si + 1;
           bg.addEventListener('click', function () { goStep(r.si); });
         }
@@ -1401,7 +1413,8 @@
     function openDrawer(type, id) {
       var D = drawer();
       if (DR.owner && DR.owner !== self) DR.owner.select(null);
-      D.body.innerHTML = ''; D.ico.innerHTML = ''; D.ico.style.removeProperty('--k'); D.kind.style.removeProperty('--k');
+      D.body.innerHTML = ''; D.ico.innerHTML = ''; D.ico.className = 'dr-ico';
+      D.ico.style.removeProperty('--k'); D.kind.style.removeProperty('--k');
       D.el.style.setProperty('--flow', 'var(--' + tone(S.flow) + ')');
       select(type, id);
       if (type === 'node') nodeDrawer(S.nodes[id], D);
@@ -1447,6 +1460,7 @@
     function nodeDrawer(n, D) {
       var kv = n.ghost ? 'var(--dim2)' : kindVar(n.kind);
       D.ico.style.setProperty('--k', kv); D.kind.style.setProperty('--k', kv);
+      D.ico.className = 'dr-ico illus k-' + (KIND[n.kind] ? n.kind : 'service');
       D.ico.innerHTML = icon(n.icon || 'service');
       D.kind.textContent = (n.ghost ? 'In the whole system' : (KIND_NAME[n.kind] || 'Box')) + (n.tech ? ' · ' + n.tech : '');
       D.title.textContent = n.label || n.id;
@@ -1658,6 +1672,7 @@
     /* The still picture: the root canvas rendered at rest in a hidden light-themed
        copy, every look baked in as SVG attributes — sanitisers keep attributes far
        more often than style="" — and the icons it uses copied into its own defs. */
+    var PAINTS = ['i1', 'i2', 'i3', 'iw', 'ion', 'igold', 'ired', 'imetal', 'imetal2', 'iline'];
     var ATTRS = {
       shape: [['fill', 'fill'], ['stroke', 'stroke'], ['strokeWidth', 'stroke-width'], ['strokeDasharray', 'stroke-dasharray'],
               ['strokeLinecap', 'stroke-linecap'], ['strokeLinejoin', 'stroke-linejoin']],
@@ -1686,7 +1701,9 @@
           set.push([p[1], v]);
         });
         if (cs.opacity !== '1') set.push(['opacity', cs.opacity]);
-        return { set: set, filter: cs.filter && cs.filter !== 'none' ? cs.filter : '' };
+        /* an icon's fills are paints its box sets: carry the resolved values into the picture */
+        var paint = tag === 'use' ? PAINTS.map(function (v) { return cs.getPropertyValue('--' + v).trim(); }) : null;
+        return { set: set, filter: cs.filter && cs.filter !== 'none' ? cs.filter : '', paint: paint };
       });
       var used = {};
       els.forEach(function (x, i) {
@@ -1697,16 +1714,22 @@
         looks[i].set.forEach(function (p) { x.setAttribute(p[0], p[1]); });
         if (looks[i].filter) x.setAttribute('style', 'filter:' + looks[i].filter);
         if (x.tagName.toLowerCase() === 'use') {
-          var ref = (x.getAttribute('href') || '').replace(/^#/, '');
-          if (ref) { used[ref] = 1; x.setAttribute('href', '#fvxs-' + ID + '-' + ref); }
+          var ref = (x.getAttribute('href') || '').replace(/^#/, ''), key = ref + '|' + (looks[i].paint || []).join(',');
+          if (ref) {
+            if (!used[key]) used[key] = { ref: ref, paint: looks[i].paint, id: 'fvxs-' + ID + '-' + ref + '-' + Object.keys(used).length };
+            x.setAttribute('href', '#' + used[key].id);
+          }
         }
       });
       var vb = (svg.getAttribute('viewBox') || '0 0 1000 600').split(/\s+/);
-      var defs = '<defs>' + Object.keys(used).map(function (ref) {
-        var sy = document.getElementById(ref);
+      var defs = '<defs>' + Object.keys(used).map(function (key) {
+        var u = used[key], sy = document.getElementById(u.ref);
         if (!sy) return '';
-        var c = sy.cloneNode(true); c.setAttribute('id', 'fvxs-' + ID + '-' + ref);
-        return c.outerHTML;
+        var c = sy.cloneNode(true); c.setAttribute('id', u.id);
+        return c.outerHTML.replace(/var\(--([a-z0-9]+)\)/g, function (m, v) {
+          var k = PAINTS.indexOf(v);
+          return k >= 0 && u.paint && u.paint[k] ? u.paint[k] : m;
+        });
       }).join('') + '</defs>';
       var inner = svg.innerHTML;
       host.remove();

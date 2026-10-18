@@ -365,7 +365,7 @@ icons, motion, peeks, the drawer, the walkthrough, the sequence view and notes a
 |---|---|
 | `id` | `[a-z0-9][a-z0-9-]*`, unique per page. Part of every note key: never rename it. |
 | node `kind` | `client` `edge` `service` `data` `stream` `external` `threat` — sets the tint; agents never pick colours. `threat` is an adversary: red, with a broken edge |
-| node `icon` | one of the icon set listed in `AGENTS.md` |
+| node `icon` | one of the icon set listed in `AGENTS.md`: illustrations whose ink is fixed and whose fills come from the box's kind |
 | node `at` | `[col, row]`, zero-based, inside `grid`, one box per cell |
 | node `ghost` | inside a segment only: the id of the parent box it stands for. Drawn dashed; click goes back. |
 | node `segment` | the key of a segment in `segments` |
@@ -478,7 +478,7 @@ selects the neutral family.
 | | Light | Dark |
 |---|---|---|
 | **report** | *journal*: warm paper `#f4efe4`, serif prose, hairlines, no vertical table borders, vermillion margin rule, 4px radii | *traditional*: cool slate `#0f1115`, system sans, full grid, 9px radii |
-| **drawing page** | *canvas*: cool white `#F5F7FB` ground, white canvas with a faint dot grid, pastel component tints, navy ink | *night*: deep navy `#0A0F1D`, luminous tints, the same grammar |
+| **drawing page** | *canvas*: cool white `#F5F7FB` ground, plain white canvas, boxes in a pale tint inside a 2px outline of their kind, illustrated icons, dotted zones with a solid tag, navy ink | *night*: deep navy `#0A0F1D`, dark tints inside luminous outlines, the same icons, the same grammar |
 
 A drawing embedded in a report takes the report's neutrals (paper, ink, hairlines) and keeps its own
 component tints and flow accents — a coloured plate printed in the notebook.
