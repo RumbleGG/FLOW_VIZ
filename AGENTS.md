@@ -431,9 +431,12 @@ it. Turn Labels on and look, once, before handover.
 
 - **`kind`** sets the tint — never pick colours: `client` `edge` `service` `data` `stream` `external`,
   and `threat` for an adversary (red, with a broken edge) so an attacker never looks like a partner.
-- **`icon`**: `user devices browser mobile gateway lb cdn cloud globe server service function worker relay
-  api check box db table cache storage search queue bell mail card bank lock key alert clock file json
-  folder terminal agent chart gear git`.
+- **`icon`** names the thing; the kind colours it. 65 illustrated icons, ink outlines on the box's colours:
+  clients `user users desktop laptop mobile devices browser terminal code` · edge `gateway lb cdn cloud globe
+  firewall` · compute `server service function worker gear chip relay api` · AI `agent llm spark chat plugin
+  tool workflow` · data `db index table cache storage search queue box cubes vector` · messages `bell mail` ·
+  trust `lock key shield cert alert card bank` · time `clock hourglass calendar` · documents `file docs json
+  folder book checklist check` · observe `chart pulse eye git target bulb`.
 - **Optional fields**: `tech`, `facts`, `peek`, `segment`, `status` on a box; `label`, `ms`, `peek`, `both`,
   `route` on a connection; `msg`, `fail` on a step. `ms` feeds the **Timings** layer — leave it out where there is
   no real latency (a user clicking, a redirect the human follows).

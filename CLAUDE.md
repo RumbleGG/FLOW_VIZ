@@ -24,7 +24,7 @@ equivalent, may run the test block at the end and relay it word for word.
 | `template/flow.js` | core runtime: state, sidecar sync, pill, theme, copy, print, `?audit=1`, report components | exposes `window.FLOWVIZ` |
 | `template/draw.css` | the drawing component + the drawing-page neutrals | uses core token names |
 | `template/draw.js` | the drawing runtime: layout, routing, motion, peek, drawer, walkthrough, sequence, segments, notes | mounts every `figure.fv-drawing` |
-| `template/icons.svg` | the icon sprite (`<symbol id="i-<name>">`) | inlined at build |
+| `template/icons.svg` | the icon sprite (`<symbol id="i-<name>">`) | inlined at build; components on a 48 grid, painted by `draw.css` (its header says how) |
 | `template/report.src.html` | report skeleton with scaffold markers, the detail slot between `detail:begin/end` | `flowviz new report` expands it; `--detail` keeps the slot |
 | `template/drawing.src.html` | drawing skeleton | `flowviz new drawing` fills it |
 | `template/pr.src.html` | a PR helper's blocks: vitals, rows, one file's disclosure | `flowviz pr` cuts from it; the audit reads its words |

@@ -6,7 +6,7 @@
 <meta name="flowviz-doc" content="deploy-proto">
 <meta name="flowviz-kind" content="report">
 <title>Notify v2.3 is ready for staging behind a one-command rollback</title>
-<script>window.FLOW={"doc": "deploy-proto", "version": "3.5.0", "kind": "report", "built": "2026-10-18T17:17:41Z"};
+<script>window.FLOW={"doc": "deploy-proto", "version": "3.6.0", "kind": "report", "built": "2026-10-18T17:18:39Z"};
 (function(){var h=document.documentElement;h.setAttribute("data-kind",FLOW.kind);try{var q=(location.search.match(/[?&]theme=(light|dark)/)||[])[1];var s=JSON.parse(localStorage.getItem("flowviz:"+FLOW.doc)||"{}"),u=s.ui||{};var t=q||u.theme||"auto";var d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);h.setAttribute("data-theme",d?"dark":"light");if(u.motion===false)h.classList.add("still");}catch(e){h.setAttribute("data-theme","light");}})();</script>
 <style>
 /* ===========================================================================
@@ -854,19 +854,29 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
      on a drawing page ([data-kind="drawing"]) the canvas/night palette replaces them.
    =========================================================================== */
 
-/* ── component tokens · light ─────────────────────────────────────────────── */
+/* ── component tokens · light ─────────────────────────────────────────────────
+   One palette for every drawing. A kind is five colours: the outline and accent
+   (--client), the box fill (-bg), a soft border (-bd) and two icon paints, main
+   (-p) and light (-l). Icons are ink outlines on flat fills: the ink is --i-ink,
+   the fills are --i1 (deep) --i2 (main) --i3 (light), which every .k-* sets from
+   its kind, plus fixed paints that mean the same in every drawing: green for a
+   lamp or a pass, gold for keys, locks and ideas, metal for hardware, and --iline
+   for an icon stroke that stands alone (ink on light paper, light on dark). */
 :root{
-  --client:#2F6FEB;  --client-bg:#EAF2FF;  --client-bd:#A7C3F4;
-  --edge:#7048E8;    --edge-bg:#F2EDFF;    --edge-bd:#C5B4F4;
-  --service:#16945A; --service-bg:#E7F6EE; --service-bd:#9FD4B8;
-  --data:#D97A0B;    --data-bg:#FFF3E0;    --data-bd:#F0C27E;
-  --stream:#D6336C;  --stream-bg:#FFEBF2;  --stream-bd:#F1A9C4;
-  --ext:#5B6B82;     --ext-bg:#EFF2F6;     --ext-bd:#BAC4D2;
-  --threat:#C92A2A;  --threat-bg:#FFEDED;  --threat-bd:#EC9A9A;
-  --f1:#2F6FEB; --f2:#0C9A8A; --f3:#E0751B;
+  --client:#2F6BE0;  --client-bg:#E6EFFF;  --client-bd:#A9C4F5;  --client-p:#7AA8FF;  --client-l:#CFE0FF;
+  --edge:#7A4FD8;    --edge-bg:#F0EAFF;    --edge-bd:#C9B6F6;    --edge-p:#A98CFB;    --edge-l:#E2D8FF;
+  --service:#1D9A5B; --service-bg:#E0F6E9; --service-bd:#9DD8B6; --service-p:#58CC8C; --service-l:#C3EFD5;
+  --data:#D77A10;    --data-bg:#FFF2DE;    --data-bd:#F2C47F;    --data-p:#FFB547;    --data-l:#FFE2AE;
+  --stream:#D23F7C;  --stream-bg:#FFEAF3;  --stream-bd:#F2AACA;  --stream-p:#FF8AB7;  --stream-l:#FFD3E4;
+  --ext:#56657E;     --ext-bg:#EFF2F7;     --ext-bd:#BAC4D3;     --ext-p:#9DABC2;     --ext-l:#DCE3EE;
+  --threat:#D23B3B;  --threat-bg:#FFECEA;  --threat-bd:#EE9E98;  --threat-p:#FF8178;  --threat-l:#FFD1CC;
+  --f1:#2F6BE0; --f2:#0C9A8A; --f3:#E0751B;
   --on-tint:#FFFFFF;
+  --i-ink:#1B2030; --iline:#1B2030; --iw:#FFFFFF; --ion:#3DD08A; --igold:#FFC53D; --ired:#F2645E;
+  --imetal:#465066; --imetal2:#A3ACBE;
+  --i1:var(--client); --i2:var(--client-p); --i3:var(--client-l);
+  --d-bar:#22B573;
   --d-sh:0 1px 2px rgba(23,32,51,.06),0 6px 18px rgba(23,32,51,.06);
-  --d-node-sh:drop-shadow(0 1px 1px rgba(23,32,51,.07)) drop-shadow(0 4px 8px rgba(23,32,51,.05));
   --d-drawer-sh:-14px 0 40px rgba(10,15,29,.14);
   --d-scrim:rgba(23,32,51,.18);
   --d-ease:cubic-bezier(.22,1,.36,1);
@@ -874,17 +884,19 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 
 /* ── component tokens · dark ──────────────────────────────────────────────── */
 [data-theme="dark"]{
-  --client:#72A9FF;  --client-bg:#12213F;  --client-bd:#2D5AA8;
-  --edge:#AC96FF;    --edge-bg:#1E1842;    --edge-bd:#5641B0;
-  --service:#52D597; --service-bg:#0D2A20; --service-bd:#22704D;
-  --data:#FFB54D;    --data-bg:#2E210C;    --data-bd:#86560F;
-  --stream:#FF7DB0;  --stream-bg:#331225;  --stream-bd:#932C59;
-  --ext:#9DAAC3;     --ext-bg:#18202F;     --ext-bd:#3B4966;
-  --threat:#FF6B6B;  --threat-bg:#35151A;  --threat-bd:#A83D45;
+  --client:#6EA2FF;  --client-bg:#11213F;  --client-bd:#2D5AA8;  --client-p:#6E9EF7;  --client-l:#BCD3FF;
+  --edge:#AC8EFF;    --edge-bg:#1D1840;    --edge-bd:#5641B0;    --edge-p:#9C80F2;    --edge-l:#D9CCFF;
+  --service:#4FD495; --service-bg:#0C2A1F; --service-bd:#22704D; --service-p:#4DC284; --service-l:#B6EDCF;
+  --data:#FFB54D;    --data-bg:#2D200B;    --data-bd:#86560F;    --data-p:#F5A93E;    --data-l:#FFDDA3;
+  --stream:#FF7DB0;  --stream-bg:#331226;  --stream-bd:#932C59;  --stream-p:#F37DAB;  --stream-l:#FFCBDF;
+  --ext:#9DAAC3;     --ext-bg:#18202F;     --ext-bd:#3B4966;     --ext-p:#8E9CB4;     --ext-l:#D4DCE8;
+  --threat:#FF6B6B;  --threat-bg:#35151A;  --threat-bd:#A83D45;  --threat-p:#F47870;  --threat-l:#FFC9C3;
   --f1:#6EA6FF; --f2:#36D6C1; --f3:#FFA652;
   --on-tint:#0A0F1D;
+  --i-ink:#0B0E17; --iline:#9AA6BF; --iw:#F4F6FB; --ion:#3DD08A; --igold:#FFC53D; --ired:#F2645E;
+  --imetal:#3A4357; --imetal2:#9AA4B8;
+  --d-bar:#34D399;
   --d-sh:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.35);
-  --d-node-sh:drop-shadow(0 2px 6px rgba(0,0,0,.35));
   --d-drawer-sh:-14px 0 40px rgba(0,0,0,.45);
   --d-scrim:rgba(0,0,0,.45);
 }
@@ -952,8 +964,11 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
   font:600 12px var(--f-ui);color:var(--dim);transition:border-color .15s,color .15s}
 .fv-tbtn:hover{border-color:var(--line2);color:var(--fg)}
 .fv-tbtn svg{width:14px;height:14px}
-.fv-drawing h1.fv-title{font:700 30px/1.16 var(--f-ui);letter-spacing:-.4px;margin:14px 0 8px;
-  max-width:34ch;text-wrap:balance;color:var(--fg)}
+.fv-drawing h1.fv-title{font:800 30px/1.16 var(--f-ui);letter-spacing:-.5px;margin:14px 0 8px;
+  max-width:34ch;text-wrap:balance;color:var(--fg);position:relative;padding-left:20px}
+/* the title's bar: one stroke of colour that says "a drawing starts here" */
+.fv-drawing h1.fv-title::before{content:"";position:absolute;left:0;top:.12em;bottom:.12em;width:7px;
+  border-radius:4px;background:var(--d-bar)}
 .fv-lede{margin:0;max-width:68ch;color:var(--dim);font:15.5px/1.55 var(--f-body);text-wrap:pretty}
 
 /* figure mode: a caption, not a page header */
@@ -988,8 +1003,8 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 .fv-stage{position:relative;background:var(--paper);border:1px solid var(--line);
   border-radius:calc(var(--r) + 4px);box-shadow:var(--d-sh);overflow:hidden}
 .fv-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
-.fv-grid{background-image:radial-gradient(color-mix(in srgb,var(--line) 88%,var(--paper)) 1px,transparent 1.2px);
-  background-size:18px 18px;background-position:9px 9px}
+/* the canvas is plain paper: the zones are dotted now, and a dotted ground would fight them */
+.fv-grid{background:none}
 .fv-map,.fv-seq{display:block;width:100%;height:auto;min-width:760px;user-select:none;-webkit-user-select:none}
 .fv-wrap{position:relative;transition:transform .32s var(--d-ease),opacity .32s var(--d-ease)}
 .fv-wrap.zoom-out{opacity:0;transform:scale(1.35)}
@@ -1059,80 +1074,86 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
   display:grid;grid-template-columns:44px 1fr;gap:6px 10px;align-items:center;width:250px}
 .fv-key svg{width:44px;height:14px;overflow:visible}
 
-/* ── SVG: zones, boxes, connections ───────────────────────────────────────── */
-.fv-drawing .zone rect{fill:color-mix(in srgb,var(--z) 5%,transparent);stroke:color-mix(in srgb,var(--z) 42%,transparent);
-  stroke-width:1.3;stroke-dasharray:5 5}
-.fv-drawing .zone text{fill:var(--z);font:700 11px var(--f-ui);letter-spacing:.4px}
-.fv-drawing .z-neutral{--z:var(--dim2)} .fv-drawing .z-sync{--z:var(--f1)} .fv-drawing .z-async{--z:var(--stream)}
+/* ── SVG: zones, boxes, connections ─────────────────────────────────────────
+      Outlined and flat: a box is a pale fill inside a 2px outline of its kind,
+      with an illustrated icon in ink; a zone is a dotted container with a solid
+      tag; a connection is ink, ending in an open chevron. No shadows anywhere. */
+.fv-drawing .zone .zbox{fill:color-mix(in srgb,var(--z) 6%,transparent);stroke:color-mix(in srgb,var(--z) 62%,transparent);
+  stroke-width:2;stroke-dasharray:.1 6;stroke-linecap:round}
+.fv-drawing .zone .ztag{fill:var(--zt,var(--z))}
+.fv-drawing .zone text{fill:var(--paper);font:750 11px var(--f-ui);letter-spacing:.3px;dominant-baseline:central}
+.fv-drawing .z-neutral{--z:var(--dim2);--zt:var(--fg)} .fv-drawing .z-sync{--z:var(--f1)} .fv-drawing .z-async{--z:var(--stream)}
 .fv-drawing .z-ext{--z:var(--ext)} .fv-drawing .z-data{--z:var(--data)} .fv-drawing .z-svc{--z:var(--service)}
 
-.k-client{--k:var(--client);--k-bg:var(--client-bg);--k-bd:var(--client-bd)}
-.k-edge{--k:var(--edge);--k-bg:var(--edge-bg);--k-bd:var(--edge-bd)}
-.k-service{--k:var(--service);--k-bg:var(--service-bg);--k-bd:var(--service-bd)}
-.k-data{--k:var(--data);--k-bg:var(--data-bg);--k-bd:var(--data-bd)}
-.k-stream{--k:var(--stream);--k-bg:var(--stream-bg);--k-bd:var(--stream-bd)}
-.k-external{--k:var(--ext);--k-bg:var(--ext-bg);--k-bd:var(--ext-bd)}
+.k-client{--k:var(--client);--k-bg:var(--client-bg);--k-bd:var(--client-bd);--i1:var(--client);--i2:var(--client-p);--i3:var(--client-l)}
+.k-edge{--k:var(--edge);--k-bg:var(--edge-bg);--k-bd:var(--edge-bd);--i1:var(--edge);--i2:var(--edge-p);--i3:var(--edge-l)}
+.k-service{--k:var(--service);--k-bg:var(--service-bg);--k-bd:var(--service-bd);--i1:var(--service);--i2:var(--service-p);--i3:var(--service-l)}
+.k-data{--k:var(--data);--k-bg:var(--data-bg);--k-bd:var(--data-bd);--i1:var(--data);--i2:var(--data-p);--i3:var(--data-l)}
+.k-stream{--k:var(--stream);--k-bg:var(--stream-bg);--k-bd:var(--stream-bd);--i1:var(--stream);--i2:var(--stream-p);--i3:var(--stream-l)}
+.k-external{--k:var(--ext);--k-bg:var(--ext-bg);--k-bd:var(--ext-bd);--i1:var(--ext);--i2:var(--ext-p);--i3:var(--ext-l)}
 /* an adversary: never ours, so never drawn like ours — red, with a broken edge */
-.k-threat{--k:var(--threat);--k-bg:var(--threat-bg);--k-bd:var(--threat-bd)}
-.fv-drawing .node.k-threat .shape{stroke-dasharray:6 3}
+.k-threat{--k:var(--threat);--k-bg:var(--threat-bg);--k-bd:var(--threat-bd);--i1:var(--threat);--i2:var(--threat-p);--i3:var(--threat-l)}
+.fv-drawing .node.k-threat .shape{stroke-dasharray:7 4}
 
 .fv-drawing .node{cursor:pointer;transition:opacity .2s var(--d-ease)}
-.fv-drawing .node .shape{fill:var(--k-bg);stroke:var(--k-bd);stroke-width:1.3;filter:var(--d-node-sh);
-  transition:stroke .15s,stroke-width .15s}
-.fv-drawing .node .tile{fill:var(--k)}
-.fv-drawing .node .ico{color:var(--on-tint)}
-.fv-drawing .node .lbl{fill:var(--fg);font:650 13px var(--f-ui);letter-spacing:-.1px}
-.fv-drawing .node .tech{fill:var(--dim2);font:500 10.5px var(--f-ui);opacity:0;transition:opacity .2s}
+.fv-drawing .node .shape{fill:var(--k-bg);stroke:var(--k);stroke-width:2;transition:stroke .15s,stroke-width .15s}
+.fv-drawing .node .ico{color:var(--i-ink)}
+.fv-drawing .node .lbl{fill:var(--fg);font:700 13px var(--f-ui);letter-spacing:-.15px}
+.fv-drawing .node .tech{fill:var(--dim);font:550 10.5px var(--f-ui);opacity:0;transition:opacity .2s}
 .fv-drawing .node .lblg{transition:transform .22s var(--d-ease)}
+.fv-drawing .node .cnt{transition:transform .22s var(--d-ease)}
+.fv-drawing svg.show-labels .node.has-tech .cnt{transform:translateX(var(--sx,0px))}
 .fv-drawing svg.show-labels .node .tech{opacity:1}
 .fv-drawing svg.show-labels .node.has-tech .lblg{transform:translateY(-6px)}
-.fv-drawing .node:hover .shape,.fv-drawing .node.sel .shape,.fv-drawing .node:focus-visible .shape{stroke:var(--k);stroke-width:2}
+.fv-drawing .node:hover .shape,.fv-drawing .node.sel .shape,.fv-drawing .node:focus-visible .shape{stroke-width:3}
 .fv-drawing .node:focus{outline:none}
-.fv-drawing .node.sel .shape{stroke-width:2.4}
-.fv-drawing .node.land .shape{stroke:var(--flow);stroke-width:2.6}
-.fv-drawing .node.ghost .shape{fill:none;stroke:var(--line2);stroke-dasharray:4 4;filter:none}
-.fv-drawing .node.ghost .tile{fill:var(--panel2)}
-.fv-drawing .node.ghost .ico{color:var(--dim2)}
+.fv-drawing .node.sel .shape{stroke-width:3.4}
+.fv-drawing .node.land .shape{stroke:var(--flow);stroke-width:3.4}
+.fv-drawing .node.ghost{--i1:var(--ext);--i2:var(--ext-p);--i3:var(--ext-l)}
+.fv-drawing .node.ghost .shape{fill:none;stroke:var(--line2);stroke-dasharray:5 5}
+.fv-drawing .node.ghost .ico{opacity:.6}
 .fv-drawing .node.ghost .lbl{fill:var(--dim)}
 .fv-drawing .node .seg{cursor:zoom-in}
-.fv-drawing .node .seg circle{fill:var(--paper);stroke:var(--k);stroke-width:1.4}
-.fv-drawing .node .seg path{stroke:var(--k);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.fv-drawing .node .seg circle{fill:var(--paper);stroke:var(--k);stroke-width:2}
+.fv-drawing .node .seg path{stroke:var(--k);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .fv-drawing .node .seg:hover circle{fill:var(--k)}
 .fv-drawing .node .seg:hover path{stroke:var(--on-tint)}
 
-.fv-drawing .edge .line{fill:none;stroke:var(--line2);stroke-width:1.6;stroke-linecap:round;
+.fv-drawing .edge .line{fill:none;stroke:var(--line2);stroke-width:1.8;stroke-linecap:round;
   transition:stroke .2s,stroke-width .2s,opacity .2s}
 .fv-drawing .edge.m-sync .line{stroke-dasharray:7 6}
-.fv-drawing .edge.m-async .line{stroke-dasharray:.1 7;stroke-width:2.6}
-.fv-drawing .edge .head{fill:var(--line2);transition:fill .2s}
+.fv-drawing .edge.m-async .line{stroke-dasharray:.1 7;stroke-width:2.8}
+.fv-drawing .edge .head{fill:none;stroke:var(--line2);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  transition:stroke .2s}
 .fv-drawing .edgeset .hit{fill:none;stroke:transparent;stroke-width:16;cursor:pointer;pointer-events:stroke}
 .fv-drawing .edge{transition:opacity .2s var(--d-ease)}
-.fv-drawing .edge.live .line{stroke:var(--flow);stroke-width:2}
-.fv-drawing .edge.live.m-async .line{stroke-width:3}
-.fv-drawing .edge.live .head{fill:var(--flow)}
+.fv-drawing .edge.live .line{stroke:var(--flow);stroke-width:2.2}
+.fv-drawing .edge.live.m-async .line{stroke-width:3.2}
+.fv-drawing .edge.live .head{stroke:var(--flow);stroke-width:2.3}
 .fv-drawing .edge.live.m-sync .line{animation:fv-march-s .9s linear infinite}
 .fv-drawing .edge.live.m-async .line{animation:fv-march-a 1.3s linear infinite}
 .fv-drawing .edge.live.rev .line{animation-direction:reverse}
 .fv-drawing .edge.failing .line{stroke:var(--bad)}
-.fv-drawing .edge.failing .head{fill:var(--bad)}
+.fv-drawing .edge.failing .head{stroke:var(--bad)}
 @keyframes fv-march-s{to{stroke-dashoffset:-13}}
 @keyframes fv-march-a{to{stroke-dashoffset:-7.1}}
-.fv-drawing .edgeset.hov .edge .line,.fv-drawing .edgeset.sel .edge .line{stroke-width:2.8}
+.fv-drawing .edgeset.hov .edge .line,.fv-drawing .edgeset.sel .edge .line{stroke-width:3}
 
 .fv-drawing .chiplbl{opacity:0;transition:opacity .18s;pointer-events:none}
-.fv-drawing .chiplbl rect{fill:var(--paper);stroke:var(--line2);stroke-width:1}
-.fv-drawing .chiplbl text{fill:var(--dim);font:600 10.5px var(--f-mono)}
+.fv-drawing .chiplbl rect{fill:var(--paper);stroke:var(--line2);stroke-width:1.4}
+.fv-drawing .chiplbl text{fill:var(--fg);font:650 10.5px var(--f-mono)}
 .fv-drawing svg.show-labels .chiplbl,.fv-drawing svg.show-times .chiplbl{opacity:1}
 .fv-drawing .edgeset.hov .chiplbl,.fv-drawing .edgeset.sel .chiplbl,.fv-drawing svg.focus .edgeset.near .chiplbl{opacity:1}
 .fv-drawing svg.focus .edgeset:not(.near) .chiplbl,.fv-drawing svg.stepping .edgeset:not(.hot) .chiplbl{opacity:0}
 
+/* a step number: a filled disc in the flow's colour, ringed in ink */
 .fv-drawing .stepno{cursor:pointer}
-.fv-drawing .stepno circle{fill:var(--flow);stroke:var(--paper);stroke-width:2.5}
-.fv-drawing .stepno text{fill:var(--on-tint);font:800 10.5px var(--f-ui);letter-spacing:0;text-anchor:middle;
+.fv-drawing .stepno circle{fill:var(--flow);stroke:var(--i-ink);stroke-width:1.8;transform-box:fill-box;transform-origin:center}
+.fv-drawing .stepno text{fill:var(--on-tint);font:800 11px var(--f-ui);letter-spacing:0;text-anchor:middle;
   dominant-baseline:central;pointer-events:none}
 .fv-drawing .stepno.fail circle{fill:var(--bad)}
 .fv-drawing .stepno.now circle{animation:fv-beat 1.2s var(--d-ease) infinite}
-@keyframes fv-beat{0%,100%{stroke-width:2.5}50%{stroke-width:5.5}}
+@keyframes fv-beat{0%,100%{transform:none}50%{transform:scale(1.22)}}
 
 /* focus + context: a hover or a step dims everything it does not touch */
 .fv-drawing svg.focus .node:not(.near),.fv-drawing svg.focus .edge:not(.near),.fv-drawing svg.focus .stepno:not(.near){opacity:.2}
@@ -1155,17 +1176,17 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 @keyframes fv-xin{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
 
 /* ── sequence view ────────────────────────────────────────────────────────── */
-.fv-seq .life{stroke:var(--line2);stroke-width:1.2;stroke-dasharray:3 5}
+.fv-seq .life{stroke:var(--dim2);stroke-width:2;stroke-dasharray:.1 5;stroke-linecap:round}
 .fv-seq .band{fill:transparent}
 .fv-seq .band.now{fill:color-mix(in srgb,var(--flow) 9%,transparent)}
-.fv-seq .msg .line{fill:none;stroke:var(--dim);stroke-width:1.6}
+.fv-seq .msg .line{fill:none;stroke:var(--fg);stroke-width:1.9;stroke-linecap:round}
 .fv-seq .msg.response .line{stroke-dasharray:6 5}
 .fv-seq .msg.event .line{stroke-dasharray:.1 6;stroke-width:2.6;stroke-linecap:round}
-.fv-seq .msg .head{fill:var(--dim)}
-.fv-seq .msg.fail .line{stroke:var(--bad)} .fv-seq .msg.fail .head{fill:var(--bad)}
-.fv-seq .msg text{fill:var(--dim);font:600 11px var(--f-mono);text-anchor:middle}
-.fv-seq .msg.now .line{stroke:var(--flow);stroke-width:2.4}
-.fv-seq .msg.now .head{fill:var(--flow)}
+.fv-seq .msg .head{fill:none;stroke:var(--fg);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fv-seq .msg.fail .line{stroke:var(--bad)} .fv-seq .msg.fail .head{stroke:var(--bad)}
+.fv-seq .msg text{fill:var(--fg);font:650 11.5px var(--f-ui);text-anchor:middle}
+.fv-seq .msg.now .line{stroke:var(--flow);stroke-width:2.6}
+.fv-seq .msg.now .head{stroke:var(--flow)}
 .fv-seq .msg.now text{fill:var(--fg)}
 .fv-seq .msg.now.fail .line{stroke:var(--bad)}
 
@@ -1198,6 +1219,9 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 .fv-drawer .dr-ico{width:40px;height:40px;border-radius:11px;background:var(--k,var(--f1));color:var(--on-tint);
   display:grid;place-items:center;flex:none}
 .fv-drawer .dr-ico svg{width:22px;height:22px}
+/* a box's drawer shows its icon the way the canvas does: ink on its kind */
+.fv-drawer .dr-ico.illus{background:var(--k-bg);border:2px solid var(--k);color:var(--i-ink)}
+.fv-drawer .dr-ico.illus svg{width:30px;height:30px}
 .fv-drawer .dr-ico b{font:800 17px var(--f-ui)}
 .fv-drawer .dr-kind{margin:0;font:700 10px var(--f-ui);letter-spacing:1px;text-transform:uppercase;color:var(--k,var(--dim2))}
 .fv-drawer h2{margin:1px 0 0;font:700 18px/1.2 var(--f-ui);color:var(--fg)}
@@ -1262,22 +1286,22 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 .pill .fv-motion[aria-pressed="false"]{color:var(--dim2)}
 
 /* ── no flows: every connection drifts in its own direction, in ink ────────── */
-.fv-drawing .edge.ink .line{stroke:var(--dim);stroke-width:1.8}
+.fv-drawing .edge.ink .line{stroke:var(--fg);stroke-width:1.9}
 .fv-drawing .edge.ink.m-async .line{stroke-width:2.8}
-.fv-drawing .edge.ink .head{fill:var(--dim)}
+.fv-drawing .edge.ink .head{stroke:var(--fg)}
 .fv-drawing .edge.ink.m-sync .line{animation:fv-march-s 1.6s linear infinite}
 .fv-drawing .edge.ink.m-async .line{animation:fv-march-a 2.2s linear infinite}
 
 /* ── results: passed is green and keeps moving; failed is red, rejected amber,
       and both stand still with their marker where the call stopped ───────── */
 .fv-drawing .edge.r-pass .line{stroke:var(--ok);stroke-width:2.2}
-.fv-drawing .edge.r-pass .head{fill:var(--ok)}
+.fv-drawing .edge.r-pass .head{stroke:var(--ok)}
 .fv-drawing .edge.r-pass:not(.live):not(.ink).m-sync .line{animation:fv-march-s 1.6s linear infinite}
 .fv-drawing .edge.r-pass:not(.live):not(.ink).m-async .line{animation:fv-march-a 2.2s linear infinite}
 .fv-drawing .edge.r-fail .line{stroke:var(--bad);stroke-width:2.2;animation:none!important}
-.fv-drawing .edge.r-fail .head{fill:var(--bad)}
+.fv-drawing .edge.r-fail .head{stroke:var(--bad)}
 .fv-drawing .edge.r-error .line{stroke:var(--warn);stroke-width:2.2;animation:none!important}
-.fv-drawing .edge.r-error .head{fill:var(--warn)}
+.fv-drawing .edge.r-error .head{stroke:var(--warn)}
 .fv-drawing svg.stepping .edge.hot.r-pass .line{stroke:var(--ok)}
 .fv-drawing svg.stepping .edge.hot.r-fail .line{stroke:var(--bad)}
 .fv-drawing svg.stepping .edge.hot.r-error .line{stroke:var(--warn)}
@@ -1301,9 +1325,9 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 .fv-drawing .nres.r-pass .rbg{fill:var(--ok)}
 .fv-drawing .nres.r-fail .rbg{fill:var(--bad)}
 .fv-drawing .nres.r-error .rbg{fill:var(--warn)}
-.fv-drawing .node.r-pass .shape{stroke:var(--ok);stroke-width:2}
-.fv-drawing .node.r-fail .shape{stroke:var(--bad);stroke-width:2}
-.fv-drawing .node.r-error .shape{stroke:var(--warn);stroke-width:2}
+.fv-drawing .node.r-pass .shape{stroke:var(--ok);stroke-width:2.8}
+.fv-drawing .node.r-fail .shape{stroke:var(--bad);stroke-width:2.8}
+.fv-drawing .node.r-error .shape{stroke:var(--warn);stroke-width:2.8}
 
 /* a box's status — what the change being explained did to it — is an ink tag on its foot: no hue,
    so it never reads as a kind tint or a result, and new / changed / removed differ in grey print too */
@@ -1344,9 +1368,9 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 .fv-res.r-fail,.fv-peek .res.r-fail{color:var(--bad)}
 .fv-res.r-error,.fv-peek .res.r-error{color:var(--warn)}
 .fv-peek .res{margin:0 0 4px;font:700 12px var(--f-ui)}
-.fv-seq .msg.r-pass .line{stroke:var(--ok)} .fv-seq .msg.r-pass .head{fill:var(--ok)}
+.fv-seq .msg.r-pass .line{stroke:var(--ok)} .fv-seq .msg.r-pass .head{stroke:var(--ok)}
 .fv-seq .msg.error .line{stroke:var(--warn);stroke-dasharray:none;stroke-width:2.2}
-.fv-seq .msg.now.r-pass .line{stroke:var(--ok)} .fv-seq .msg.now.r-pass .head{fill:var(--ok)}
+.fv-seq .msg.now.r-pass .line{stroke:var(--ok)} .fv-seq .msg.now.r-pass .head{stroke:var(--ok)}
 .fv-seq .msg.now.error .line{stroke:var(--warn)}
 
 /* ── the embed: a drawing pasted into a wiki page ─────────────────────────────
@@ -2028,55 +2052,84 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
 </details>
 
 <div class="foot">
-<span class="v">FLOW-VIZ v3.5.0</span> · doc <code>deploy-proto</code> · template <code>report@3.5.0</code> · built 2026-10-18 · sha <code>7848a3b</code> · state <code>deploy-proto.flow.json</code>
-<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.5.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
+<span class="v">FLOW-VIZ v3.6.0</span> · doc <code>deploy-proto</code> · template <code>report@3.6.0</code> · built 2026-10-18 · sha <code>75068a2+dirty</code> · state <code>deploy-proto.flow.json</code>
+<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.6.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
 </div>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
-<!-- FLOW_VIZ icon sprite. Stroke icons on a 24 grid; draw.js references them as #i-<name>.
-     Components (for node "icon"): user devices browser mobile gateway lb cdn cloud globe server
-     service function worker relay api check box db table cache storage search queue bell mail card
-     bank lock key clock file json folder terminal agent chart gear git.
-     UI glyphs: play pause replay left right back sun moon auto motion info copy x zoom. -->
-<symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.8"/><path d="M4.5 20.5c.8-3.9 3.8-6.2 7.5-6.2s6.7 2.3 7.5 6.2"/></g></symbol>
-<symbol id="i-devices" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="13" height="9.5" rx="1.5"/><path d="M2.5 14 1 17.5h15.5L15 14"/><rect x="17.5" y="8.5" width="5" height="11" rx="1.4"/><path d="M19.8 17.2h.4"/></g></symbol>
-<symbol id="i-browser" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2.2"/><path d="M2.5 8.5h19M5.8 6.3h.2M8.3 6.3h.2"/></g></symbol>
-<symbol id="i-mobile" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.2"/><path d="M10.5 18.3h3"/></g></symbol>
-<symbol id="i-gateway" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l7.5 3v5.4c0 4.6-3.2 8.3-7.5 10-4.3-1.7-7.5-5.4-7.5-10V5.8z"/><path d="M8.6 12.1l2.4 2.4 4.6-4.8"/></g></symbol>
-<symbol id="i-lb" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.3"/><circle cx="19" cy="5.5" r="2.3"/><circle cx="19" cy="12" r="2.3"/><circle cx="19" cy="18.5" r="2.3"/><path d="M7.3 12h9.4M7.1 11 16.8 6.4M7.1 13l9.7 4.6"/></g></symbol>
-<symbol id="i-cdn" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15.5a4 4 0 0 1-.4-8 5.5 5.5 0 0 1 10.6 1.3 3.4 3.4 0 0 1 .3 6.7z"/><path d="M8 19.5h.2M12 19.5h.2M16 19.5h.2"/></g></symbol>
-<symbol id="i-cloud" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5a4.5 4.5 0 0 1-.5-9 6 6 0 0 1 11.6 1.4 3.8 3.8 0 0 1 .4 7.6z"/></g></symbol>
-<symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z"/></g></symbol>
-<symbol id="i-server" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="7" rx="1.8"/><rect x="3.5" y="13" width="17" height="7" rx="1.8"/><path d="M7 7.5h.2M7 16.5h.2M11 7.5h6M11 16.5h6"/></g></symbol>
-<symbol id="i-service" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l8 4.4v9.6l-8 4.4-8-4.4V7.2z"/><path d="M4 7.2l8 4.4 8-4.4M12 11.6v9.6"/></g></symbol>
-<symbol id="i-function" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 4.5h2.3c.9 0 1.6.5 1.9 1.3l5.6 13.7h2.2"/><path d="M11 10.6 6.2 19.5"/></g></symbol>
-<symbol id="i-worker" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21"/></g></symbol>
-<symbol id="i-relay" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 0 1-13 5.1M4.5 12a7.5 7.5 0 0 1 13-5.1"/><path d="M17.8 3.2v3.9h-3.9M6.2 20.8v-3.9h3.9"/></g></symbol>
-<symbol id="i-api" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 7.5 4 12l4.5 4.5M15.5 7.5 20 12l-4.5 4.5M13.4 5.5l-2.8 13"/></g></symbol>
-<symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4.5" width="14" height="16.5" rx="2"/><path d="M9 4.5V3.2h6v1.3M8.8 13l2.3 2.3 4.2-4.5"/></g></symbol>
-<symbol id="i-box" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9M7.8 5.3l8.4 4.6"/></g></symbol>
-<symbol id="i-db" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.8" rx="7.5" ry="2.8"/><path d="M4.5 5.8v12.4c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8V5.8"/><path d="M4.5 12c0 1.55 3.36 2.8 7.5 2.8s7.5-1.25 7.5-2.8"/></g></symbol>
-<symbol id="i-table" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M3 9.5h18M3 14.5h18M9.5 9.5v10"/></g></symbol>
-<symbol id="i-cache" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 2.5 5 13.5h6.2l-1.2 8 8.2-11h-6.2z"/></g></symbol>
-<symbol id="i-storage" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6.5" rx="7.5" ry="2.4"/><path d="M4.5 6.5l1.6 12.2a2 2 0 0 0 2 1.8h7.8a2 2 0 0 0 2-1.8L19.5 6.5"/></g></symbol>
-<symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/></g></symbol>
-<symbol id="i-queue" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="10" rx="2.2"/><path d="M7.3 7v10M12 7v10M16.7 7v10"/></g></symbol>
-<symbol id="i-bell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 1.8h-15z"/><path d="M10 20.6a2.1 2.1 0 0 0 4 0"/></g></symbol>
-<symbol id="i-mail" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.8 7 12 13l8.2-6"/></g></symbol>
-<symbol id="i-card" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.2"/><path d="M2.5 9.8h19M6 15h4"/></g></symbol>
-<symbol id="i-bank" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.2 12 4l9 5.2"/><path d="M5 10v7.5M9.7 10v7.5M14.3 10v7.5M19 10v7.5M3 20h18"/></g></symbol>
-<symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2 2.9 17.5A2 2 0 0 0 4.6 20.5h14.8a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4.5M12 17.2v.1"/></g></symbol>
-<symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7M12 14.5v2.5"/></g></symbol>
-<symbol id="i-key" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15.5" r="4"/><path d="M11 12.6 19.5 4M16.5 7l2.5 2.5M14.3 9.2l2 2"/></g></symbol>
-<symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.8"/><path d="M12 7.2V12l3.2 2"/></g></symbol>
-<symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h7.2l4.8 4.8v11.7a1.5 1.5 0 0 1-1.5 1.5h-10.5A1.5 1.5 0 0 1 5 19.5v-15A1.5 1.5 0 0 1 6.5 3z"/><path d="M13.5 3v5h5M8.5 13h7M8.5 16.5h5"/></g></symbol>
-<symbol id="i-json" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h7.2l4.8 4.8v11.7a1.5 1.5 0 0 1-1.5 1.5h-10.5A1.5 1.5 0 0 1 5 19.5v-15A1.5 1.5 0 0 1 6.5 3z"/><path d="M13.5 3v5h5"/><path d="M10.3 11.3 8.9 12v1.4l-.9.6.9.6V16l1.4.7M13.7 11.3l1.4.7v1.4l.9.6-.9.6V16l-1.4.7"/></g></symbol>
-<symbol id="i-folder" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4.3l2 2.2h8.7A1.5 1.5 0 0 1 21 9.7v8.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></g></symbol>
-<symbol id="i-terminal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2.2"/><path d="M6.5 9.5l3 2.5-3 2.5M12 15h5"/></g></symbol>
-<symbol id="i-agent" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="8" width="15" height="11.5" rx="3"/><path d="M12 8V4.5M10.5 4.5h3M9.5 16.5h5M2.5 12.5v3M21.5 12.5v3"/><circle cx="9" cy="12.8" r="1"/><circle cx="15" cy="12.8" r="1"/></g></symbol>
-<symbol id="i-chart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M7.5 15.5 11 11.5l3 2.5 5-6"/></g></symbol>
-<symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.8"/><circle cx="12" cy="12" r="6.6"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M5.6 18.4l1.7-1.7M16.7 7.3l1.7-1.7"/></g></symbol>
-<symbol id="i-git" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="5.5" r="2.2"/><circle cx="6.5" cy="18.5" r="2.2"/><circle cx="17.5" cy="8.5" r="2.2"/><path d="M6.5 7.7v8.6M17.5 10.7c0 3.6-4.2 3.8-9.3 6"/></g></symbol>
-<symbol id="i-zoom" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"/></g></symbol>
+<!-- FLOW_VIZ icon sprite.
+     Components (node "icon"): drawn on a 48 grid, ink outlines on flat fills. The ink is currentColor;
+     the fills are paints the box sets: --i1 deep, --i2 main, --i3 light (from its kind), and the fixed
+     --iw white, --ion green, --igold gold, --ired coral, --imetal/--imetal2 hardware, and --iline for a stroke
+     that stands alone (ink on light paper, light on dark). draw.css owns them all. A new icon follows suit:
+     a 48 viewBox, one <g> carrying the ink stroke (2.5, round), fills as style="fill:var(--i2)" and the like.
+     user users desktop laptop mobile devices browser terminal code gateway lb cdn cloud globe firewall server service function worker gear chip relay api agent llm spark db index table cache storage search queue
+     box cubes vector bell mail chat card bank lock key shield cert alert clock hourglass calendar file docs json folder book checklist check chart pulse eye tool plugin workflow git target bulb.
+     UI glyphs (24 grid, currentColor stroke): play pause replay left right back sun moon auto motion info copy x zoom. -->
+<symbol id="i-user" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 43c0-9.6 7.4-15.5 16.5-15.5S40.5 33.4 40.5 43z" style="fill:var(--i2)"/><path stroke-width="2.2" d="M19 28.6l5 5.4 5-5.4"/><circle cx="24" cy="15.5" r="9" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-users" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 37c0-7.4 5-12 11.5-12S46 29.6 46 37z" style="fill:var(--i3)"/><circle cx="34.5" cy="15" r="6.8" style="fill:var(--i3)"/><path d="M2.5 43c0-9 6.4-14.5 14.5-14.5S31.5 34 31.5 43z" style="fill:var(--i2)"/><circle cx="17" cy="18.5" r="8" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-desktop" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 33.5h8l1.6 6.5H18.4z" style="fill:var(--imetal)"/><rect x="12.5" y="39" width="23" height="4.5" rx="2.2" stroke-width="2.2" style="fill:var(--imetal)"/><rect x="4" y="6" width="40" height="28" rx="3.5" style="fill:var(--imetal)"/><rect x="8" y="10" width="32" height="20" rx="1.5" stroke-width="2" style="fill:var(--i2)"/><path stroke-width="2.8" d="M13 15.5l4.5 4-4.5 4M21.5 24.5h6" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-laptop" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8" width="31" height="23" rx="3" style="fill:var(--imetal)"/><rect x="12" y="11.5" width="24" height="16" rx="1" stroke-width="2" style="fill:var(--i2)"/><path stroke-width="2.6" d="M16 16h9M16 21h5" style="stroke:var(--iw)"/><path d="M3.5 31h41v2.5a4.5 4.5 0 0 1-4.5 4.5H8a4.5 4.5 0 0 1-4.5-4.5z" style="fill:var(--imetal2)"/><path stroke-width="2" d="M19.5 31v1a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5v-1"/></g></symbol>
+<symbol id="i-mobile" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="12.5" y="3.5" width="23" height="41" rx="5" style="fill:var(--imetal)"/><rect x="16" y="9" width="16" height="27.5" rx="1.5" stroke-width="2" style="fill:var(--i2)"/><path stroke-width="2.6" d="M19.5 15h9M19.5 20.5h5" style="stroke:var(--iw)"/><path stroke-width="2.6" d="M21.5 40.5h5" style="stroke:var(--imetal2)"/></g></symbol>
+<symbol id="i-devices" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="8" width="28" height="20" rx="2.5" style="fill:var(--imetal)"/><rect x="8" y="11.5" width="21" height="13" rx="1" stroke-width="2" style="fill:var(--i2)"/><path d="M1.5 28h34v1.5a3.5 3.5 0 0 1-3.5 3.5H5a3.5 3.5 0 0 1-3.5-3.5z" style="fill:var(--imetal2)"/><rect x="30.5" y="15.5" width="15" height="27" rx="3.5" style="fill:var(--imetal)"/><rect x="33.5" y="19.5" width="9" height="16" rx="1" stroke-width="2" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-browser" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="40" height="34" rx="4" style="fill:var(--iw)"/><path d="M4 11a4 4 0 0 1 4-4h32a4 4 0 0 1 4 4v5H4z" style="fill:var(--i2)"/><circle cx="9.5" cy="11.5" r="1.6" stroke-width="1.6" style="fill:var(--iw)"/><circle cx="14.5" cy="11.5" r="1.6" stroke-width="1.6" style="fill:var(--iw)"/><rect x="9" y="21" width="12" height="14" rx="1.5" stroke-width="2" style="fill:var(--i3)"/><path stroke-width="2.6" d="M26 23h12M26 28.5h12M26 34h7"/></g></symbol>
+<symbol id="i-terminal" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="40" height="34" rx="4" style="fill:var(--imetal)"/><path d="M4 11a4 4 0 0 1 4-4h32a4 4 0 0 1 4 4v4H4z" style="fill:var(--imetal2)"/><circle cx="9.5" cy="11" r="1.5" stroke-width="1.5" style="fill:var(--iw)"/><circle cx="14.5" cy="11" r="1.5" stroke-width="1.5" style="fill:var(--iw)"/><path stroke-width="3.2" d="M11 22l5.5 4.5-5.5 4.5" style="stroke:var(--i2)"/><path stroke-width="3.2" d="M21 33.5h9" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-code" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="40" height="34" rx="4" style="fill:var(--iw)"/><path d="M4 11a4 4 0 0 1 4-4h32a4 4 0 0 1 4 4v4H4z" style="fill:var(--i2)"/><circle cx="9.5" cy="11" r="1.5" stroke-width="1.5" style="fill:var(--iw)"/><circle cx="14.5" cy="11" r="1.5" stroke-width="1.5" style="fill:var(--iw)"/><path stroke-width="3" d="M17.5 21.5l-6 6 6 6M30.5 21.5l6 6-6 6"/><path stroke-width="3" d="M26.5 20l-5 15" style="stroke:var(--i1)"/></g></symbol>
+<symbol id="i-gateway" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="13" width="8.5" height="29" rx="2" style="fill:var(--i2)"/><rect x="32.5" y="13" width="8.5" height="29" rx="2" style="fill:var(--i2)"/><rect x="3.5" y="6" width="41" height="8.5" rx="2.5" style="fill:var(--i1)"/><path d="M15.5 24.5h7.5V19l9.5 9-9.5 9v-5.5h-7.5z" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-lb" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 24h21M14 24L35 10M14 24l21 14" style="stroke:var(--iline)"/><circle cx="11" cy="24" r="7.5" style="fill:var(--i2)"/><circle cx="11" cy="24" r="2.6" stroke-width="2" style="fill:var(--iw)"/><circle cx="38.5" cy="9.5" r="5" style="fill:var(--i3)"/><circle cx="38.5" cy="24" r="5" style="fill:var(--i3)"/><circle cx="38.5" cy="38.5" r="5" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-cdn" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="2.4" d="M13 36v4.5M24 36v4.5M35 36v4.5" style="stroke:var(--iline)"/><circle cx="13" cy="42" r="2.8" stroke-width="2" style="fill:var(--i3)"/><circle cx="24" cy="42" r="2.8" stroke-width="2" style="fill:var(--i3)"/><circle cx="35" cy="42" r="2.8" stroke-width="2" style="fill:var(--i3)"/><g transform="translate(0 -4)"><path d="M14 37a8.5 8.5 0 0 1-1.6-16.85A12 12 0 0 1 35.3 16.9 10 10 0 0 1 34 37z" style="fill:var(--i2)"/><path stroke-width="2.6" d="M16 27.5h16M19 32h10" style="stroke:var(--iw)"/></g></g></symbol>
+<symbol id="i-cloud" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0 1)"><path d="M14 37a8.5 8.5 0 0 1-1.6-16.85A12 12 0 0 1 35.3 16.9 10 10 0 0 1 34 37z" style="fill:var(--i3)"/><path stroke="none" d="M8.6 30.5a8.5 8.5 0 0 0 5.4 6.5h20a10 10 0 0 0 9.8-8z" style="fill:var(--i2)"/><path fill="none" d="M14 37a8.5 8.5 0 0 1-1.6-16.85A12 12 0 0 1 35.3 16.9 10 10 0 0 1 34 37z"/><path stroke-width="2.6" d="M17.5 19.5a7.5 7.5 0 0 1 5-3.4" style="stroke:var(--iw)"/></g></g></symbol>
+<symbol id="i-globe" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="18.5" style="fill:var(--i3)"/><path d="M24 5.5c5 5 7.5 11.2 7.5 18.5S29 37.5 24 42.5c-5-5-7.5-11.2-7.5-18.5S19 10.5 24 5.5z" style="fill:var(--i2)"/><path stroke-width="2.2" d="M5.5 24h37M8.5 14.5h31M8.5 33.5h31"/></g></symbol>
+<symbol id="i-firewall" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="40" height="31" rx="3" style="fill:var(--i2)"/><path stroke-width="2.2" d="M4 19.3h40M4 29.6h40M17 9v10.3M31 9v10.3M10 19.3v10.3M24 19.3v10.3M38 19.3v10.3M17 29.6V40M31 29.6V40"/><path stroke-width="2.2" d="M34 3.5c4.5 3 6.5 6 6.5 9.2a5.5 5.5 0 0 1-11 0c0-1.6.8-3.2 2-4.2.2 1.5 1 2.4 2.2 2.6-.6-2.6-.4-5 .3-7.6z" style="fill:var(--ired)"/></g></symbol>
+<symbol id="i-server" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="4.5" width="34" height="11.5" rx="3" style="fill:var(--i2)"/><rect x="7" y="18.25" width="34" height="11.5" rx="3" style="fill:var(--i2)"/><rect x="7" y="32" width="34" height="11.5" rx="3" style="fill:var(--i2)"/><circle cx="13.5" cy="10.25" r="2.3" stroke-width="2" style="fill:var(--ion)"/><circle cx="13.5" cy="24" r="2.3" stroke-width="2" style="fill:var(--ion)"/><circle cx="13.5" cy="37.75" r="2.3" stroke-width="2" style="fill:var(--ion)"/><path stroke-width="2.7" d="M25.5 8.4v0M30 8.4v0M34.5 8.4v0M25.5 12.1v0M30 12.1v0M34.5 12.1v0M25.5 22.15v0M30 22.15v0M34.5 22.15v0M25.5 25.85v0M30 25.85v0M34.5 25.85v0M25.5 35.9v0M30 35.9v0M34.5 35.9v0M25.5 39.6v0M30 39.6v0M34.5 39.6v0"/></g></symbol>
+<symbol id="i-service" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 5L40.45 14.5L24 24L7.55 14.5Z" style="fill:var(--i3)"/><path d="M7.55 14.5L24 24L24 43L7.55 33.5Z" style="fill:var(--i2)"/><path d="M24 24L40.45 14.5L40.45 33.5L24 43Z" style="fill:var(--i1)"/></g></symbol>
+<symbol id="i-function" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="38" height="38" rx="9" style="fill:var(--i2)"/><path stroke-width="3.6" d="M15.5 13h3.6c1.5 0 2.4.7 3 2.1l7.3 19.4h3.1M23.5 23L16 35" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-worker" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.53 7.77L17.06 3.62L20.94 3.62L21.47 7.77L24.33 8.81L27.4 5.97L30.37 8.47L28.11 11.98L29.63 14.62L33.81 14.42L34.48 18.24L30.49 19.48L29.96 22.48L33.29 25.01L31.35 28.37L27.49 26.75L25.16 28.71L26.09 32.79L22.43 34.11L20.52 30.4L17.48 30.4L15.57 34.11L11.91 32.79L12.84 28.71L10.51 26.75L6.65 28.37L4.71 25.01L8.04 22.48L7.51 19.48L3.52 18.24L4.19 14.42L8.37 14.62L9.89 11.98L7.63 8.47L10.6 5.97L13.67 8.81Z" style="fill:var(--i2)"/><circle cx="19" cy="19" r="5" style="fill:var(--iw)"/><path d="M32.44 27.29L32.81 24.14L36.19 24.14L36.56 27.29L38.85 28.39L41.55 26.72L43.66 29.36L41.42 31.61L41.99 34.1L44.98 35.16L44.23 38.45L41.07 38.11L39.49 40.1L40.52 43.1L37.47 44.57L35.77 41.89L33.23 41.89L31.53 44.57L28.48 43.1L29.51 40.1L27.93 38.11L24.77 38.45L24.02 35.16L27.01 34.1L27.58 31.61L25.34 29.36L27.45 26.72L30.15 28.39Z" style="fill:var(--i3)"/><circle cx="34.5" cy="34.5" r="3" style="fill:var(--iw)"/></g></symbol>
+<symbol id="i-gear" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.1 9.28L21.74 4.13L26.26 4.13L26.9 9.28L30.3 10.39L33.85 6.6L37.51 9.25L35 13.8L37.1 16.69L42.2 15.71L43.6 20.01L38.89 22.21L38.89 25.79L43.6 27.99L42.2 32.29L37.1 31.31L35 34.2L37.51 38.75L33.85 41.4L30.3 37.61L26.9 38.72L26.26 43.87L21.74 43.87L21.1 38.72L17.7 37.61L14.15 41.4L10.49 38.75L13 34.2L10.9 31.31L5.8 32.29L4.4 27.99L9.11 25.79L9.11 22.21L4.4 20.01L5.8 15.71L10.9 16.69L13 13.8L10.49 9.25L14.15 6.6L17.7 10.39Z" style="fill:var(--i2)"/><circle cx="24" cy="24" r="10" style="fill:var(--i3)"/><circle cx="24" cy="24" r="4.5" style="fill:var(--iw)"/></g></symbol>
+<symbol id="i-chip" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="2.6" d="M17 4v6M24 4v6M31 4v6M17 38v6M24 38v6M31 38v6M4 17h6M4 24h6M4 31h6M38 17h6M38 24h6M38 31h6" style="stroke:var(--iline)"/><rect x="10" y="10" width="28" height="28" rx="4" style="fill:var(--i2)"/><rect x="16.5" y="16.5" width="15" height="15" rx="2" style="fill:var(--i3)"/><path stroke-width="2.4" d="M21 21h6v6h-6z" stroke-linejoin="round" style="stroke:var(--i1)"/></g></symbol>
+<symbol id="i-relay" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11.5h24.5V5.5l13 9.5-13 9.5v-6H5z" style="fill:var(--i2)"/><path d="M43 29.5H18.5v-6l-13 9.5 13 9.5v-6H43z" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-api" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="2.6" d="M9.5 9.5l7 7M38.5 9.5l-7 7M9.5 38.5l7-7M38.5 38.5l-7-7" style="stroke:var(--iline)"/><circle cx="8" cy="8" r="4" style="fill:var(--i3)"/><circle cx="40" cy="8" r="4" style="fill:var(--i3)"/><circle cx="8" cy="40" r="4" style="fill:var(--i3)"/><circle cx="40" cy="40" r="4" style="fill:var(--i3)"/><path d="M21.32 11.79L21.93 7.63L26.07 7.63L26.68 11.79L29.79 12.92L32.94 10.13L36.11 12.79L33.9 16.37L35.56 19.24L39.76 19.12L40.48 23.19L36.49 24.52L35.91 27.78L39.21 30.39L37.14 33.98L33.23 32.43L30.7 34.55L31.54 38.68L27.66 40.09L25.65 36.39L22.35 36.39L20.34 40.09L16.46 38.68L17.3 34.55L14.77 32.43L10.86 33.98L8.79 30.39L12.09 27.78L11.51 24.52L7.52 23.19L8.24 19.12L12.44 19.24L14.1 16.37L11.89 12.79L15.06 10.13L18.21 12.92Z" style="fill:var(--i2)"/><circle cx="24" cy="24" r="7.5" style="fill:var(--iw)"/><path stroke-width="2.4" d="M22 21l-3 3 3 3M26 21l3 3-3 3"/></g></symbol>
+<symbol id="i-agent" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="2.6" d="M24 11V7" style="stroke:var(--iline)"/><circle cx="24" cy="5" r="2.6" stroke-width="2" style="fill:var(--igold)"/><rect x="4" y="18.5" width="5.5" height="11" rx="2" style="fill:var(--i3)"/><rect x="38.5" y="18.5" width="5.5" height="11" rx="2" style="fill:var(--i3)"/><path d="M13.5 44v-1.5a6 6 0 0 1 6-6h9a6 6 0 0 1 6 6V44z" style="fill:var(--i3)"/><rect x="9.5" y="10.5" width="29" height="25" rx="8" style="fill:var(--i2)"/><rect x="14" y="15.5" width="20" height="13" rx="5.5" style="fill:var(--imetal)"/><circle stroke="none" cx="19.5" cy="22" r="2.6" style="fill:var(--i3)"/><circle stroke="none" cx="28.5" cy="22" r="2.6" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-llm" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23.5 9.5C21.5 6.3 15.8 6.4 14.4 10.4 9.8 10.1 6.8 14.2 8.4 18.2 5.2 20.3 5.2 26 8.4 28 6.8 32.2 9.6 36.4 14 36.2c.9 4 6.4 5.6 9.5 2.5z" style="fill:var(--i2)"/><path d="M24.5 9.5c2-3.2 7.7-3.1 9.1.9 4.6-.3 7.6 3.8 6 7.8 3.2 2.1 3.2 7.8 0 9.8 1.6 4.2-1.2 8.4-5.6 8.2-.9 4-6.4 5.6-9.5 2.5z" style="fill:var(--i3)"/><path stroke-width="2.2" d="M14.4 10.4c.4 2.6 2.4 4.3 5.2 4.3M8.4 18.2c2.7-.5 5.4.6 6.3 3.3M8.4 28c2.6.4 5-.7 6-3.2M14 36.2c.4-3 2.4-4.7 5.2-4.7M33.6 10.4c-.4 2.6-2.4 4.3-5.2 4.3M39.6 18.2c-2.7-.5-5.4.6-6.3 3.3M39.6 28c-2.6.4-5-.7-6-3.2M34 36.2c-.4-3-2.4-4.7-5.2-4.7"/></g></symbol>
+<symbol id="i-spark" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c1.3 8.2 5 11.9 13.2 13.2C24 19.5 20.3 23.2 19 31.4 17.7 23.2 14 19.5 5.8 18.2 14 16.9 17.7 13.2 19 5z" style="fill:var(--i2)"/><path d="M35 25.5c.7 4.5 2.7 6.5 7.2 7.2-4.5.7-6.5 2.7-7.2 7.2-.7-4.5-2.7-6.5-7.2-7.2 4.5-.7 6.5-2.7 7.2-7.2z" style="fill:var(--igold)"/><path stroke-width="2" d="M36 5.5c.4 2.4 1.5 3.5 3.9 3.9-2.4.4-3.5 1.5-3.9 3.9-.4-2.4-1.5-3.5-3.9-3.9 2.4-.4 3.5-1.5 3.9-3.9z" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-db" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11v26c0 2.8 6.7 5 15 5s15-2.2 15-5V11" style="fill:var(--i2)"/><path stroke-width="3.2" d="M13.2 18.5v2.5M13.2 27v2.5M13.2 35.5v2" style="stroke:var(--i3)"/><path d="M9 19.6c0 2.8 6.7 5 15 5s15-2.2 15-5M9 28.3c0 2.8 6.7 5 15 5s15-2.2 15-5"/><ellipse cx="24" cy="11" rx="15" ry="5" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-index" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9v21c0 2.5 5.4 4.5 12 4.5s12-2 12-4.5V9" style="fill:var(--i2)"/><path d="M4.5 19.5c0 2.5 5.4 4.5 12 4.5s12-2 12-4.5"/><ellipse cx="16.5" cy="9" rx="12" ry="4.5" style="fill:var(--i3)"/><path stroke-width="8.5" d="M38 38l5 5"/><path stroke-width="3.5" d="M38 38l5 5" style="stroke:var(--i1)"/><circle cx="32" cy="32" r="9" style="fill:var(--iw)"/><path stroke-width="2.6" d="M27.5 30.5a5 5 0 0 1 3-3.4" style="stroke:var(--i3)"/></g></symbol>
+<symbol id="i-table" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="8" width="39" height="32" rx="4" style="fill:var(--iw)"/><path d="M4.5 12a4 4 0 0 1 4-4h31a4 4 0 0 1 4 4v5.5h-39z" style="fill:var(--i2)"/><path stroke-width="2.2" d="M4.5 17.5h39M4.5 25h39M4.5 32.5h39M17.5 17.5V40M30.5 17.5V40"/></g></symbol>
+<symbol id="i-cache" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="19.5" style="fill:var(--i3)"/><path d="M27.5 6.5L13 27h10l-3 14.5L35 21H25z" style="fill:var(--i2)"/><path stroke-width="2.4" d="M24.5 13.5l-5 7" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-storage" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 12l3.6 27.3a4 4 0 0 0 4 3.5h17.8a4 4 0 0 0 4-3.5L40.5 12" style="fill:var(--i2)"/><path d="M9.3 25.5c3.7 1.9 8.8 2.9 14.7 2.9s11-1 14.7-2.9"/><ellipse cx="24" cy="12" rx="16.5" ry="5.5" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-search" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="9" d="M30.5 30.5l10.5 10.5"/><path stroke-width="4" d="M30.5 30.5l10.5 10.5" style="stroke:var(--i2)"/><circle cx="20" cy="20" r="13.5" style="fill:var(--i3)"/><path stroke-width="2.8" d="M12.5 17.5a8 8 0 0 1 5-5.5" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-queue" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 18.5h5V13l7 11-7 11v-5.5h-5z" style="fill:var(--i2)"/><path d="M35.5 18.5h4V13l7 11-7 11v-5.5h-4z" style="fill:var(--i2)"/><rect x="8.5" y="11" width="30" height="26" rx="6.5" style="fill:var(--iw)"/><rect x="12.5" y="15" width="4.4" height="18" rx="1.4" stroke-width="2" style="fill:var(--i2)"/><rect x="18.3" y="15" width="4.4" height="18" rx="1.4" stroke-width="2" style="fill:var(--i2)"/><rect x="24.1" y="15" width="4.4" height="18" rx="1.4" stroke-width="2" style="fill:var(--i2)"/><rect x="29.9" y="15" width="4.4" height="18" rx="1.4" stroke-width="2" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-box" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 5L40.45 14.5L24 24L7.55 14.5Z" style="fill:var(--i3)"/><path d="M7.55 14.5L24 24L24 43L7.55 33.5Z" style="fill:var(--i2)"/><path d="M24 24L40.45 14.5L40.45 33.5L24 43Z" style="fill:var(--i1)"/><path stroke-width="2" d="M13.2 11.2L17.6 8.6L34.5 18.3L30 20.9Z" style="fill:var(--iw)"/><path stroke-width="2" d="M30 20.9L34.5 18.3L34.5 37.3L30 39.9Z" style="fill:var(--iw)"/></g></symbol>
+<symbol id="i-cubes" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 23L24.09 28.25L15 33.5L5.91 28.25Z" style="fill:var(--i3)"/><path d="M5.91 28.25L15 33.5L15 44L5.91 38.75Z" style="fill:var(--i2)"/><path d="M15 33.5L24.09 28.25L24.09 38.75L15 44Z" style="fill:var(--i1)"/><path d="M33 23L42.09 28.25L33 33.5L23.91 28.25Z" style="fill:var(--i3)"/><path d="M23.91 28.25L33 33.5L33 44L23.91 38.75Z" style="fill:var(--i2)"/><path d="M33 33.5L42.09 28.25L42.09 38.75L33 44Z" style="fill:var(--i1)"/><path d="M24 5L33.09 10.25L24 15.5L14.91 10.25Z" style="fill:var(--i3)"/><path d="M14.91 10.25L24 15.5L24 26L14.91 20.75Z" style="fill:var(--i2)"/><path d="M24 15.5L33.09 10.25L33.09 20.75L24 26Z" style="fill:var(--i1)"/></g></symbol>
+<symbol id="i-vector" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="2.4" d="M24 5.5v6M41 15l-5 3M41 33l-5-3M24 42.5v-6M7 33l5-3M7 15l5 3" style="stroke:var(--iline)"/><path d="M24 11.5L34.83 17.75L24 24L13.18 17.75Z" style="fill:var(--i3)"/><path d="M13.18 17.75L24 24L24 36.5L13.18 30.25Z" style="fill:var(--i2)"/><path d="M24 24L34.83 17.75L34.83 30.25L24 36.5Z" style="fill:var(--i1)"/><circle cx="24" cy="4" r="3" stroke-width="2" style="fill:var(--i2)"/><circle cx="42.5" cy="14" r="3" stroke-width="2" style="fill:var(--i2)"/><circle cx="42.5" cy="34" r="3" stroke-width="2" style="fill:var(--i2)"/><circle cx="24" cy="44" r="3" stroke-width="2" style="fill:var(--i2)"/><circle cx="5.5" cy="34" r="3" stroke-width="2" style="fill:var(--i2)"/><circle cx="5.5" cy="14" r="3" stroke-width="2" style="fill:var(--i2)"/></g></symbol>
+<symbol id="i-bell" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="3" d="M24 5.5v3.5" style="stroke:var(--iline)"/><path d="M19 39.5a5 5 0 0 0 10 0z" style="fill:var(--i3)"/><path d="M11.5 34V22.5a12.5 12.5 0 0 1 25 0V34l3.5 4.5H8z" style="fill:var(--i2)"/><path stroke-width="2.6" d="M17 22a7.5 7.5 0 0 1 4-6.2" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-mail" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10" width="39" height="28" rx="4" style="fill:var(--iw)"/><path stroke-width="2.2" d="M6 36.5l13.5-12M42 36.5l-13.5-12"/><path d="M8.5 10h31a3.5 3.5 0 0 1 2.4 1L24 26.5 6.1 11a3.5 3.5 0 0 1 2.4-1z" style="fill:var(--i2)"/></g></symbol>
+<symbol id="i-chat" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6.5h28a5 5 0 0 1 5 5v16a5 5 0 0 1-5 5H22.5L13 40.5v-8h-3a5 5 0 0 1-5-5v-16a5 5 0 0 1 5-5z" style="fill:var(--i2)"/><path stroke-width="4" d="M16 19.5v0M24 19.5v0M32 19.5v0" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-card" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9.5" width="40" height="29" rx="4" style="fill:var(--i2)"/><path fill="currentColor" d="M4 16h40v6H4z"/><rect x="9" y="27" width="8.5" height="6.5" rx="1.5" stroke-width="2" style="fill:var(--igold)"/><path stroke-width="2.6" d="M23 30.5h15" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-bank" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16.5L24 5.5l19 11z" style="fill:var(--i3)"/><rect x="9" y="20" width="5" height="15" rx="1" style="fill:var(--iw)"/><rect x="17" y="20" width="5" height="15" rx="1" style="fill:var(--iw)"/><rect x="26" y="20" width="5" height="15" rx="1" style="fill:var(--iw)"/><rect x="34" y="20" width="5" height="15" rx="1" style="fill:var(--iw)"/><rect x="5" y="16.5" width="38" height="4" rx="1.5" style="fill:var(--i2)"/><rect x="3.5" y="35" width="41" height="7" rx="2" style="fill:var(--i2)"/></g></symbol>
+<symbol id="i-lock" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="8.5" d="M15.5 21v-6a8.5 8.5 0 0 1 17 0v6"/><path stroke-width="3.5" d="M15.5 21v-6a8.5 8.5 0 0 1 17 0v6" style="stroke:var(--imetal2)"/><rect x="8.5" y="19.5" width="31" height="24" rx="4.5" style="fill:var(--igold)"/><circle fill="currentColor" stroke="none" cx="24" cy="29.5" r="3.4"/><path stroke-width="3.2" d="M24 31v5.5"/></g></symbol>
+<symbol id="i-key" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="8.5" d="M21 27L40.5 7.5M35 13l4.5 4.5M29.5 18.5l3.5 3.5"/><path stroke-width="3.5" d="M21 27L40.5 7.5M35 13l4.5 4.5M29.5 18.5l3.5 3.5" style="stroke:var(--igold)"/><circle cx="15" cy="33" r="10.5" style="fill:var(--igold)"/><circle cx="12.5" cy="35.5" r="3.2" style="fill:var(--iw)"/></g></symbol>
+<symbol id="i-shield" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 4.5l16.5 6v11.5c0 10.5-7 18.2-16.5 22.2C14.5 40.2 7.5 32.5 7.5 22V10.5z" style="fill:var(--i2)"/><path stroke="none" d="M24 8.3l12.8 4.7v9c0 8.2-5.2 14.4-12.8 18z" style="fill:var(--i3)"/><path stroke-width="2.2" d="M26.5 12.5l-9 13h6.5l-2.5 10 9-13.5H24z" style="fill:var(--igold)"/></g></symbol>
+<symbol id="i-cert" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h18l8 8v28a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" style="fill:var(--iw)"/><path d="M26 4v6a2 2 0 0 0 2 2h6z" style="fill:var(--i2)"/><path stroke-width="2.6" d="M11 20h17M11 26h12"/><circle cx="34.5" cy="34.5" r="9.5" style="fill:var(--ion)"/><path stroke-width="3" d="M30 34.5l3.2 3.2 5.6-5.8" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-alert" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.2L4.4 36.4A3.5 3.5 0 0 0 7.4 41.5h33.2a3.5 3.5 0 0 0 3-5.1L27 7.2a3.4 3.4 0 0 0-6 0z" style="fill:var(--igold)"/><path stroke-width="3.4" d="M24 17v11"/><circle fill="currentColor" stroke="none" cx="24" cy="34.2" r="2.2"/></g></symbol>
+<symbol id="i-clock" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="19.5" style="fill:var(--i2)"/><circle cx="24" cy="24" r="14" style="fill:var(--iw)"/><path stroke-width="3" d="M24 15.5V24l6 3.8"/><circle fill="currentColor" stroke="none" cx="24" cy="24" r="2"/></g></symbol>
+<symbol id="i-hourglass" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6h20v6.5c0 5-4 8.5-7 11.5 3 3 7 6.5 7 11.5V42H14v-6.5c0-5 4-8.5 7-11.5-3-3-7-6.5-7-11.5z" style="fill:var(--iw)"/><path stroke="none" d="M17.6 39.5c.8-3.6 3.6-5.8 6.4-7.4 2.8 1.6 5.6 3.8 6.4 7.4z" style="fill:var(--i2)"/><path stroke="none" d="M18.2 13.5h11.6c-.7 2.6-3 4.7-5.8 6.7-2.8-2-5.1-4.1-5.8-6.7z" style="fill:var(--i2)"/><rect x="10" y="2.5" width="28" height="5" rx="2" stroke-width="2.2" style="fill:var(--imetal2)"/><rect x="10" y="40.5" width="28" height="5" rx="2" stroke-width="2.2" style="fill:var(--imetal2)"/></g></symbol>
+<symbol id="i-calendar" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="9" width="37" height="33.5" rx="4" style="fill:var(--iw)"/><path d="M5.5 13a4 4 0 0 1 4-4h29a4 4 0 0 1 4 4v6h-37z" style="fill:var(--i2)"/><path stroke-width="3" d="M15 5v8M33 5v8" style="stroke:var(--iline)"/><rect x="27" y="30" width="8" height="7" rx="1.5" stroke-width="2" style="fill:var(--i3)"/><path stroke-width="3.2" d="M13 26v0M20 26v0M27 26v0M34 26v0M13 33.5v0M20 33.5v0"/></g></symbol>
+<symbol id="i-file" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4h18l10 10v28a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" style="fill:var(--iw)"/><path d="M29 4v8a2 2 0 0 0 2 2h8z" style="fill:var(--i2)"/><path stroke-width="2.6" d="M15 22h18M15 28.5h18M15 35h11"/></g></symbol>
+<symbol id="i-docs" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3h16l8 8v24a2 2 0 0 1-2 2H17a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" style="fill:var(--i3)"/><path d="M33 3v6a2 2 0 0 0 2 2h6z" style="fill:var(--i3)"/><path d="M9 10h16l8 8v25a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2z" style="fill:var(--iw)"/><path d="M25 10v6a2 2 0 0 0 2 2h6z" style="fill:var(--i2)"/><path stroke-width="2.6" d="M12 27h15M12 33h15M12 39h9"/></g></symbol>
+<symbol id="i-json" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4h18l10 10v28a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" style="fill:var(--iw)"/><path d="M29 4v8a2 2 0 0 0 2 2h8z" style="fill:var(--i2)"/><path stroke-width="2.6" d="M20 21.5c-2.4 0-3 1-3 2.6v2.3c0 1.2-.8 1.8-2 1.8 1.2 0 2 .6 2 1.8v2.3c0 1.6.6 2.6 3 2.6M28 21.5c2.4 0 3 1 3 2.6v2.3c0 1.2.8 1.8 2 1.8-1.2 0-2 .6-2 1.8v2.3c0 1.6-.6 2.6-3 2.6"/></g></symbol>
+<symbol id="i-folder" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12a3 3 0 0 1 3-3h10.2l4.3 4.5h18.5a3 3 0 0 1 3 3V38a3 3 0 0 1-3 3h-33a3 3 0 0 1-3-3z" style="fill:var(--i2)"/><path d="M4.5 20.5a3 3 0 0 1 3-3h33a3 3 0 0 1 3 3V38a3 3 0 0 1-3 3h-33a3 3 0 0 1-3-3z" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-book" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 14v29h18c1.6 1.7 5.4 1.7 7 0h18V14z" style="fill:var(--i2)"/><path d="M24 13c-5-4.2-11.5-5.3-18.5-3.6v27.8c7-1.7 13.5-.6 18.5 3.6z" style="fill:var(--iw)"/><path d="M24 13c5-4.2 11.5-5.3 18.5-3.6v27.8c-7-1.7-13.5-.6-18.5 3.6z" style="fill:var(--iw)"/><path stroke-width="2.2" d="M10 17c3.5-.4 7 .2 10 1.8M10 23.5c3.5-.4 7 .2 10 1.8M10 30c3.5-.4 7 .2 10 1.8M28 18.8c3-1.6 6.5-2.2 10-1.8M28 25.3c3-1.6 6.5-2.2 10-1.8M28 31.8c3-1.6 6.5-2.2 10-1.8"/></g></symbol>
+<symbol id="i-checklist" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="4.5" width="32" height="39" rx="4" style="fill:var(--iw)"/><path stroke-width="3.6" d="M25 15h9M25 25h9M25 35h6" style="stroke:var(--i2)"/><path stroke-width="2.6" d="M13.5 15l2.6 2.6 4.4-5M13.5 25l2.6 2.6 4.4-5M13.5 35l2.6 2.6 4.4-5"/></g></symbol>
+<symbol id="i-check" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="7" width="31" height="36.5" rx="4" style="fill:var(--iw)"/><path d="M16.5 4.5h15a1.5 1.5 0 0 1 1.5 1.5v4.5a2 2 0 0 1-2 2H17a2 2 0 0 1-2-2V6a1.5 1.5 0 0 1 1.5-1.5z" style="fill:var(--i2)"/><path stroke-width="3.4" d="M16 27l5.5 5.5L32.5 21"/></g></symbol>
+<symbol id="i-chart" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="6" width="39" height="36" rx="4" style="fill:var(--iw)"/><rect x="11" y="25" width="6" height="11" rx="1" stroke-width="2.2" style="fill:var(--i3)"/><rect x="21" y="17" width="6" height="19" rx="1" stroke-width="2.2" style="fill:var(--i2)"/><rect x="31" y="21" width="6" height="15" rx="1" stroke-width="2.2" style="fill:var(--i1)"/><path stroke-width="2.4" d="M10 13.5l7.5 3.5 7-5 9.5 2.5"/></g></symbol>
+<symbol id="i-pulse" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 33.5h8l1.6 6.5H18.4z" style="fill:var(--imetal)"/><rect x="12.5" y="39" width="23" height="4.5" rx="2.2" stroke-width="2.2" style="fill:var(--imetal)"/><rect x="4" y="6" width="40" height="28" rx="3.5" style="fill:var(--iw)"/><rect x="8" y="10" width="32" height="20" rx="1.5" stroke-width="2" style="fill:var(--i2)"/><path stroke-width="2.8" d="M11 21h6l3-6 4.5 11 3.5-7 2 2h7" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-eye" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 24S10.5 11.5 24 11.5 45 24 45 24 37.5 36.5 24 36.5 3 24 3 24z" style="fill:var(--iw)"/><circle cx="24" cy="24" r="8" style="fill:var(--i2)"/><circle fill="currentColor" stroke="none" cx="24" cy="24" r="3.3"/><circle stroke="none" cx="26.6" cy="21.4" r="1.5" style="fill:var(--iw)"/></g></symbol>
+<symbol id="i-tool" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><g transform="matrix(1.75 0 0 1.75 3 3)" stroke-width="1.45"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" style="fill:var(--i2)"/></g></g></symbol>
+<symbol id="i-plugin" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="8" d="M18 5v8M30 5v8"/><path stroke-width="3" d="M18 5v8M30 5v8" style="stroke:var(--imetal2)"/><path stroke-width="8" d="M24 33v10"/><path stroke-width="3" d="M24 33v10" style="stroke:var(--i3)"/><path d="M11 13h26v7a13 13 0 0 1-26 0z" style="fill:var(--i2)"/><path stroke-width="2.6" d="M16.5 20.5a8 8 0 0 0 3.5 6" style="stroke:var(--iw)"/></g></symbol>
+<symbol id="i-workflow" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18v13.5M12 24h19" style="stroke:var(--iline)"/><rect x="5" y="5" width="14" height="13" rx="3" style="fill:var(--i2)"/><rect x="29" y="17.5" width="14" height="13" rx="3" style="fill:var(--i3)"/><rect x="5" y="30" width="14" height="13" rx="3" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-git" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path stroke-width="3" d="M13 13v22M35 18c0 9-9 10.5-20 15" style="stroke:var(--iline)"/><circle cx="13" cy="10" r="5.5" style="fill:var(--i2)"/><circle cx="13" cy="38" r="5.5" style="fill:var(--i2)"/><circle cx="35" cy="14" r="5.5" style="fill:var(--i3)"/></g></symbol>
+<symbol id="i-target" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="21" cy="27" r="17" style="fill:var(--iw)"/><circle cx="21" cy="27" r="11" style="fill:var(--i2)"/><circle cx="21" cy="27" r="5.5" style="fill:var(--iw)"/><path stroke-width="3" d="M21 27L38.5 9.5" style="stroke:var(--iline)"/><path stroke-width="2.2" d="M36 5.5l1.5 5.5 5.5 1.5-4 4-5.5-1.5-1.5-5.5z" style="fill:var(--igold)"/><circle fill="currentColor" stroke="none" cx="21" cy="27" r="2"/></g></symbol>
+<symbol id="i-bulb" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 4a13.5 13.5 0 0 0-7.8 24.5c1.3 1 2.1 2.4 2.1 4V33.5h11.4V32.5c0-1.6.8-3 2.1-4A13.5 13.5 0 0 0 24 4z" style="fill:var(--igold)"/><path d="M18.3 33.5h11.4v4.5a3 3 0 0 1-3 3h-5.4a3 3 0 0 1-3-3z" style="fill:var(--imetal2)"/><path stroke-width="2.2" d="M18.5 37.3h11M20.5 22l3.5 3.5 3.5-3.5M24 25.5v8"/><path stroke-width="2.6" d="M16.5 15.5a8 8 0 0 1 4.2-5" style="stroke:var(--iw)"/></g></symbol>
 <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.8v14.4a.8.8 0 0 0 1.2.7l11.4-7.2a.8.8 0 0 0 0-1.4L8.2 4.1A.8.8 0 0 0 7 4.8z" fill="currentColor"/></symbol>
 <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1" fill="currentColor"/></symbol>
 <symbol id="i-replay" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></g></symbol>
@@ -2090,6 +2143,7 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
 <symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></g></symbol>
 <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></g></symbol>
 <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-zoom" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"/></g></symbol>
 </svg>
 
 <script type="text/plain" id="fvEmbedCss">
@@ -2296,33 +2350,38 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
 @media (max-width:700px){.fvx li.step{grid-template-columns:20px 1fr;gap:0 9px}
 .fvx li.step>.ctr{grid-column:2;padding-top:6px}}
 .fvx{
-  --client:#2F6FEB;  --client-bg:#EAF2FF;  --client-bd:#A7C3F4;
-  --edge:#7048E8;    --edge-bg:#F2EDFF;    --edge-bd:#C5B4F4;
-  --service:#16945A; --service-bg:#E7F6EE; --service-bd:#9FD4B8;
-  --data:#D97A0B;    --data-bg:#FFF3E0;    --data-bd:#F0C27E;
-  --stream:#D6336C;  --stream-bg:#FFEBF2;  --stream-bd:#F1A9C4;
-  --ext:#5B6B82;     --ext-bg:#EFF2F6;     --ext-bd:#BAC4D2;
-  --threat:#C92A2A;  --threat-bg:#FFEDED;  --threat-bd:#EC9A9A;
-  --f1:#2F6FEB; --f2:#0C9A8A; --f3:#E0751B;
+  --client:#2F6BE0;  --client-bg:#E6EFFF;  --client-bd:#A9C4F5;  --client-p:#7AA8FF;  --client-l:#CFE0FF;
+  --edge:#7A4FD8;    --edge-bg:#F0EAFF;    --edge-bd:#C9B6F6;    --edge-p:#A98CFB;    --edge-l:#E2D8FF;
+  --service:#1D9A5B; --service-bg:#E0F6E9; --service-bd:#9DD8B6; --service-p:#58CC8C; --service-l:#C3EFD5;
+  --data:#D77A10;    --data-bg:#FFF2DE;    --data-bd:#F2C47F;    --data-p:#FFB547;    --data-l:#FFE2AE;
+  --stream:#D23F7C;  --stream-bg:#FFEAF3;  --stream-bd:#F2AACA;  --stream-p:#FF8AB7;  --stream-l:#FFD3E4;
+  --ext:#56657E;     --ext-bg:#EFF2F7;     --ext-bd:#BAC4D3;     --ext-p:#9DABC2;     --ext-l:#DCE3EE;
+  --threat:#D23B3B;  --threat-bg:#FFECEA;  --threat-bd:#EE9E98;  --threat-p:#FF8178;  --threat-l:#FFD1CC;
+  --f1:#2F6BE0; --f2:#0C9A8A; --f3:#E0751B;
   --on-tint:#FFFFFF;
+  --i-ink:#1B2030; --iline:#1B2030; --iw:#FFFFFF; --ion:#3DD08A; --igold:#FFC53D; --ired:#F2645E;
+  --imetal:#465066; --imetal2:#A3ACBE;
+  --i1:var(--client); --i2:var(--client-p); --i3:var(--client-l);
+  --d-bar:#22B573;
   --d-sh:0 1px 2px rgba(23,32,51,.06),0 6px 18px rgba(23,32,51,.06);
-  --d-node-sh:drop-shadow(0 1px 1px rgba(23,32,51,.07)) drop-shadow(0 4px 8px rgba(23,32,51,.05));
   --d-drawer-sh:-14px 0 40px rgba(10,15,29,.14);
   --d-scrim:rgba(23,32,51,.18);
   --d-ease:cubic-bezier(.22,1,.36,1);
 }
 .fvx[data-theme="dark"]{
-  --client:#72A9FF;  --client-bg:#12213F;  --client-bd:#2D5AA8;
-  --edge:#AC96FF;    --edge-bg:#1E1842;    --edge-bd:#5641B0;
-  --service:#52D597; --service-bg:#0D2A20; --service-bd:#22704D;
-  --data:#FFB54D;    --data-bg:#2E210C;    --data-bd:#86560F;
-  --stream:#FF7DB0;  --stream-bg:#331225;  --stream-bd:#932C59;
-  --ext:#9DAAC3;     --ext-bg:#18202F;     --ext-bd:#3B4966;
-  --threat:#FF6B6B;  --threat-bg:#35151A;  --threat-bd:#A83D45;
+  --client:#6EA2FF;  --client-bg:#11213F;  --client-bd:#2D5AA8;  --client-p:#6E9EF7;  --client-l:#BCD3FF;
+  --edge:#AC8EFF;    --edge-bg:#1D1840;    --edge-bd:#5641B0;    --edge-p:#9C80F2;    --edge-l:#D9CCFF;
+  --service:#4FD495; --service-bg:#0C2A1F; --service-bd:#22704D; --service-p:#4DC284; --service-l:#B6EDCF;
+  --data:#FFB54D;    --data-bg:#2D200B;    --data-bd:#86560F;    --data-p:#F5A93E;    --data-l:#FFDDA3;
+  --stream:#FF7DB0;  --stream-bg:#331226;  --stream-bd:#932C59;  --stream-p:#F37DAB;  --stream-l:#FFCBDF;
+  --ext:#9DAAC3;     --ext-bg:#18202F;     --ext-bd:#3B4966;     --ext-p:#8E9CB4;     --ext-l:#D4DCE8;
+  --threat:#FF6B6B;  --threat-bg:#35151A;  --threat-bd:#A83D45;  --threat-p:#F47870;  --threat-l:#FFC9C3;
   --f1:#6EA6FF; --f2:#36D6C1; --f3:#FFA652;
   --on-tint:#0A0F1D;
+  --i-ink:#0B0E17; --iline:#9AA6BF; --iw:#F4F6FB; --ion:#3DD08A; --igold:#FFC53D; --ired:#F2645E;
+  --imetal:#3A4357; --imetal2:#9AA4B8;
+  --d-bar:#34D399;
   --d-sh:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.35);
-  --d-node-sh:drop-shadow(0 2px 6px rgba(0,0,0,.35));
   --d-drawer-sh:-14px 0 40px rgba(0,0,0,.45);
   --d-scrim:rgba(0,0,0,.45);
 }
@@ -2377,8 +2436,10 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
   font:600 12px var(--f-ui);color:var(--dim);transition:border-color .15s,color .15s}
 .fv-tbtn:hover{border-color:var(--line2);color:var(--fg)}
 .fv-tbtn svg{width:14px;height:14px}
-.fv-drawing h1.fv-title{font:700 30px/1.16 var(--f-ui);letter-spacing:-.4px;margin:14px 0 8px;
-  max-width:34ch;text-wrap:balance;color:var(--fg)}
+.fv-drawing h1.fv-title{font:800 30px/1.16 var(--f-ui);letter-spacing:-.5px;margin:14px 0 8px;
+  max-width:34ch;text-wrap:balance;color:var(--fg);position:relative;padding-left:20px}
+.fv-drawing h1.fv-title::before{content:"";position:absolute;left:0;top:.12em;bottom:.12em;width:7px;
+  border-radius:4px;background:var(--d-bar)}
 .fv-lede{margin:0;max-width:68ch;color:var(--dim);font:15.5px/1.55 var(--f-body);text-wrap:pretty}
 .fv-drawing figcaption.fv-fc{display:grid;gap:3px;margin:0 0 8px}
 .fv-fc .fv-fc-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
@@ -2407,8 +2468,7 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
 .fv-stage{position:relative;background:var(--paper);border:1px solid var(--line);
   border-radius:calc(var(--r) + 4px);box-shadow:var(--d-sh);overflow:hidden}
 .fv-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
-.fv-grid{background-image:radial-gradient(color-mix(in srgb,var(--line) 88%,var(--paper)) 1px,transparent 1.2px);
-  background-size:18px 18px;background-position:9px 9px}
+.fv-grid{background:none}
 .fv-map,.fv-seq{display:block;width:100%;height:auto;min-width:760px;user-select:none;-webkit-user-select:none}
 .fv-wrap{position:relative;transition:transform .32s var(--d-ease),opacity .32s var(--d-ease)}
 .fv-wrap.zoom-out{opacity:0;transform:scale(1.35)}
@@ -2470,77 +2530,79 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
   border-radius:12px;box-shadow:var(--d-sh);padding:10px 12px;font:500 12px var(--f-ui);color:var(--dim);
   display:grid;grid-template-columns:44px 1fr;gap:6px 10px;align-items:center;width:250px}
 .fv-key svg{width:44px;height:14px;overflow:visible}
-.fv-drawing .zone rect{fill:color-mix(in srgb,var(--z) 5%,transparent);stroke:color-mix(in srgb,var(--z) 42%,transparent);
-  stroke-width:1.3;stroke-dasharray:5 5}
-.fv-drawing .zone text{fill:var(--z);font:700 11px var(--f-ui);letter-spacing:.4px}
-.fv-drawing .z-neutral{--z:var(--dim2)}
+.fv-drawing .zone .zbox{fill:color-mix(in srgb,var(--z) 6%,transparent);stroke:color-mix(in srgb,var(--z) 62%,transparent);
+  stroke-width:2;stroke-dasharray:.1 6;stroke-linecap:round}
+.fv-drawing .zone .ztag{fill:var(--zt,var(--z))}
+.fv-drawing .zone text{fill:var(--paper);font:750 11px var(--f-ui);letter-spacing:.3px;dominant-baseline:central}
+.fv-drawing .z-neutral{--z:var(--dim2);--zt:var(--fg)}
 .fv-drawing .z-sync{--z:var(--f1)}
 .fv-drawing .z-async{--z:var(--stream)}
 .fv-drawing .z-ext{--z:var(--ext)}
 .fv-drawing .z-data{--z:var(--data)}
 .fv-drawing .z-svc{--z:var(--service)}
-.fvx .k-client{--k:var(--client);--k-bg:var(--client-bg);--k-bd:var(--client-bd)}
-.fvx .k-edge{--k:var(--edge);--k-bg:var(--edge-bg);--k-bd:var(--edge-bd)}
-.fvx .k-service{--k:var(--service);--k-bg:var(--service-bg);--k-bd:var(--service-bd)}
-.fvx .k-data{--k:var(--data);--k-bg:var(--data-bg);--k-bd:var(--data-bd)}
-.fvx .k-stream{--k:var(--stream);--k-bg:var(--stream-bg);--k-bd:var(--stream-bd)}
-.fvx .k-external{--k:var(--ext);--k-bg:var(--ext-bg);--k-bd:var(--ext-bd)}
-.fvx .k-threat{--k:var(--threat);--k-bg:var(--threat-bg);--k-bd:var(--threat-bd)}
-.fv-drawing .node.k-threat .shape{stroke-dasharray:6 3}
+.fvx .k-client{--k:var(--client);--k-bg:var(--client-bg);--k-bd:var(--client-bd);--i1:var(--client);--i2:var(--client-p);--i3:var(--client-l)}
+.fvx .k-edge{--k:var(--edge);--k-bg:var(--edge-bg);--k-bd:var(--edge-bd);--i1:var(--edge);--i2:var(--edge-p);--i3:var(--edge-l)}
+.fvx .k-service{--k:var(--service);--k-bg:var(--service-bg);--k-bd:var(--service-bd);--i1:var(--service);--i2:var(--service-p);--i3:var(--service-l)}
+.fvx .k-data{--k:var(--data);--k-bg:var(--data-bg);--k-bd:var(--data-bd);--i1:var(--data);--i2:var(--data-p);--i3:var(--data-l)}
+.fvx .k-stream{--k:var(--stream);--k-bg:var(--stream-bg);--k-bd:var(--stream-bd);--i1:var(--stream);--i2:var(--stream-p);--i3:var(--stream-l)}
+.fvx .k-external{--k:var(--ext);--k-bg:var(--ext-bg);--k-bd:var(--ext-bd);--i1:var(--ext);--i2:var(--ext-p);--i3:var(--ext-l)}
+.fvx .k-threat{--k:var(--threat);--k-bg:var(--threat-bg);--k-bd:var(--threat-bd);--i1:var(--threat);--i2:var(--threat-p);--i3:var(--threat-l)}
+.fv-drawing .node.k-threat .shape{stroke-dasharray:7 4}
 .fv-drawing .node{cursor:pointer;transition:opacity .2s var(--d-ease)}
-.fv-drawing .node .shape{fill:var(--k-bg);stroke:var(--k-bd);stroke-width:1.3;filter:var(--d-node-sh);
-  transition:stroke .15s,stroke-width .15s}
-.fv-drawing .node .tile{fill:var(--k)}
-.fv-drawing .node .ico{color:var(--on-tint)}
-.fv-drawing .node .lbl{fill:var(--fg);font:650 13px var(--f-ui);letter-spacing:-.1px}
-.fv-drawing .node .tech{fill:var(--dim2);font:500 10.5px var(--f-ui);opacity:0;transition:opacity .2s}
+.fv-drawing .node .shape{fill:var(--k-bg);stroke:var(--k);stroke-width:2;transition:stroke .15s,stroke-width .15s}
+.fv-drawing .node .ico{color:var(--i-ink)}
+.fv-drawing .node .lbl{fill:var(--fg);font:700 13px var(--f-ui);letter-spacing:-.15px}
+.fv-drawing .node .tech{fill:var(--dim);font:550 10.5px var(--f-ui);opacity:0;transition:opacity .2s}
 .fv-drawing .node .lblg{transition:transform .22s var(--d-ease)}
+.fv-drawing .node .cnt{transition:transform .22s var(--d-ease)}
+.fv-drawing svg.show-labels .node.has-tech .cnt{transform:translateX(var(--sx,0px))}
 .fv-drawing svg.show-labels .node .tech{opacity:1}
 .fv-drawing svg.show-labels .node.has-tech .lblg{transform:translateY(-6px)}
-.fv-drawing .node:hover .shape,.fv-drawing .node.sel .shape,.fv-drawing .node:focus-visible .shape{stroke:var(--k);stroke-width:2}
+.fv-drawing .node:hover .shape,.fv-drawing .node.sel .shape,.fv-drawing .node:focus-visible .shape{stroke-width:3}
 .fv-drawing .node:focus{outline:none}
-.fv-drawing .node.sel .shape{stroke-width:2.4}
-.fv-drawing .node.land .shape{stroke:var(--flow);stroke-width:2.6}
-.fv-drawing .node.ghost .shape{fill:none;stroke:var(--line2);stroke-dasharray:4 4;filter:none}
-.fv-drawing .node.ghost .tile{fill:var(--panel2)}
-.fv-drawing .node.ghost .ico{color:var(--dim2)}
+.fv-drawing .node.sel .shape{stroke-width:3.4}
+.fv-drawing .node.land .shape{stroke:var(--flow);stroke-width:3.4}
+.fv-drawing .node.ghost{--i1:var(--ext);--i2:var(--ext-p);--i3:var(--ext-l)}
+.fv-drawing .node.ghost .shape{fill:none;stroke:var(--line2);stroke-dasharray:5 5}
+.fv-drawing .node.ghost .ico{opacity:.6}
 .fv-drawing .node.ghost .lbl{fill:var(--dim)}
 .fv-drawing .node .seg{cursor:zoom-in}
-.fv-drawing .node .seg circle{fill:var(--paper);stroke:var(--k);stroke-width:1.4}
-.fv-drawing .node .seg path{stroke:var(--k);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.fv-drawing .node .seg circle{fill:var(--paper);stroke:var(--k);stroke-width:2}
+.fv-drawing .node .seg path{stroke:var(--k);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .fv-drawing .node .seg:hover circle{fill:var(--k)}
 .fv-drawing .node .seg:hover path{stroke:var(--on-tint)}
-.fv-drawing .edge .line{fill:none;stroke:var(--line2);stroke-width:1.6;stroke-linecap:round;
+.fv-drawing .edge .line{fill:none;stroke:var(--line2);stroke-width:1.8;stroke-linecap:round;
   transition:stroke .2s,stroke-width .2s,opacity .2s}
 .fv-drawing .edge.m-sync .line{stroke-dasharray:7 6}
-.fv-drawing .edge.m-async .line{stroke-dasharray:.1 7;stroke-width:2.6}
-.fv-drawing .edge .head{fill:var(--line2);transition:fill .2s}
+.fv-drawing .edge.m-async .line{stroke-dasharray:.1 7;stroke-width:2.8}
+.fv-drawing .edge .head{fill:none;stroke:var(--line2);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  transition:stroke .2s}
 .fv-drawing .edgeset .hit{fill:none;stroke:transparent;stroke-width:16;cursor:pointer;pointer-events:stroke}
 .fv-drawing .edge{transition:opacity .2s var(--d-ease)}
-.fv-drawing .edge.live .line{stroke:var(--flow);stroke-width:2}
-.fv-drawing .edge.live.m-async .line{stroke-width:3}
-.fv-drawing .edge.live .head{fill:var(--flow)}
+.fv-drawing .edge.live .line{stroke:var(--flow);stroke-width:2.2}
+.fv-drawing .edge.live.m-async .line{stroke-width:3.2}
+.fv-drawing .edge.live .head{stroke:var(--flow);stroke-width:2.3}
 .fv-drawing .edge.live.m-sync .line{animation:fv-march-s .9s linear infinite}
 .fv-drawing .edge.live.m-async .line{animation:fv-march-a 1.3s linear infinite}
 .fv-drawing .edge.live.rev .line{animation-direction:reverse}
 .fv-drawing .edge.failing .line{stroke:var(--bad)}
-.fv-drawing .edge.failing .head{fill:var(--bad)}
+.fv-drawing .edge.failing .head{stroke:var(--bad)}
 @keyframes fv-march-s{to{stroke-dashoffset:-13}}
 @keyframes fv-march-a{to{stroke-dashoffset:-7.1}}
-.fv-drawing .edgeset.hov .edge .line,.fv-drawing .edgeset.sel .edge .line{stroke-width:2.8}
+.fv-drawing .edgeset.hov .edge .line,.fv-drawing .edgeset.sel .edge .line{stroke-width:3}
 .fv-drawing .chiplbl{opacity:0;transition:opacity .18s;pointer-events:none}
-.fv-drawing .chiplbl rect{fill:var(--paper);stroke:var(--line2);stroke-width:1}
-.fv-drawing .chiplbl text{fill:var(--dim);font:600 10.5px var(--f-mono)}
+.fv-drawing .chiplbl rect{fill:var(--paper);stroke:var(--line2);stroke-width:1.4}
+.fv-drawing .chiplbl text{fill:var(--fg);font:650 10.5px var(--f-mono)}
 .fv-drawing svg.show-labels .chiplbl,.fv-drawing svg.show-times .chiplbl{opacity:1}
 .fv-drawing .edgeset.hov .chiplbl,.fv-drawing .edgeset.sel .chiplbl,.fv-drawing svg.focus .edgeset.near .chiplbl{opacity:1}
 .fv-drawing svg.focus .edgeset:not(.near) .chiplbl,.fv-drawing svg.stepping .edgeset:not(.hot) .chiplbl{opacity:0}
 .fv-drawing .stepno{cursor:pointer}
-.fv-drawing .stepno circle{fill:var(--flow);stroke:var(--paper);stroke-width:2.5}
-.fv-drawing .stepno text{fill:var(--on-tint);font:800 10.5px var(--f-ui);letter-spacing:0;text-anchor:middle;
+.fv-drawing .stepno circle{fill:var(--flow);stroke:var(--i-ink);stroke-width:1.8;transform-box:fill-box;transform-origin:center}
+.fv-drawing .stepno text{fill:var(--on-tint);font:800 11px var(--f-ui);letter-spacing:0;text-anchor:middle;
   dominant-baseline:central;pointer-events:none}
 .fv-drawing .stepno.fail circle{fill:var(--bad)}
 .fv-drawing .stepno.now circle{animation:fv-beat 1.2s var(--d-ease) infinite}
-@keyframes fv-beat{0%,100%{stroke-width:2.5}50%{stroke-width:5.5}}
+@keyframes fv-beat{0%,100%{transform:none}50%{transform:scale(1.22)}}
 .fv-drawing svg.focus .node:not(.near),.fv-drawing svg.focus .edge:not(.near),.fv-drawing svg.focus .stepno:not(.near){opacity:.2}
 .fv-drawing svg.stepping .node:not(.hot),.fv-drawing svg.stepping .edge:not(.hot),.fv-drawing svg.stepping .stepno:not(.hot){opacity:.18}
 .fv-drawing svg.stepping .edge.hot .line{stroke:var(--flow);stroke-width:2.8}
@@ -2557,18 +2619,18 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
 .fv-drawing .xmark path{stroke:var(--bad);stroke-width:2.6;stroke-linecap:round}
 .fv-drawing .xmark circle{fill:var(--paper);stroke:var(--bad);stroke-width:1.6}
 @keyframes fv-xin{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
-.fv-seq .life{stroke:var(--line2);stroke-width:1.2;stroke-dasharray:3 5}
+.fv-seq .life{stroke:var(--dim2);stroke-width:2;stroke-dasharray:.1 5;stroke-linecap:round}
 .fv-seq .band{fill:transparent}
 .fv-seq .band.now{fill:color-mix(in srgb,var(--flow) 9%,transparent)}
-.fv-seq .msg .line{fill:none;stroke:var(--dim);stroke-width:1.6}
+.fv-seq .msg .line{fill:none;stroke:var(--fg);stroke-width:1.9;stroke-linecap:round}
 .fv-seq .msg.response .line{stroke-dasharray:6 5}
 .fv-seq .msg.event .line{stroke-dasharray:.1 6;stroke-width:2.6;stroke-linecap:round}
-.fv-seq .msg .head{fill:var(--dim)}
+.fv-seq .msg .head{fill:none;stroke:var(--fg);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .fv-seq .msg.fail .line{stroke:var(--bad)}
-.fv-seq .msg.fail .head{fill:var(--bad)}
-.fv-seq .msg text{fill:var(--dim);font:600 11px var(--f-mono);text-anchor:middle}
-.fv-seq .msg.now .line{stroke:var(--flow);stroke-width:2.4}
-.fv-seq .msg.now .head{fill:var(--flow)}
+.fv-seq .msg.fail .head{stroke:var(--bad)}
+.fv-seq .msg text{fill:var(--fg);font:650 11.5px var(--f-ui);text-anchor:middle}
+.fv-seq .msg.now .line{stroke:var(--flow);stroke-width:2.6}
+.fv-seq .msg.now .head{stroke:var(--flow)}
 .fv-seq .msg.now text{fill:var(--fg)}
 .fv-seq .msg.now.fail .line{stroke:var(--bad)}
 .fv-specwrap{padding:16px 18px 18px;display:grid;gap:10px}
@@ -2600,6 +2662,8 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
 .fv-drawer .dr-ico{width:40px;height:40px;border-radius:11px;background:var(--k,var(--f1));color:var(--on-tint);
   display:grid;place-items:center;flex:none}
 .fv-drawer .dr-ico svg{width:22px;height:22px}
+.fv-drawer .dr-ico.illus{background:var(--k-bg);border:2px solid var(--k);color:var(--i-ink)}
+.fv-drawer .dr-ico.illus svg{width:30px;height:30px}
 .fv-drawer .dr-ico b{font:800 17px var(--f-ui)}
 .fv-drawer .dr-kind{margin:0;font:700 10px var(--f-ui);letter-spacing:1px;text-transform:uppercase;color:var(--k,var(--dim2))}
 .fv-drawer h2{margin:1px 0 0;font:700 18px/1.2 var(--f-ui);color:var(--fg)}
@@ -2658,19 +2722,19 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
 .fv-motion svg{width:14px;height:14px;vertical-align:-2px;margin-right:4px}
 .pill .fv-motion{display:inline-flex;align-items:center}
 .pill .fv-motion[aria-pressed="false"]{color:var(--dim2)}
-.fv-drawing .edge.ink .line{stroke:var(--dim);stroke-width:1.8}
+.fv-drawing .edge.ink .line{stroke:var(--fg);stroke-width:1.9}
 .fv-drawing .edge.ink.m-async .line{stroke-width:2.8}
-.fv-drawing .edge.ink .head{fill:var(--dim)}
+.fv-drawing .edge.ink .head{stroke:var(--fg)}
 .fv-drawing .edge.ink.m-sync .line{animation:fv-march-s 1.6s linear infinite}
 .fv-drawing .edge.ink.m-async .line{animation:fv-march-a 2.2s linear infinite}
 .fv-drawing .edge.r-pass .line{stroke:var(--ok);stroke-width:2.2}
-.fv-drawing .edge.r-pass .head{fill:var(--ok)}
+.fv-drawing .edge.r-pass .head{stroke:var(--ok)}
 .fv-drawing .edge.r-pass:not(.live):not(.ink).m-sync .line{animation:fv-march-s 1.6s linear infinite}
 .fv-drawing .edge.r-pass:not(.live):not(.ink).m-async .line{animation:fv-march-a 2.2s linear infinite}
 .fv-drawing .edge.r-fail .line{stroke:var(--bad);stroke-width:2.2;animation:none!important}
-.fv-drawing .edge.r-fail .head{fill:var(--bad)}
+.fv-drawing .edge.r-fail .head{stroke:var(--bad)}
 .fv-drawing .edge.r-error .line{stroke:var(--warn);stroke-width:2.2;animation:none!important}
-.fv-drawing .edge.r-error .head{fill:var(--warn)}
+.fv-drawing .edge.r-error .head{stroke:var(--warn)}
 .fv-drawing svg.stepping .edge.hot.r-pass .line{stroke:var(--ok)}
 .fv-drawing svg.stepping .edge.hot.r-fail .line{stroke:var(--bad)}
 .fv-drawing svg.stepping .edge.hot.r-error .line{stroke:var(--warn)}
@@ -2690,9 +2754,9 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
 .fv-drawing .nres.r-pass .rbg{fill:var(--ok)}
 .fv-drawing .nres.r-fail .rbg{fill:var(--bad)}
 .fv-drawing .nres.r-error .rbg{fill:var(--warn)}
-.fv-drawing .node.r-pass .shape{stroke:var(--ok);stroke-width:2}
-.fv-drawing .node.r-fail .shape{stroke:var(--bad);stroke-width:2}
-.fv-drawing .node.r-error .shape{stroke:var(--warn);stroke-width:2}
+.fv-drawing .node.r-pass .shape{stroke:var(--ok);stroke-width:2.8}
+.fv-drawing .node.r-fail .shape{stroke:var(--bad);stroke-width:2.8}
+.fv-drawing .node.r-error .shape{stroke:var(--warn);stroke-width:2.8}
 .fv-drawing .nstat rect{fill:var(--fg);stroke:var(--fg);stroke-width:1.2}
 .fv-drawing .nstat text{fill:var(--paper);font:700 9.5px var(--f-mono);letter-spacing:.5px}
 .fv-drawing .nstat.s-changed rect{fill:var(--paper)}
@@ -2729,10 +2793,10 @@ window.FVPROTO_SEED = {"schema": 5, "doc": "deploy-proto", "flowviz": "3.0.0", "
 .fv-res.r-error,.fv-peek .res.r-error{color:var(--warn)}
 .fv-peek .res{margin:0 0 4px;font:700 12px var(--f-ui)}
 .fv-seq .msg.r-pass .line{stroke:var(--ok)}
-.fv-seq .msg.r-pass .head{fill:var(--ok)}
+.fv-seq .msg.r-pass .head{stroke:var(--ok)}
 .fv-seq .msg.error .line{stroke:var(--warn);stroke-dasharray:none;stroke-width:2.2}
 .fv-seq .msg.now.r-pass .line{stroke:var(--ok)}
-.fv-seq .msg.now.r-pass .head{fill:var(--ok)}
+.fv-seq .msg.now.r-pass .head{stroke:var(--ok)}
 .fv-seq .msg.now.error .line{stroke:var(--warn)}
 .fvx[data-fvx]{background:var(--bg);color:var(--fg);padding:14px 16px 16px;border-radius:calc(var(--r) + 6px)}
 .fv-drawer.fvx,.fv-scrim.fvx,.fv-toast.fvx{margin:0}
@@ -5250,7 +5314,9 @@ figure.fv-drawing{break-inside:avoid}
   var NS = 'http://www.w3.org/2000/svg';
   /* one grid for every drawing: agents place boxes in cells, never in pixels */
   var G = { cw: 240, ch: 132, nw: 172, nh: 56, px: 22, py: 18, r: 10, lane: 4.5 };
-  var LABEL_ROOM = G.nw - 55 - 12;      // width a box label may use before it shrinks
+  /* a box's icon and label are one group, centred in the box, with 9px to spare each side */
+  var ICON = 36, IGAP = 8;
+  var LABEL_ROOM = G.nw - 2 * 9 - ICON - IGAP;   // width a box label may use before it shrinks
   var KIND = { client: 'client', edge: 'edge', service: 'service', data: 'data', stream: 'stream', external: 'ext',
               threat: 'threat' };
   var KIND_NAME = { client: 'Client', edge: 'Edge', service: 'Service', data: 'Data', stream: 'Event stream', external: 'External',
@@ -5288,6 +5354,16 @@ figure.fv-drawing{break-inside:avoid}
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* a text's width; where it is not laid out (a hidden view) it is measured from its font */
+  var MEAS = null;
+  function textW(t) {
+    var w = t.getComputedTextLength();
+    if (w) return w;
+    var cs = window.getComputedStyle(t), s = t.textContent || '';
+    if (!MEAS) MEAS = document.createElement('canvas').getContext('2d');
+    MEAS.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    return MEAS.measureText(s).width + (parseFloat(cs.letterSpacing) || 0) * s.length;
   }
   function words(s) { return String(s || '').trim().split(/\s+/).filter(Boolean).length; }
   function ease(k) { return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; }
@@ -5341,6 +5417,14 @@ figure.fv-drawing{break-inside:avoid}
     var c = z.cols || [0, 0], r = z.rows || [0, 0];
     return { x: G.px + c[0] * G.cw + 8, y: G.py + r[0] * G.ch + 6,
              w: (c[1] - c[0] + 1) * G.cw - 16, h: (r[1] - r[0] + 1) * G.ch - 12 };
+  }
+  /* a zone's tag: a pill tucked into the corner its "tag" names. Text width is
+     measured by the caller; this is where the pill's fixed edge and band sit */
+  var ZPAD = 9, ZTAG_H = 18;
+  function zoneTag(z, r) {
+    var tag = z.tag || 'tl', right = tag[1] === 'r', bottom = tag[0] === 'b';
+    var y0 = bottom ? r.y + r.h - 8 - ZTAG_H : r.y + 8;
+    return { right: right, edge: right ? r.x + r.w - 12 : r.x + 12, y0: y0, y1: y0 + ZTAG_H };
   }
   /* a connection leaves the side that faces its target; bends live in the gutter */
   function plan(e, nodes) {
@@ -5737,11 +5821,12 @@ figure.fv-drawing{break-inside:avoid}
     shrunkLabels({ nodes: [] }, host);               // makes sure the scratch svg is mounted in host
     var g = el('g', { class: 'zone' }, scratch), hits = [], segs = segments(L);
     L.zones.forEach(function (zr) {
-      var z = zr.z, r = zr.r, tag = z.tag || 'tl', right = tag[1] === 'r', bottom = tag[0] === 'b';
+      var z = zr.z, r = zr.r, p = zoneTag(z, r);
+      if (!z.label) return;
       var t = el('text', {}, g);
-      t.textContent = z.label || '';
-      var w = t.getComputedTextLength(), base = bottom ? r.y + r.h - 11 : r.y + 20;
-      var x0 = (right ? r.x + r.w - 14 - w : r.x + 14) - 3, x1 = x0 + w + 6, y0 = base - 12, y1 = base + 4;
+      t.textContent = z.label;
+      var w = t.getComputedTextLength() + 2 * ZPAD;
+      var x0 = p.right ? p.edge - w : p.edge, x1 = x0 + w, y0 = p.y0, y1 = p.y1;
       segs.forEach(function (s) {
         var x = span(s.a.x, s.b.x), y = span(s.a.y, s.b.y);
         if (x[1] >= x0 && x[0] <= x1 && y[1] >= y0 && y[0] <= y1) hits.push('zone ' + z.id + ' label × ' + s.id);
@@ -5945,25 +6030,29 @@ figure.fv-drawing{break-inside:avoid}
     function drawZone(zr) {
       var z = zr.z, r = zr.r;
       var g = el('g', { class: 'zone z-' + (z.tone || 'neutral') }, S.layer.zones);
-      el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: 16 }, g);
-      var tag = z.tag || 'tl', right = tag[1] === 'r', bottom = tag[0] === 'b';
-      var t = el('text', { x: right ? r.x + r.w - 14 : r.x + 14, y: bottom ? r.y + r.h - 11 : r.y + 20,
-        'text-anchor': right ? 'end' : 'start' }, g);
-      t.textContent = z.label || '';
+      el('rect', { class: 'zbox', x: r.x, y: r.y, width: r.w, height: r.h, rx: 16 }, g);
+      if (!z.label) return;
+      var p = zoneTag(z, r), pill = el('rect', { class: 'ztag', y: p.y0, height: p.y1 - p.y0, rx: (p.y1 - p.y0) / 2 }, g);
+      var t = el('text', { y: (p.y0 + p.y1) / 2 + 0.5, 'text-anchor': 'middle' }, g);
+      t.textContent = z.label;
+      var w = t.getComputedTextLength() || z.label.length * 6.4, x0 = p.right ? p.edge - w - 2 * ZPAD : p.edge;
+      pill.setAttribute('x', f(x0)); pill.setAttribute('width', f(w + 2 * ZPAD));
+      t.setAttribute('x', f(x0 + ZPAD + w / 2));
     }
+    /* an open chevron, drawn in the line's own ink */
     function head(pts, g) {
       var q = pts[pts.length - 1], p = pts[pts.length - 2];
       var dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
-      var tx = q.x - ux * 1.5, ty = q.y - uy * 1.5, bx = tx - ux * 8.5, by = ty - uy * 8.5;
-      el('path', { class: 'head', d: 'M' + f(tx) + ' ' + f(ty) + 'L' + f(bx - uy * 4.6) + ' ' + f(by + ux * 4.6) +
-        'L' + f(bx + uy * 4.6) + ' ' + f(by - ux * 4.6) + 'Z' }, g);
+      var tx = q.x - ux * 2, ty = q.y - uy * 2, bx = tx - ux * 7, by = ty - uy * 7;
+      el('path', { class: 'head', d: 'M' + f(bx - uy * 4.4) + ' ' + f(by + ux * 4.4) + 'L' + f(tx) + ' ' + f(ty) +
+        'L' + f(bx + uy * 4.4) + ' ' + f(by - ux * 4.4) }, g);
     }
     function drawEdge(p) {
       var e = p.e, mode = e.mode === 'async' ? 'async' : 'sync';
       var set = el('g', { class: 'edgeset', 'data-edge': e.id }, S.layer.edges);
       p.lanes.forEach(function (ln) {
         var g = el('g', { class: 'edge m-' + mode, 'data-edge': e.id, 'data-dir': ln.dir }, set);
-        var pts = trimEnd(ln.pts, 7);
+        var pts = trimEnd(ln.pts, 2.5);
         var path = el('path', { class: 'line', d: roundPath(pts, G.r) }, g);
         head(ln.pts, g);
         S.lanes.push({ edge: e, dir: ln.dir, g: g, path: path, pts: pts });
@@ -5993,21 +6082,31 @@ figure.fv-drawing{break-inside:avoid}
         'data-node': n.id, tabindex: 0, role: 'button',
         'aria-label': (n.label || n.id) + (ns ? '. ' + STATUS[ns].word : '') + (n.peek ? '. ' + n.peek : '')
       }, S.layer.nodes);
-      el('rect', { class: 'shape', x: b.x, y: b.y, width: b.w, height: b.h, rx: 14 }, g);
-      el('rect', { class: 'tile', x: b.x + 11, y: b.y + 11, width: 34, height: 34, rx: 10 }, g);
-      el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), x: b.x + 18, y: b.y + 18, width: 20, height: 20 }, g);
-      var lg = el('g', { class: 'lblg' }, g);
-      var t = el('text', { class: 'lbl', x: b.x + 55, y: b.cy + 4.5 }, lg);
+      el('rect', { class: 'shape', x: b.x, y: b.y, width: b.w, height: b.h, rx: 12 }, g);
+      /* the icon and the label travel as one group, centred in the box; with the Labels
+         layer on, the group slides to centre on the wider of the label and the tech line */
+      var cg = el('g', { class: 'cnt' }, g);
+      var ico = el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), y: b.cy - ICON / 2, width: ICON, height: ICON }, cg);
+      var lg = el('g', { class: 'lblg' }, cg);
+      var t = el('text', { class: 'lbl', y: b.cy + 4.5 }, lg);
       t.textContent = n.label || n.id;
       fit(t, LABEL_ROOM);
-      if (ns === 'removed') {
-        var sx = t.getComputedTextLength() || LABEL_ROOM;
-        el('line', { class: 'strike', x1: b.x + 55, y1: f(b.cy + 0.5), x2: f(b.x + 55 + sx), y2: f(b.cy + 0.5) }, lg);
-      }
+      var lw = textW(t), tw = 0, tt = null;
       if (n.tech) {
-        var tt = el('text', { class: 'tech', x: b.x + 55, y: b.cy + 14 }, g);
+        tt = el('text', { class: 'tech', y: b.cy + 14 }, cg);
         tt.textContent = n.tech;
-        fit(tt, b.w - 55 - 10);
+        fit(tt, LABEL_ROOM);
+        tw = textW(tt);
+      }
+      var x0 = b.cx - (ICON + IGAP + lw) / 2, x1 = b.cx - (ICON + IGAP + Math.max(lw, tw)) / 2;
+      ico.setAttribute('x', f(x0));
+      t.setAttribute('x', f(x0 + ICON + IGAP));
+      if (tt) tt.setAttribute('x', f(x0 + ICON + IGAP));
+      if (x1 < x0 - 0.5) cg.style.setProperty('--sx', f(x1 - x0) + 'px');
+      if (ns === 'removed') {
+        /* from the label's own x, inside lg, so it lifts and slides with the label */
+        var tx0 = x0 + ICON + IGAP, sx = t.getComputedTextLength() || lw;
+        el('line', { class: 'strike', x1: f(tx0), y1: f(b.cy + 0.5), x2: f(tx0 + sx), y2: f(b.cy + 0.5) }, lg);
       }
       if (n.segment && !n.ghost) {
         var sg = el('g', { class: 'seg', role: 'button', 'aria-label': 'Open the inside of ' + (n.label || n.id) }, g);
@@ -6176,7 +6275,7 @@ figure.fv-drawing{break-inside:avoid}
           var g = el('g', { class: 'stepno' + (it.st.fail ? ' fail' : '') + (it.res ? ' r-' + it.res : ''), 'data-si': it.si,
             'data-edge': slot.lane.edge.id, tabindex: 0, role: 'button',
             'aria-label': 'Step ' + (it.si + 1) + (it.res ? ', ' + RES[it.res].step : '') + ': ' + (it.st.say || '') }, gb);
-          el('circle', { cx: f(pt.x), cy: f(pt.y), r: 9.5 }, g);
+          el('circle', { cx: f(pt.x), cy: f(pt.y), r: 10.5 }, g);
           var tx = el('text', { x: f(pt.x), y: f(pt.y) + 0.5 }, g);
           tx.textContent = it.si + 1;
           g.addEventListener('click', function (ev) { ev.stopPropagation(); goStep(it.si); });
@@ -6235,12 +6334,13 @@ figure.fv-drawing{break-inside:avoid}
         el('line', { class: 'life', x1: x, y1: top + headH, x2: x, y2: H - 8 }, gLife);
         var g = el('g', { class: 'node k-' + (KIND[n.kind] ? n.kind : 'service') + (n.ghost ? ' ghost' : ''), 'data-node': id,
           tabindex: 0, role: 'button', 'aria-label': n.label || id }, gLife);
-        el('rect', { class: 'shape', x: x - w / 2, y: top, width: w, height: headH - 6, rx: 11 }, g);
-        el('rect', { class: 'tile', x: x - w / 2 + 7, y: top + 7, width: 26, height: 26, rx: 8 }, g);
-        el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), x: x - w / 2 + 12, y: top + 12, width: 16, height: 16 }, g);
-        var t = el('text', { class: 'lbl', x: x - w / 2 + 41, y: top + 24.5 }, g);
+        el('rect', { class: 'shape', x: x - w / 2, y: top, width: w, height: headH - 6, rx: 10 }, g);
+        var hu = el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), y: top + 5, width: 30, height: 30 }, g);
+        var t = el('text', { class: 'lbl', y: top + 24.5 }, g);
         t.textContent = n.label || id;
         if (visible) fit(t, w - 50);
+        var hx = x - (36 + Math.min(textW(t), w - 50)) / 2;     // icon, gap and label, centred on the lifeline
+        hu.setAttribute('x', f(hx)); t.setAttribute('x', f(hx + 36));
         wireHover(g, 'node', id, g);
       });
       rows.forEach(function (r, k) {
@@ -6248,20 +6348,21 @@ figure.fv-drawing{break-inside:avoid}
         var band = el('rect', { class: 'band', x: 6, y: f(y - rowH / 2 + 3), width: W - 12, height: rowH - 6, rx: 9 }, gRows);
         var g = el('g', { class: 'msg ' + r.h.mode + (r.h.result ? ' r-' + r.h.result : '') }, gMsg);
         var xs = x1 + dir * 12;
-        var xe = r.h.mode === 'fail' ? x1 + (x2 - x1) * 0.62 : r.h.mode === 'error' ? x1 + dir * 46 : x2 - dir * 9;
+        var xe = r.h.mode === 'fail' ? x1 + (x2 - x1) * 0.62 : r.h.mode === 'error' ? x1 + dir * 46 : x2 - dir * 3;
         var p = el('path', { class: 'line', d: 'M' + f(xs) + ' ' + y + 'H' + f(xe) }, g);
         if (r.h.mode === 'fail') {
           var xg = el('g', { transform: 'translate(' + f(xe) + ' ' + y + ')' }, g), xm = el('g', { class: 'xmark' }, xg);
           el('circle', { r: 8 }, xm); el('path', { d: 'M-3.2 -3.2L3.2 3.2M3.2 -3.2L-3.2 3.2' }, xm);
         } else if (r.h.mode === 'error') {
           resGlyph(el('g', { class: 'rmark r-error', transform: 'translate(' + f(xe) + ' ' + y + ')' }, g), 'error', 8.5);
-        } else el('path', { class: 'head', d: 'M' + f(x2 - dir * 1.5) + ' ' + y + 'l' + (-dir * 9) + ' -4.8v9.6z' }, g);
+        } else el('path', { class: 'head', d: 'M' + f(x2 - dir * 9.5) + ' ' + (y - 4.6) + 'L' + f(x2 - dir * 2.5) + ' ' + y +
+          'L' + f(x2 - dir * 9.5) + ' ' + (y + 4.6) }, g);
         var tx = el('text', { x: f(r.h.mode === 'error' ? (xs + xe) / 2 : (x1 + x2) / 2), y: y - 8 }, g);
         tx.textContent = r.st.msg || '';
         if (r.h.i === 0) {
           var rr = resultOf(r.st);
           var bg = el('g', { class: 'stepno' + (r.st.fail ? ' fail' : '') + (rr ? ' r-' + rr : ''), 'data-si': r.si }, gMsg);
-          el('circle', { cx: x1, cy: y, r: 9.5 }, bg);
+          el('circle', { cx: x1, cy: y, r: 10.5 }, bg);
           var bt = el('text', { x: x1, y: y + 0.5 }, bg); bt.textContent = r.si + 1;
           bg.addEventListener('click', function () { goStep(r.si); });
         }
@@ -6657,7 +6758,8 @@ figure.fv-drawing{break-inside:avoid}
     function openDrawer(type, id) {
       var D = drawer();
       if (DR.owner && DR.owner !== self) DR.owner.select(null);
-      D.body.innerHTML = ''; D.ico.innerHTML = ''; D.ico.style.removeProperty('--k'); D.kind.style.removeProperty('--k');
+      D.body.innerHTML = ''; D.ico.innerHTML = ''; D.ico.className = 'dr-ico';
+      D.ico.style.removeProperty('--k'); D.kind.style.removeProperty('--k');
       D.el.style.setProperty('--flow', 'var(--' + tone(S.flow) + ')');
       select(type, id);
       if (type === 'node') nodeDrawer(S.nodes[id], D);
@@ -6703,6 +6805,7 @@ figure.fv-drawing{break-inside:avoid}
     function nodeDrawer(n, D) {
       var kv = n.ghost ? 'var(--dim2)' : kindVar(n.kind);
       D.ico.style.setProperty('--k', kv); D.kind.style.setProperty('--k', kv);
+      D.ico.className = 'dr-ico illus k-' + (KIND[n.kind] ? n.kind : 'service');
       D.ico.innerHTML = icon(n.icon || 'service');
       D.kind.textContent = (n.ghost ? 'In the whole system' : (KIND_NAME[n.kind] || 'Box')) + (n.tech ? ' · ' + n.tech : '');
       D.title.textContent = n.label || n.id;
@@ -6929,6 +7032,7 @@ figure.fv-drawing{break-inside:avoid}
     /* The still picture: the root canvas rendered at rest in a hidden light-themed
        copy, every look baked in as SVG attributes — sanitisers keep attributes far
        more often than style="" — and the icons it uses copied into its own defs. */
+    var PAINTS = ['i1', 'i2', 'i3', 'iw', 'ion', 'igold', 'ired', 'imetal', 'imetal2', 'iline'];
     var ATTRS = {
       shape: [['fill', 'fill'], ['stroke', 'stroke'], ['strokeWidth', 'stroke-width'], ['strokeDasharray', 'stroke-dasharray'],
               ['strokeLinecap', 'stroke-linecap'], ['strokeLinejoin', 'stroke-linejoin']],
@@ -6957,7 +7061,9 @@ figure.fv-drawing{break-inside:avoid}
           set.push([p[1], v]);
         });
         if (cs.opacity !== '1') set.push(['opacity', cs.opacity]);
-        return { set: set, filter: cs.filter && cs.filter !== 'none' ? cs.filter : '' };
+        /* an icon's fills are paints its box sets: carry the resolved values into the picture */
+        var paint = tag === 'use' ? PAINTS.map(function (v) { return cs.getPropertyValue('--' + v).trim(); }) : null;
+        return { set: set, filter: cs.filter && cs.filter !== 'none' ? cs.filter : '', paint: paint };
       });
       var used = {};
       els.forEach(function (x, i) {
@@ -6968,16 +7074,22 @@ figure.fv-drawing{break-inside:avoid}
         looks[i].set.forEach(function (p) { x.setAttribute(p[0], p[1]); });
         if (looks[i].filter) x.setAttribute('style', 'filter:' + looks[i].filter);
         if (x.tagName.toLowerCase() === 'use') {
-          var ref = (x.getAttribute('href') || '').replace(/^#/, '');
-          if (ref) { used[ref] = 1; x.setAttribute('href', '#fvxs-' + ID + '-' + ref); }
+          var ref = (x.getAttribute('href') || '').replace(/^#/, ''), key = ref + '|' + (looks[i].paint || []).join(',');
+          if (ref) {
+            if (!used[key]) used[key] = { ref: ref, paint: looks[i].paint, id: 'fvxs-' + ID + '-' + ref + '-' + Object.keys(used).length };
+            x.setAttribute('href', '#' + used[key].id);
+          }
         }
       });
       var vb = (svg.getAttribute('viewBox') || '0 0 1000 600').split(/\s+/);
-      var defs = '<defs>' + Object.keys(used).map(function (ref) {
-        var sy = document.getElementById(ref);
+      var defs = '<defs>' + Object.keys(used).map(function (key) {
+        var u = used[key], sy = document.getElementById(u.ref);
         if (!sy) return '';
-        var c = sy.cloneNode(true); c.setAttribute('id', 'fvxs-' + ID + '-' + ref);
-        return c.outerHTML;
+        var c = sy.cloneNode(true); c.setAttribute('id', u.id);
+        return c.outerHTML.replace(/var\(--([a-z0-9]+)\)/g, function (m, v) {
+          var k = PAINTS.indexOf(v);
+          return k >= 0 && u.paint && u.paint[k] ? u.paint[k] : m;
+        });
       }).join('') + '</defs>';
       var inner = svg.innerHTML;
       host.remove();

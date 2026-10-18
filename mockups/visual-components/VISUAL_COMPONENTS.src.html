@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="flowviz-doc" content="visual-components">
+<meta name="flowviz-kind" content="report">
+<title>Every drawing now shares one outlined, illustrated look and palette</title>
+<!-- flowviz:head -->
+</head>
+<body>
+
+<div class="card">
+  <div class="top">
+    <span class="chip ok"><span class="d"></span>Ready to review</span>
+    <span class="meta">2026-10-18 · branch visual-components · worktree ~/Projects/FLOW_VIZ-visual</span>
+  </div>
+
+  <h1>Every drawing now shares one outlined, illustrated look and palette</h1>
+
+  <div class="slot">
+    <span class="k">Verdict</span>
+    <div class="v" data-slot="verdict">Drawings now follow the style you shared: pale fills inside 2px outlines of their kind, 65 illustrated icons with ink outlines, connections ending in open chevrons, and dotted zones with a solid tag. One palette sets every colour, so drawings match each other in light and dark.</div>
+  </div>
+
+  <div class="slot wh">
+    <span class="k">So what</span>
+    <div class="v" data-slot="sowhat">No spec changes: a plain rebuild restyles every drawing. Merging needs one manual pass in drawNode, where the other agent's status tags also landed. Both steps below only read.</div>
+  </div>
+
+  <div class="vitals">
+    <div><div class="n">65</div><div class="l">component icons</div></div>
+    <div><div class="n">26</div><div class="l">of them new</div></div>
+    <div><div class="n">7</div><div class="l">kinds, one palette</div></div>
+    <div><div class="n">0</div><div class="l">spec fields changed</div></div>
+    <div><div class="n">3</div><div class="l">reference builds clean</div></div>
+  </div>
+
+  <div class="next">
+    <span class="k">Next</span>
+    <ol>
+      <li>Open rows c to f and judge the look in light and dark <span class="badge ro">read-only</span></li>
+      <li>Run b1 and b2 to see the diff and a clean audit <span class="badge ro">read-only</span></li>
+      <li>Merge visual-components once the other agent's draw.js work lands <span class="badge w">write</span></li>
+    </ol>
+  </div>
+</div>
+
+<div class="spine">
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "spine",
+  "name": "Web stack",
+  "title": "A request meets the CDN first and the database last",
+  "lede": "Nine boxes from the reference's system-design vocabulary: clients, edge, compute, data and async work, each drawn in its kind's colour.",
+  "grid": {"cols": 5, "rows": 3},
+  "zones": [
+    {"id": "edge", "label": "Edge", "cols": [1, 1], "rows": [1, 1], "tone": "sync"},
+    {"id": "origin", "label": "Origin · one region", "cols": [2, 4], "rows": [0, 2], "tone": "neutral", "tag": "tr"}
+  ],
+  "nodes": [
+    {"id": "users", "label": "Users", "kind": "client", "icon": "users", "at": [0, 1], "tech": "web and mobile", "peek": "Everyone sending requests: kind client, icon users."},
+    {"id": "cdn", "label": "CDN", "kind": "edge", "icon": "cdn", "at": [1, 1], "tech": "40 points of presence", "peek": "Serves static files from the nearest point of presence and forwards everything else."},
+    {"id": "storage", "label": "Object storage", "kind": "data", "icon": "storage", "at": [2, 0], "tech": "S3-compatible", "peek": "Holds images and bundles; the CDN pulls from it on a miss."},
+    {"id": "lb", "label": "Load balancer", "kind": "edge", "icon": "lb", "at": [2, 1], "tech": "L7, health-checked", "peek": "Spreads requests across the app servers and drops any that fail a health check."},
+    {"id": "app", "label": "App servers", "kind": "service", "icon": "server", "at": [3, 1], "tech": "6 instances", "peek": "Stateless servers that run the business logic: kind service, icon server."},
+    {"id": "cache", "label": "Cache", "kind": "data", "icon": "cache", "at": [3, 0], "tech": "Redis", "peek": "Answers hot reads in under a millisecond so most of them never reach the database."},
+    {"id": "db", "label": "Primary DB", "kind": "data", "icon": "db", "at": [4, 1], "tech": "Postgres", "peek": "The source of truth: every write lands here, drawn with the stacked-disc database icon."},
+    {"id": "queue", "label": "Job queue", "kind": "stream", "icon": "queue", "at": [3, 2], "tech": "FIFO", "peek": "Holds slow work so a request never waits on it."},
+    {"id": "worker", "label": "Workers", "kind": "service", "icon": "worker", "at": [4, 2], "tech": "autoscaled", "peek": "Drain the queue and write their results back to the database."}
+  ],
+  "edges": [
+    {"id": "users-cdn", "from": "users", "to": "cdn", "mode": "sync", "label": "HTTPS", "peek": "Every request enters at the edge."},
+    {"id": "cdn-storage", "from": "cdn", "to": "storage", "mode": "sync", "label": "origin pull", "peek": "On a cache miss the CDN fetches the file from object storage."},
+    {"id": "cdn-lb", "from": "cdn", "to": "lb", "mode": "sync", "label": "dynamic", "peek": "Anything not cacheable goes on to the load balancer."},
+    {"id": "lb-app", "from": "lb", "to": "app", "mode": "sync", "label": "HTTP", "peek": "Round-robin across healthy app servers."},
+    {"id": "app-cache", "from": "app", "to": "cache", "mode": "sync", "label": "GET", "peek": "Reads try the cache first."},
+    {"id": "app-db", "from": "app", "to": "db", "mode": "sync", "label": "SQL", "peek": "Writes and cache misses go to the primary."},
+    {"id": "app-queue", "from": "app", "to": "queue", "mode": "async", "label": "jobs", "peek": "Slow work is enqueued and the request returns: dotted, because nobody waits."},
+    {"id": "queue-worker", "from": "queue", "to": "worker", "mode": "async", "label": "consume", "peek": "Workers pull jobs at their own pace."},
+    {"id": "worker-db", "from": "worker", "to": "db", "mode": "sync", "label": "results", "peek": "Each job writes its result to the primary."}
+  ],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="db">
+  <p>The spec line behind this box — the look comes from <code>kind</code> and <code>icon</code> alone:</p>
+  <div class="cmd fig"><pre><code>{"id": "db", "label": "Primary DB", "kind": "data", "icon": "db", "at": [4, 1]}</code></pre></div>
+</section>
+<section data-for="app">
+  <p>The server icon is the one from the reference's SSH diagram: three stacked units, a green lamp on each, a grille of dots. Its units take the box's kind paint, so a server in a <code>service</code> box is green and one in an <code>external</code> box is slate.</p>
+</section>
+</div>
+</figure>
+</div>
+
+<div class="ctl">
+  <button id="flowExpand">Expand all</button>
+  <button id="flowCollapse">Collapse all</button>
+  <button id="flowAgentCopy">Copy captures for agent</button>
+  <button id="flowEvidence">Save evidence</button>
+  <span class="hint">nothing is open at load, by design</span>
+</div>
+
+<h2 class="sec">What changed</h2>
+<details class="row" data-row="a" data-kind="finding">
+<summary><span class="ord">a</span><span class="cl">Boxes, icons, connections and zones now draw in the reference style</span><span class="rt">2 min</span></summary>
+<div class="in">
+<p>Everything below is the runtime's: no spec writes a colour, so every drawing changes on a plain rebuild and none of them can drift from the others.</p>
+<table>
+<thead><tr><th>Part</th><th>Before</th><th>Now</th></tr></thead>
+<tbody>
+<tr><td>Box</td><td>soft 1.3px border, drop shadow, white glyph on a coloured tile, left-aligned</td><td>pale fill of its kind inside a 2px outline of its kind; flat, no shadow; icon and label centred together as one group</td></tr>
+<tr><td>Icon</td><td>24-grid line glyph in one colour</td><td>48-grid illustration: ink outline, two paints from the box's kind, fixed gold, green, coral and metal accents</td></tr>
+<tr><td>Label</td><td>weight 650</td><td>weight 700, in ink</td></tr>
+<tr><td>Connection</td><td>grey, filled triangle head</td><td>ink, or the flow's colour when walked; open chevron head</td></tr>
+<tr><td>Step number</td><td>disc with a paper halo, radius 9.5</td><td>disc ringed in ink, radius 10.5; the current step pulses by growing</td></tr>
+<tr><td>Zone</td><td>dashed hairline, coloured text in a corner</td><td>dotted 2px border on a pale fill; the label sits in a solid pill (an ink pill on a neutral zone)</td></tr>
+<tr><td>Canvas</td><td>faint dot grid</td><td>plain paper, so the dotted zones read</td></tr>
+<tr><td>Drawing page title</td><td>plain</td><td>a 7px green bar to its left</td></tr>
+<tr><td>Sequence view</td><td>grey lifelines, filled heads, mono labels</td><td>dotted lifelines, ink arrows with chevrons, the map's own box heads, centred on their lifelines</td></tr>
+<tr><td>Drawer header</td><td>white glyph on a coloured tile</td><td>the box's own icon on its kind</td></tr>
+<tr><td>Copy HTML still picture</td><td>one-colour glyphs</td><td>each icon keeps its box's paints</td></tr>
+</tbody>
+</table>
+<div class="box ok"><p>Unchanged on purpose: the grid (240 × 132 cells, 172 × 56 boxes), routing, every cap, the motion grammar (dashes are calls, dots are messages), every spec field, and all 39 existing icon names.</p></div>
+</div>
+</details>
+<details class="row" data-row="b" data-kind="test">
+<summary><span class="ord">b</span><span class="cl">The three reference builds rebuild and audit clean on the branch</span><span class="rt">3 min</span></summary>
+<div class="in">
+<table>
+<thead><tr><th>File</th><th>What changed</th></tr></thead>
+<tbody>
+<tr><td><code>template/icons.svg</code></td><td>65 component icons on a 48 grid, 39 redrawn and 26 new; the UI glyphs are untouched</td></tr>
+<tr><td><code>template/draw.css</code></td><td>one palette (each kind gains <code>-p</code> and <code>-l</code> icon paints; fixed icon paints; <code>--d-bar</code>); box, connection, zone, badge, sequence and drawer rules rewritten; dot grid removed</td></tr>
+<tr><td><code>template/draw.js</code></td><td>no tile behind the icon; 36px icon centred with its label (the group slides to centre on the tech line when Labels is on); chevron heads; zone pill from one <code>zoneTag()</code> shared with the label hit test; larger badges; the drawer icon on its kind; Copy HTML's still picture resolves icon paints</td></tr>
+<tr><td><code>AGENTS.md</code>, <code>SPEC.md</code>, <code>CLAUDE.md</code>, <code>CHANGELOG.md</code></td><td>the icon list, the theme description, the sprite note, the entry</td></tr>
+<tr><td><code>examples/</code>, <code>PLAN.html</code></td><td>rebuilt</td></tr>
+<tr><td><code>mockups/visual-components/</code></td><td>this report</td></tr>
+</tbody>
+</table>
+<div class="box warn"><p>Merging: the other agent's uncommitted work on <code>main</code> also edits <code>drawNode()</code> in <code>template/draw.js</code> (status tags) and the audit beside <code>BOX_W</code>. Expect a conflict in <code>drawNode()</code>; keep both. Their strike-through line starts at <code>b.x + 55</code>; the label is now centred, so it should start at the label's own <code>x</code> and sit inside the <code>g.cnt</code> group that slides. <code>MERGE.md</code> beside this report has the tested recipe: every conflict, its resolution, and a retention check.</p></div>
+<div class="pb" data-pb="verify">
+  <div class="hd">
+    <span class="t">See the branch and prove it audits clean</span>
+    <span class="prog">0 / 0 done</span>
+  </div>
+  <ol class="steps">
+    <li class="step" data-step="b1" data-risk="ro">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">List the files the branch changes against main.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>git -C ~/Projects/FLOW_VIZ-visual diff --stat main...visual-components</code></pre></div>
+          <p class="expect"><b>Pass:</b> a list ending in <code>N files changed</code> &nbsp;·&nbsp; <i>Fail:</i> <code>fatal:</code>, the branch or worktree is missing</p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["b1"]</span></div>
+            <textarea data-cap="b1" data-pass="\b\d+ files? changed\b" data-fail="\bfatal\b"
+              placeholder="paste the terminal output here — it saves as you type"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="b1" placeholder="0"></span>
+              <span data-cnt="b1">empty</span><span data-at="b1"></span>
+              <span class="rn" data-run="b1"></span>
+              <button class="rr" data-rr="b1" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="b1" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>The three dots compare the branch with the point where it left <code>main</code>, so the other agent's later commits on <code>main</code> do not show up as removals.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="b1">—</span></span>
+    </li>
+    <li class="step" data-step="b2" data-risk="ro" data-after="b1">
+      <input type="checkbox" class="done">
+      <details class="sd">
+        <summary><span class="n"></span><span class="ds">Audit the three reference builds in headless Chrome.</span></summary>
+        <div class="in">
+          <div class="cmd"><button class="copy">copy</button><pre><code>cd ~/Projects/FLOW_VIZ-visual && for f in examples/checkout/checkout.html examples/deploy/DEPLOY.html PLAN.html; do bin/flowviz audit --browser "$f" | tail -1; done</code></pre></div>
+          <p class="expect"><b>Pass:</b> <code>result: clean</code> three times &nbsp;·&nbsp; <i>Fail:</i> any <code>result: N over</code></p>
+          <div class="cap">
+            <div class="cl">Paste output <span class="kp">captures["b2"]</span></div>
+            <textarea data-cap="b2" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"
+              placeholder="paste the terminal output here — it saves as you type"></textarea>
+            <div class="ft">
+              <span>exit <input class="ec" data-ec="b2" placeholder="0"></span>
+              <span data-cnt="b2">empty</span><span data-at="b2"></span>
+              <span class="rn" data-run="b2"></span>
+              <button class="rr" data-rr="b2" title="keep this attempt and clear the box">re-run</button>
+            </div>
+            <input class="nt" data-note="b2" placeholder="note for the agent (optional)">
+          </div>
+          <details class="more"><summary>why this step</summary>
+          <div class="in"><p>The browser audit measures what only layout can: crossings, connections through boxes, labels shrunk to fit and zone labels crossed. The bolder labels and the new zone pill are the two changes that could have moved them.</p></div></details>
+        </div>
+      </details>
+      <span class="ctr"><span class="badge ro">read</span>
+        <button class="copy">⧉</button><span class="vd" data-vd="b2">—</span></span>
+    </li>
+  </ol>
+</div>
+</div>
+</details>
+
+<h2 class="sec">The components</h2>
+<details class="row" data-row="c" data-kind="context">
+<summary><span class="ord">c</span><span class="cl">Sixty-five illustrated icons cover clients, compute, data, AI, security and docs</span><span class="rt">4 min</span></summary>
+<div class="in">
+<p>Each box below is labelled with the icon's name, the word a spec puts in <code>"icon"</code>. Hover one for when to use it. The ink outline is fixed; the two fills come from the box's kind, so the same icon changes colour with its kind and never clashes with its box.</p>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "gallery-clients",
+  "name": "Clients",
+  "title": "Clients are the people and the screens a request starts from",
+  "lede": "Nine icons for whoever, or whatever, starts the conversation.",
+  "grid": {"cols": 4, "rows": 3},
+  "zones": [
+    {"id": "people", "label": "People", "cols": [0, 0], "rows": [0, 1], "tone": "sync"},
+    {"id": "devices", "label": "Devices", "cols": [1, 2], "rows": [0, 1], "tone": "neutral"},
+    {"id": "apps", "label": "Apps", "cols": [3, 3], "rows": [0, 2], "tone": "ext"}
+  ],
+  "nodes": [
+    {"id": "user", "label": "user", "kind": "client", "icon": "user", "at": [0, 0], "peek": "One person: a customer, an operator, the human who asked."},
+    {"id": "users", "label": "users", "kind": "client", "icon": "users", "at": [0, 1], "peek": "Many people at once: concurrent users, a team, the public."},
+    {"id": "desktop", "label": "desktop", "kind": "client", "icon": "desktop", "at": [1, 0], "peek": "A workstation with a prompt: the SSH client, a developer's machine."},
+    {"id": "laptop", "label": "laptop", "kind": "client", "icon": "laptop", "at": [2, 0], "peek": "A laptop: local development, a person working away from the office."},
+    {"id": "mobile", "label": "mobile", "kind": "client", "icon": "mobile", "at": [1, 1], "peek": "A phone app or a mobile browser."},
+    {"id": "devices", "label": "devices", "kind": "client", "icon": "devices", "at": [2, 1], "peek": "Web and mobile together, when the drawing does not care which."},
+    {"id": "browser", "label": "browser", "kind": "client", "icon": "browser", "at": [3, 0], "peek": "A web page or single-page app running in the browser."},
+    {"id": "terminal", "label": "terminal", "kind": "client", "icon": "terminal", "at": [3, 1], "peek": "A shell or CLI: a script, a cron job, a command someone runs."},
+    {"id": "code", "label": "code", "kind": "client", "icon": "code", "at": [3, 2], "peek": "An IDE or a code editor: where an agent or a developer writes code."}
+  ],
+  "edges": [],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden></div>
+</figure>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "gallery-network",
+  "name": "Network and compute",
+  "title": "Edge, network and compute icons trace the path a request takes",
+  "lede": "Twelve icons: the edge it crosses, the networks around it, and what runs it.",
+  "grid": {"cols": 4, "rows": 3},
+  "zones": [
+    {"id": "edgez", "label": "Edge", "cols": [0, 3], "rows": [0, 0], "tone": "neutral"},
+    {"id": "compute", "label": "Compute", "cols": [0, 3], "rows": [2, 2], "tone": "svc"}
+  ],
+  "nodes": [
+    {"id": "gateway", "label": "gateway", "kind": "edge", "icon": "gateway", "at": [0, 0], "peek": "An API gateway or ingress: the gate every request walks through."},
+    {"id": "lb", "label": "lb", "kind": "edge", "icon": "lb", "at": [1, 0], "peek": "A load balancer fanning one stream of requests out to many servers."},
+    {"id": "cdn", "label": "cdn", "kind": "edge", "icon": "cdn", "at": [2, 0], "peek": "A CDN: a cloud with points of presence underneath."},
+    {"id": "firewall", "label": "firewall", "kind": "edge", "icon": "firewall", "at": [3, 0], "peek": "A firewall, WAF or network policy."},
+    {"id": "cloud", "label": "cloud", "kind": "external", "icon": "cloud", "at": [0, 1], "peek": "A cloud provider or someone else's hosted platform."},
+    {"id": "globe", "label": "globe", "kind": "external", "icon": "globe", "at": [1, 1], "peek": "The internet, DNS, or anything reached over the public network."},
+    {"id": "relay", "label": "relay", "kind": "service", "icon": "relay", "at": [2, 1], "peek": "A two-way exchange: a proxy, a sync job, a key exchange."},
+    {"id": "chip", "label": "chip", "kind": "service", "icon": "chip", "at": [3, 1], "peek": "A CPU or GPU: inference hardware, a quantized model on a machine."},
+    {"id": "server", "label": "server", "kind": "service", "icon": "server", "at": [0, 2], "peek": "A server or a fleet of them: three units, a lamp on each."},
+    {"id": "service", "label": "service", "kind": "service", "icon": "service", "at": [1, 2], "peek": "One service or microservice, drawn as a solid cube."},
+    {"id": "function", "label": "function", "kind": "service", "icon": "function", "at": [2, 2], "peek": "A serverless function: Lambda, Cloud Functions, a worker script."},
+    {"id": "worker", "label": "worker", "kind": "service", "icon": "worker", "at": [3, 2], "peek": "A background worker or job runner: two gears turning."}
+  ],
+  "edges": [],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden></div>
+</figure>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "gallery-ai",
+  "name": "AI and integration",
+  "title": "AI and integration icons show the model, the agent and its tools",
+  "lede": "Nine icons for the newer half of the reference: models, agents, and what they reach.",
+  "grid": {"cols": 4, "rows": 3},
+  "zones": [
+    {"id": "models", "label": "Models and agents", "cols": [0, 2], "rows": [0, 0], "tone": "ext"},
+    {"id": "integration", "label": "Integration", "cols": [0, 3], "rows": [1, 2], "tone": "svc"}
+  ],
+  "nodes": [
+    {"id": "llm", "label": "llm", "kind": "external", "icon": "llm", "at": [0, 0], "peek": "A language model: two hemispheres of a brain, the reference's own symbol."},
+    {"id": "agent", "label": "agent", "kind": "service", "icon": "agent", "at": [1, 0], "peek": "An agent runtime: a robot with a visor."},
+    {"id": "spark", "label": "spark", "kind": "service", "icon": "spark", "at": [2, 0], "peek": "Generated output, or an AI feature in an otherwise ordinary product."},
+    {"id": "chat", "label": "chat", "kind": "client", "icon": "chat", "at": [3, 0], "peek": "A chat interface, a message, a prompt or an answer."},
+    {"id": "api", "label": "api", "kind": "edge", "icon": "api", "at": [0, 1], "peek": "An API: a gear with connection points on every corner."},
+    {"id": "plugin", "label": "plugin", "kind": "service", "icon": "plugin", "at": [1, 1], "peek": "A plugin, an extension, or an MCP server plugged into a host."},
+    {"id": "tool", "label": "tool", "kind": "service", "icon": "tool", "at": [2, 1], "peek": "A tool an agent calls, or a maintenance job."},
+    {"id": "workflow", "label": "workflow", "kind": "service", "icon": "workflow", "at": [3, 1], "peek": "A pipeline or workflow: steps that hand off to each other."},
+    {"id": "gear", "label": "gear", "kind": "service", "icon": "gear", "at": [0, 2], "peek": "Configuration, settings, or a generic engine."}
+  ],
+  "edges": [],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden></div>
+</figure>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "gallery-data",
+  "name": "Data and messaging",
+  "title": "Data and messaging icons separate what is stored from what is sent",
+  "lede": "Twelve icons: stores and indexes on top, the things that move between them below.",
+  "grid": {"cols": 4, "rows": 3},
+  "zones": [
+    {"id": "stores", "label": "Stores and indexes", "cols": [0, 3], "rows": [0, 1], "tone": "data"},
+    {"id": "messages", "label": "Messages", "cols": [0, 3], "rows": [2, 2], "tone": "async"}
+  ],
+  "nodes": [
+    {"id": "db", "label": "db", "kind": "data", "icon": "db", "at": [0, 0], "peek": "A database: three stacked discs, the icon the reference uses everywhere."},
+    {"id": "table", "label": "table", "kind": "data", "icon": "table", "at": [1, 0], "peek": "A table, a spreadsheet, or rows of structured data."},
+    {"id": "index", "label": "index", "kind": "data", "icon": "index", "at": [2, 0], "peek": "A search or vector index: a database with a magnifier."},
+    {"id": "search", "label": "search", "kind": "data", "icon": "search", "at": [3, 0], "peek": "Search or retrieval as an action: a retriever, a query, a lookup."},
+    {"id": "cache", "label": "cache", "kind": "data", "icon": "cache", "at": [0, 1], "peek": "A cache: a bolt, because it is the fast path."},
+    {"id": "storage", "label": "storage", "kind": "data", "icon": "storage", "at": [1, 1], "peek": "Object or blob storage: a bucket."},
+    {"id": "vector", "label": "vector", "kind": "data", "icon": "vector", "at": [2, 1], "peek": "Embeddings: a cube wired to its neighbours."},
+    {"id": "cubes", "label": "cubes", "kind": "data", "icon": "cubes", "at": [3, 1], "peek": "Chunks, shards or partitions: one thing split into blocks."},
+    {"id": "queue", "label": "queue", "kind": "stream", "icon": "queue", "at": [0, 2], "peek": "A queue or topic: blocks in a capsule, in at one end and out at the other."},
+    {"id": "bell", "label": "bell", "kind": "stream", "icon": "bell", "at": [1, 2], "peek": "Notifications, alerts sent to people, push messages."},
+    {"id": "mail", "label": "mail", "kind": "stream", "icon": "mail", "at": [2, 2], "peek": "Email, or any message with an envelope."},
+    {"id": "box", "label": "box", "kind": "data", "icon": "box", "at": [3, 2], "peek": "A package, an artifact or a container image."}
+  ],
+  "edges": [],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden></div>
+</figure>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "gallery-security",
+  "name": "Security and money",
+  "title": "Security and money icons mark trust, secrets and payments",
+  "lede": "Seven icons. Keys and locks are always gold, whatever their box, so a secret is recognisable everywhere.",
+  "grid": {"cols": 4, "rows": 2},
+  "zones": [
+    {"id": "trust", "label": "Trust", "cols": [0, 3], "rows": [0, 0], "tone": "neutral"},
+    {"id": "money", "label": "Money", "cols": [1, 2], "rows": [1, 1], "tone": "ext"}
+  ],
+  "nodes": [
+    {"id": "lock", "label": "lock", "kind": "edge", "icon": "lock", "at": [0, 0], "peek": "Encryption, a locked resource, TLS."},
+    {"id": "key", "label": "key", "kind": "edge", "icon": "key", "at": [1, 0], "peek": "A key or secret: an API key, a private key, a session key."},
+    {"id": "shield", "label": "shield", "kind": "edge", "icon": "shield", "at": [2, 0], "peek": "Protection or policy: a guard, a rate limit, a security boundary."},
+    {"id": "cert", "label": "cert", "kind": "edge", "icon": "cert", "at": [3, 0], "peek": "A certificate or a verified file: known_hosts, authorized_keys, a signed artifact."},
+    {"id": "alert", "label": "alert", "kind": "threat", "icon": "alert", "at": [0, 1], "peek": "A warning or an adversary; in a threat box the outline breaks."},
+    {"id": "card", "label": "card", "kind": "external", "icon": "card", "at": [1, 1], "peek": "A payment card or a card network."},
+    {"id": "bank", "label": "bank", "kind": "external", "icon": "bank", "at": [2, 1], "peek": "A bank, a payment processor, a ledger of record."}
+  ],
+  "edges": [],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden></div>
+</figure>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "gallery-docs",
+  "name": "Documents and time",
+  "title": "Document and time icons cover files, plans and schedules",
+  "lede": "Ten icons: what is written down, and when things happen.",
+  "grid": {"cols": 4, "rows": 3},
+  "zones": [
+    {"id": "documents", "label": "Documents", "cols": [0, 2], "rows": [0, 1], "tone": "data"},
+    {"id": "plans", "label": "Plans", "cols": [3, 3], "rows": [0, 1], "tone": "svc"},
+    {"id": "time", "label": "Time", "cols": [0, 3], "rows": [2, 2], "tone": "async"}
+  ],
+  "nodes": [
+    {"id": "file", "label": "file", "kind": "data", "icon": "file", "at": [0, 0], "peek": "One document or file."},
+    {"id": "docs", "label": "docs", "kind": "data", "icon": "docs", "at": [1, 0], "peek": "A set of documents: a corpus, a knowledge source, the docs site."},
+    {"id": "json", "label": "json", "kind": "data", "icon": "json", "at": [2, 0], "peek": "A config file, a schema or a JSON payload."},
+    {"id": "folder", "label": "folder", "kind": "data", "icon": "folder", "at": [0, 1], "peek": "A directory, a file system or a repository."},
+    {"id": "book", "label": "book", "kind": "data", "icon": "book", "at": [1, 1], "peek": "A knowledge base, a runbook or a manual."},
+    {"id": "checklist", "label": "checklist", "kind": "service", "icon": "checklist", "at": [3, 0], "peek": "A plan, a checklist or a set of rules."},
+    {"id": "check", "label": "check", "kind": "service", "icon": "check", "at": [3, 1], "peek": "Verification, a test or an approval."},
+    {"id": "clock", "label": "clock", "kind": "stream", "icon": "clock", "at": [0, 2], "peek": "A timeout, a TTL, latency, or history."},
+    {"id": "hourglass", "label": "hourglass", "kind": "stream", "icon": "hourglass", "at": [1, 2], "peek": "Waiting: a pending state, a backoff, a long-running job."},
+    {"id": "calendar", "label": "calendar", "kind": "stream", "icon": "calendar", "at": [2, 2], "peek": "A schedule: cron, a nightly job, a release date."}
+  ],
+  "edges": [],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden></div>
+</figure>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "gallery-observe",
+  "name": "Observe and plan",
+  "title": "Observability and planning icons watch the system and set goals",
+  "lede": "Six icons for the boxes that watch, ship and steer.",
+  "grid": {"cols": 4, "rows": 2},
+  "zones": [
+    {"id": "observe", "label": "Observe", "cols": [0, 2], "rows": [0, 0], "tone": "ext"},
+    {"id": "plan", "label": "Plan and ship", "cols": [0, 2], "rows": [1, 1], "tone": "sync"}
+  ],
+  "nodes": [
+    {"id": "chart", "label": "chart", "kind": "external", "icon": "chart", "at": [0, 0], "peek": "Metrics and analytics: bars with a trend."},
+    {"id": "pulse", "label": "pulse", "kind": "external", "icon": "pulse", "at": [1, 0], "peek": "Monitoring and health checks: a screen with a heartbeat."},
+    {"id": "eye", "label": "eye", "kind": "external", "icon": "eye", "at": [2, 0], "peek": "Observability, tracing or review: something that watches every stage."},
+    {"id": "git", "label": "git", "kind": "client", "icon": "git", "at": [0, 1], "peek": "Version control, branches and commits."},
+    {"id": "target", "label": "target", "kind": "client", "icon": "target", "at": [1, 1], "peek": "A goal or an objective: what the user wants done."},
+    {"id": "bulb", "label": "bulb", "kind": "client", "icon": "bulb", "at": [2, 1], "peek": "An idea, a tip, or a recommendation."}
+  ],
+  "edges": [],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden></div>
+</figure>
+</div>
+</details>
+<details class="row" data-row="d" data-kind="context">
+<summary><span class="ord">d</span><span class="cl">Seven kinds colour every box and icon from one shared palette</span><span class="rt">2 min</span></summary>
+<div class="in">
+<p>The reference drawings change palette from one picture to the next. Here the palette is fixed: a box's <code>kind</code> picks its outline, its fill and both of its icon's paints, and four accents mean the same thing in every drawing.</p>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "kinds",
+  "name": "Kinds",
+  "title": "Seven kinds colour every box, the attacker included",
+  "lede": "One small system with every kind in it. The threat's outline breaks so it never looks like a partner.",
+  "grid": {"cols": 4, "rows": 3},
+  "zones": [
+    {"id": "outside", "label": "Outside", "cols": [0, 0], "rows": [0, 2], "tone": "neutral"},
+    {"id": "trusted", "label": "Trusted", "cols": [1, 3], "rows": [1, 2], "tone": "svc", "tag": "br"}
+  ],
+  "nodes": [
+    {"id": "attacker", "label": "Attacker", "kind": "threat", "icon": "alert", "at": [0, 0], "peek": "kind threat: red, with a broken outline."},
+    {"id": "browser", "label": "Browser", "kind": "client", "icon": "browser", "at": [0, 1], "peek": "kind client: blue."},
+    {"id": "gateway", "label": "Gateway", "kind": "edge", "icon": "gateway", "at": [1, 1], "peek": "kind edge: violet."},
+    {"id": "orders", "label": "Orders", "kind": "service", "icon": "service", "at": [2, 1], "peek": "kind service: green."},
+    {"id": "ordersdb", "label": "Orders DB", "kind": "data", "icon": "db", "at": [3, 1], "peek": "kind data: amber."},
+    {"id": "events", "label": "Events", "kind": "stream", "icon": "queue", "at": [2, 2], "peek": "kind stream: pink."},
+    {"id": "network", "label": "Card network", "kind": "external", "icon": "card", "at": [0, 2], "peek": "kind external: slate."}
+  ],
+  "edges": [
+    {"id": "browser-gateway", "from": "browser", "to": "gateway", "mode": "sync", "label": "HTTPS"},
+    {"id": "attacker-gateway", "from": "attacker", "to": "gateway", "mode": "sync", "label": "probe"},
+    {"id": "gateway-orders", "from": "gateway", "to": "orders", "mode": "sync"},
+    {"id": "orders-db", "from": "orders", "to": "ordersdb", "mode": "sync", "label": "SQL"},
+    {"id": "orders-events", "from": "orders", "to": "events", "mode": "async", "both": true, "label": "events"},
+    {"id": "events-network", "from": "events", "to": "network", "mode": "async", "label": "charge"}
+  ],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden></div>
+</figure>
+
+<table>
+<thead><tr><th>Kind</th><th>Colour</th><th>Use it for</th></tr></thead>
+<tbody>
+<tr><td><code>client</code></td><td>blue</td><td>people, devices, apps: where a request starts</td></tr>
+<tr><td><code>edge</code></td><td>violet</td><td>gateways, balancers, CDNs, security controls</td></tr>
+<tr><td><code>service</code></td><td>green</td><td>your services, workers, agents, tools</td></tr>
+<tr><td><code>data</code></td><td>amber</td><td>databases, caches, indexes, files</td></tr>
+<tr><td><code>stream</code></td><td>pink</td><td>queues, topics, notifications, schedules</td></tr>
+<tr><td><code>external</code></td><td>slate</td><td>third parties: models, providers, card networks</td></tr>
+<tr><td><code>threat</code></td><td>red, broken outline</td><td>an adversary</td></tr>
+</tbody>
+</table>
+<table>
+<thead><tr><th>Fixed accent</th><th>Means</th><th>Where</th></tr></thead>
+<tbody>
+<tr><td>gold</td><td>a secret, a warning, an idea</td><td>key, lock, alert, bulb, the card's chip</td></tr>
+<tr><td>green</td><td>on, passed</td><td>the server's lamps, the cert's check</td></tr>
+<tr><td>coral</td><td>heat</td><td>the firewall's flame</td></tr>
+<tr><td>metal</td><td>hardware</td><td>monitor, laptop and phone frames, the lock's shackle</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<h2 class="sec">Diagrams in this style</h2>
+<details class="row" data-row="e" data-kind="finding">
+<summary><span class="ord">e</span><span class="cl">An SSH login walks nine numbered steps, on the map and in sequence</span><span class="rt">3 min</span></summary>
+<div class="in">
+<p>The reference's SSH picture, as a drawing with one flow. Press <b>Walk through</b> to watch the packet, or switch to <b>Sequence</b> for the same nine steps laid out in time between lifelines, the way the reference draws them.</p>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "ssh",
+  "name": "SSH",
+  "title": "SSH agrees on session keys before it checks who you are",
+  "lede": "Six boxes, one flow of nine steps. The private key signs on the laptop and never travels.",
+  "grid": {"cols": 5, "rows": 2},
+  "zones": [
+    {"id": "mine", "label": "Your machine", "cols": [0, 1], "rows": [0, 1], "tone": "sync"},
+    {"id": "tunnel", "label": "Encrypted tunnel", "cols": [2, 2], "rows": [0, 1], "tone": "neutral"},
+    {"id": "remote", "label": "Remote host", "cols": [3, 4], "rows": [0, 1], "tone": "svc", "tag": "tr"}
+  ],
+  "nodes": [
+    {"id": "pkey", "label": "Private key", "kind": "data", "icon": "key", "at": [0, 0], "tech": "~/.ssh/id_ed25519", "peek": "Signs the login request; it never leaves this machine."},
+    {"id": "client", "label": "SSH client", "kind": "client", "icon": "desktop", "at": [1, 0], "tech": "OpenSSH", "peek": "Opens the connection, checks the server is who it claims, then proves who you are."},
+    {"id": "known", "label": "known_hosts", "kind": "data", "icon": "cert", "at": [1, 1], "tech": "~/.ssh/known_hosts", "peek": "The host keys this machine already trusts."},
+    {"id": "server", "label": "SSH server", "kind": "service", "icon": "server", "at": [3, 0], "tech": "sshd · port 22", "peek": "Proves its identity with a host key, then checks yours."},
+    {"id": "auth", "label": "authorized_keys", "kind": "data", "icon": "cert", "at": [4, 0], "tech": "~/.ssh/authorized_keys", "peek": "The public keys allowed to log in as this user."},
+    {"id": "shell", "label": "Shell session", "kind": "service", "icon": "terminal", "at": [3, 1], "tech": "bash", "peek": "Runs your commands inside the encrypted channel."}
+  ],
+  "edges": [
+    {"id": "client-server", "from": "client", "to": "server", "mode": "sync", "label": "TCP 22", "peek": "Everything after the key exchange travels encrypted on this one connection."},
+    {"id": "client-pkey", "from": "client", "to": "pkey", "mode": "sync", "label": "sign", "peek": "The signature leaves; the key does not."},
+    {"id": "client-known", "from": "client", "to": "known", "mode": "sync", "label": "lookup", "peek": "A host key that is missing or different stops the login here."},
+    {"id": "server-auth", "from": "server", "to": "auth", "mode": "sync", "label": "lookup", "peek": "The offered public key must be listed here."},
+    {"id": "server-shell", "from": "server", "to": "shell", "mode": "sync", "label": "spawn", "peek": "One channel per session; port forwards get their own."}
+  ],
+  "flows": [
+    {"id": "login", "label": "Log in", "summary": "Nine steps; keys are agreed at step 2, and you are checked only at step 7.",
+     "steps": [
+      {"id": "s1", "path": ["client", "server"], "msg": "TCP + versions", "say": "The client opens port 22 and both sides swap SSH version strings."},
+      {"id": "s2", "path": ["client", "server"], "msg": "Key exchange", "say": "Both sides run Diffie-Hellman and derive the same session keys without ever sending them."},
+      {"id": "s3", "path": ["server", "client"], "msg": "Host key + signature", "say": "The server signs the exchange with its host key and sends both back."},
+      {"id": "s4", "path": ["client", "known"], "msg": "Check host key", "say": "The client trusts the server only if that host key is already in known_hosts."},
+      {"id": "s5", "path": ["client", "pkey"], "msg": "Sign request", "say": "The client signs its login request with a private key that never leaves the machine."},
+      {"id": "s6", "path": ["client", "server"], "msg": "Public key + signature", "say": "The client offers its public key and that signature over the encrypted channel."},
+      {"id": "s7", "path": ["server", "auth"], "msg": "Match key", "say": "The server finds the public key in authorized_keys and verifies the signature with it."},
+      {"id": "s8", "path": ["server", "client"], "msg": "Auth success", "say": "The server accepts the login."},
+      {"id": "s9", "path": ["server", "shell"], "msg": "Open channel", "say": "A session channel opens and the shell runs inside the encrypted tunnel."}
+     ]}
+  ]
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="step:s2">
+  <p>Both sides now hold the same symmetric keys, derived locally. From here on every byte on the connection is encrypted, before either side has proved who it is.</p>
+</section>
+<section data-for="step:s4">
+  <p>On a first connection the host key is not there yet and the client asks you to confirm its fingerprint. A host key that has <em>changed</em> stops the login with a warning instead.</p>
+</section>
+</div>
+</figure>
+</div>
+</details>
+<details class="row" data-row="f" data-kind="finding">
+<summary><span class="ord">f</span><span class="cl">An agent harness reads as one bordered loop around the model</span><span class="rt">2 min</span></summary>
+<div class="in">
+<p>The reference's harness picture without flows: zones, two loops back to the start, and nine icons from rows c and d. The connections still drift in their own direction, so the loops read at a glance.</p>
+
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "harness",
+  "name": "Agent harness",
+  "title": "The harness checks every action the model proposes before it runs",
+  "lede": "The model only proposes; the gate, the constraints and the verifier decide. Two loops feed results back.",
+  "grid": {"cols": 4, "rows": 3},
+  "zones": [
+    {"id": "harnessz", "label": "The harness", "cols": [1, 3], "rows": [0, 1], "tone": "ext"}
+  ],
+  "nodes": [
+    {"id": "goal", "label": "User goal", "kind": "client", "icon": "target", "at": [0, 0], "peek": "What the person wants done, in their words."},
+    {"id": "context", "label": "Context builder", "kind": "service", "icon": "docs", "at": [1, 0], "tech": "docs · data · history", "peek": "Gathers live facts and state so the model reasons from the real situation."},
+    {"id": "llm", "label": "LLM", "kind": "external", "icon": "llm", "at": [2, 0], "tech": "reasoning", "peek": "Reasons over the context and proposes the next action."},
+    {"id": "gate", "label": "Policy gate", "kind": "edge", "icon": "shield", "at": [3, 0], "tech": "allow / block", "peek": "Allows or blocks each proposed action before anything runs."},
+    {"id": "constraints", "label": "Constraints", "kind": "data", "icon": "checklist", "at": [3, 1], "tech": "rules · permissions", "peek": "The rules and permissions the gate and the tools enforce."},
+    {"id": "tools", "label": "Tools", "kind": "service", "icon": "tool", "at": [2, 1], "tech": "CRM · APIs · MCP", "peek": "Runs approved actions under the constraints."},
+    {"id": "verify", "label": "Verify", "kind": "service", "icon": "check", "at": [1, 1], "tech": "tests · validation", "peek": "Checks each result; failures go back to the context builder as feedback."},
+    {"id": "result", "label": "Result", "kind": "client", "icon": "agent", "at": [0, 1], "tech": "bounded + checked", "peek": "Only a verified result leaves the harness."},
+    {"id": "observe", "label": "Observability", "kind": "external", "icon": "pulse", "at": [2, 2], "tech": "traces · metrics", "peek": "Watches every stage: traces, metrics and errors."}
+  ],
+  "edges": [
+    {"id": "goal-context", "from": "goal", "to": "context", "mode": "sync", "label": "intent"},
+    {"id": "context-llm", "from": "context", "to": "llm", "mode": "sync", "label": "grounded input"},
+    {"id": "llm-gate", "from": "llm", "to": "gate", "mode": "sync", "label": "proposed action"},
+    {"id": "gate-tools", "from": "gate", "to": "tools", "mode": "sync", "label": "approved"},
+    {"id": "constraints-gate", "from": "constraints", "to": "gate", "mode": "sync", "label": "enforce"},
+    {"id": "constraints-tools", "from": "constraints", "to": "tools", "mode": "sync", "label": "limit"},
+    {"id": "tools-llm", "from": "tools", "to": "llm", "mode": "sync", "label": "tool result"},
+    {"id": "tools-verify", "from": "tools", "to": "verify", "mode": "sync", "label": "result"},
+    {"id": "verify-context", "from": "verify", "to": "context", "mode": "async", "label": "feedback"},
+    {"id": "verify-result", "from": "verify", "to": "result", "mode": "sync", "label": "accepted"},
+    {"id": "tools-observe", "from": "tools", "to": "observe", "mode": "async", "label": "traces"}
+  ],
+  "flows": []
+}
+</script>
+<div class="fv-depth" hidden></div>
+</figure>
+</div>
+</details>
+
+<!-- flowviz:foot -->
+<!-- flowviz:js -->
+</body>
+</html>

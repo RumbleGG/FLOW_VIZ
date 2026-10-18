@@ -3,6 +3,41 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.6.0 — 2026-10-18 · one outlined, illustrated look for every drawing
+
+**Why.** The human shared ten ByteByteGo infographics and asked for drawing components in that style, the
+database, client and server icons above all, with one colour scheme across drawings instead of a new palette
+per picture. What matters is the aesthetic and the outline.
+
+**The look** (`template/draw.css`, `template/draw.js`). A box is a pale fill of its kind inside a 2px outline
+of its kind: flat, no shadow, no coloured tile. Its 36px icon and its label are one group, centred in the box; with
+the Labels layer on, the group slides to centre on the wider of the label and the tech line. Labels are weight
+700 in ink. Connections are ink (or the walked flow's colour) and end in an open chevron. Step numbers are
+larger discs ringed in ink, and the current one pulses by growing. Zones are dotted with a pale fill and carry
+their label in a solid pill; a neutral zone's pill is ink. The canvas loses its dot grid, so the dotted zones
+read. A drawing page's title gets a green bar. The sequence view uses dotted lifelines, ink arrows with
+chevrons and the map's own box heads, centred on their lifelines; the drawer shows a box's own icon on its kind.
+
+**The icons** (`template/icons.svg`). 65 components on a 48 grid, 39 redrawn under their old names and 26 new:
+`users desktop laptop code firewall chip llm spark index cubes vector chat shield cert hourglass calendar docs
+book checklist pulse eye tool plugin workflow target bulb`. Each is ink outlines (`currentColor`, set to
+`--i-ink`) on flat fills that are custom properties: `--i1 --i2 --i3` come from the box's kind (each kind gains
+`-p` and `-l` paints), and fixed paints mean the same in every drawing: gold for keys, locks, alerts and ideas,
+green for lamps and passes, coral for heat, metal for hardware frames. `--iline` paints a stroke that stands
+alone, ink on light paper and light on dark, so it never vanishes in the night theme. UI glyphs are unchanged.
+
+**Copy HTML.** The still picture resolves every icon's paints at the box it sits in, so the picture keeps its
+colours on a host that strips styles.
+
+**Unchanged.** The grid (240 × 132 cells, 172 × 56 boxes), routing, every cap, the motion grammar, every spec
+field and every icon name. A rebuild restyles every drawing; no spec needs an edit. `zoneTag()` gives the zone
+pill and the browser audit's zone-label hit test one geometry.
+
+**Merged with 3.5.0.** The detail slot, the `status` tags and the PR helpers take the new look unchanged; the
+`removed` strike-through starts at the label's own x, inside the label group, so it lifts and slides with it.
+
+Minor: a restyle; no cap, spec field or icon name changed, and the audit fails nothing it passed before.
+
 ## 3.5.0 — 2026-10-18 · a detail drawing under the spine, a box's status, and PR helpers
 
 **Why.** A report that explained one pull request worked for its reader but had to break the standard: under
