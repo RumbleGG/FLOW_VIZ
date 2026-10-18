@@ -112,7 +112,7 @@
 <table>
 <thead><tr><th>Part</th><th>Before</th><th>Now</th></tr></thead>
 <tbody>
-<tr><td>Box</td><td>soft 1.3px border, drop shadow, white glyph on a coloured tile</td><td>pale fill of its kind inside a 2px outline of its kind; flat, no shadow</td></tr>
+<tr><td>Box</td><td>soft 1.3px border, drop shadow, white glyph on a coloured tile, left-aligned</td><td>pale fill of its kind inside a 2px outline of its kind; flat, no shadow; icon and label centred together as one group</td></tr>
 <tr><td>Icon</td><td>24-grid line glyph in one colour</td><td>48-grid illustration: ink outline, two paints from the box's kind, fixed gold, green, coral and metal accents</td></tr>
 <tr><td>Label</td><td>weight 650</td><td>weight 700, in ink</td></tr>
 <tr><td>Connection</td><td>grey, filled triangle head</td><td>ink, or the flow's colour when walked; open chevron head</td></tr>
@@ -120,7 +120,7 @@
 <tr><td>Zone</td><td>dashed hairline, coloured text in a corner</td><td>dotted 2px border on a pale fill; the label sits in a solid pill (an ink pill on a neutral zone)</td></tr>
 <tr><td>Canvas</td><td>faint dot grid</td><td>plain paper, so the dotted zones read</td></tr>
 <tr><td>Drawing page title</td><td>plain</td><td>a 7px green bar to its left</td></tr>
-<tr><td>Sequence view</td><td>grey lifelines, filled heads, mono labels</td><td>dotted lifelines, ink arrows with chevrons, the map's own box heads</td></tr>
+<tr><td>Sequence view</td><td>grey lifelines, filled heads, mono labels</td><td>dotted lifelines, ink arrows with chevrons, the map's own box heads, centred on their lifelines</td></tr>
 <tr><td>Drawer header</td><td>white glyph on a coloured tile</td><td>the box's own icon on its kind</td></tr>
 <tr><td>Copy HTML still picture</td><td>one-colour glyphs</td><td>each icon keeps its box's paints</td></tr>
 </tbody>
@@ -136,13 +136,13 @@
 <tbody>
 <tr><td><code>template/icons.svg</code></td><td>65 component icons on a 48 grid, 39 redrawn and 26 new; the UI glyphs are untouched</td></tr>
 <tr><td><code>template/draw.css</code></td><td>one palette (each kind gains <code>-p</code> and <code>-l</code> icon paints; fixed icon paints; <code>--d-bar</code>); box, connection, zone, badge, sequence and drawer rules rewritten; dot grid removed</td></tr>
-<tr><td><code>template/draw.js</code></td><td>no tile behind the icon; 36px icon; chevron heads; zone pill from one <code>zoneTag()</code> shared with the label hit test; larger badges; the drawer icon on its kind; Copy HTML's still picture resolves icon paints</td></tr>
+<tr><td><code>template/draw.js</code></td><td>no tile behind the icon; 36px icon centred with its label (the group slides to centre on the tech line when Labels is on); chevron heads; zone pill from one <code>zoneTag()</code> shared with the label hit test; larger badges; the drawer icon on its kind; Copy HTML's still picture resolves icon paints</td></tr>
 <tr><td><code>AGENTS.md</code>, <code>SPEC.md</code>, <code>CLAUDE.md</code>, <code>CHANGELOG.md</code></td><td>the icon list, the theme description, the sprite note, the entry</td></tr>
 <tr><td><code>examples/</code>, <code>PLAN.html</code></td><td>rebuilt</td></tr>
 <tr><td><code>mockups/visual-components/</code></td><td>this report</td></tr>
 </tbody>
 </table>
-<div class="box warn"><p>Merging: the other agent's uncommitted work on <code>main</code> also edits <code>drawNode()</code> in <code>template/draw.js</code> (status tags) and the audit beside <code>BOX_W</code>. Expect a conflict in <code>drawNode()</code>; keep both. Their strike-through line starts at <code>b.x + 55</code>, and the label now starts at <code>b.x + 54</code>.</p></div>
+<div class="box warn"><p>Merging: the other agent's uncommitted work on <code>main</code> also edits <code>drawNode()</code> in <code>template/draw.js</code> (status tags) and the audit beside <code>BOX_W</code>. Expect a conflict in <code>drawNode()</code>; keep both. Their strike-through line starts at <code>b.x + 55</code>; the label is now centred, so it should start at the label's own <code>x</code> and sit inside the <code>g.cnt</code> group that slides.</p></div>
 <div class="pb" data-pb="verify">
   <div class="hd">
     <span class="t">See the branch and prove it audits clean</span>

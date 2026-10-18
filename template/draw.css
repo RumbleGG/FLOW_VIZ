@@ -256,6 +256,8 @@
 .fv-drawing .node .lbl{fill:var(--fg);font:700 13px var(--f-ui);letter-spacing:-.15px}
 .fv-drawing .node .tech{fill:var(--dim);font:550 10.5px var(--f-ui);opacity:0;transition:opacity .2s}
 .fv-drawing .node .lblg{transition:transform .22s var(--d-ease)}
+.fv-drawing .node .cnt{transition:transform .22s var(--d-ease)}
+.fv-drawing svg.show-labels .node.has-tech .cnt{transform:translateX(var(--sx,0px))}
 .fv-drawing svg.show-labels .node .tech{opacity:1}
 .fv-drawing svg.show-labels .node.has-tech .lblg{transform:translateY(-6px)}
 .fv-drawing .node:hover .shape,.fv-drawing .node.sel .shape,.fv-drawing .node:focus-visible .shape{stroke-width:3}

@@ -10,12 +10,13 @@ database, client and server icons above all, with one colour scheme across drawi
 per picture. What matters is the aesthetic and the outline.
 
 **The look** (`template/draw.css`, `template/draw.js`). A box is a pale fill of its kind inside a 2px outline
-of its kind: flat, no shadow, no coloured tile. Its icon sits straight on the box at 36px. Labels are weight
+of its kind: flat, no shadow, no coloured tile. Its 36px icon and its label are one group, centred in the box; with
+the Labels layer on, the group slides to centre on the wider of the label and the tech line. Labels are weight
 700 in ink. Connections are ink (or the walked flow's colour) and end in an open chevron. Step numbers are
 larger discs ringed in ink, and the current one pulses by growing. Zones are dotted with a pale fill and carry
 their label in a solid pill; a neutral zone's pill is ink. The canvas loses its dot grid, so the dotted zones
 read. A drawing page's title gets a green bar. The sequence view uses dotted lifelines, ink arrows with
-chevrons and the map's own box heads; the drawer shows a box's own icon on its kind.
+chevrons and the map's own box heads, centred on their lifelines; the drawer shows a box's own icon on its kind.
 
 **The icons** (`template/icons.svg`). 65 components on a 48 grid, 39 redrawn under their old names and 26 new:
 `users desktop laptop code firewall chip llm spark index cubes vector chat shield cert hourglass calendar docs

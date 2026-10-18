@@ -29,7 +29,9 @@
   var NS = 'http://www.w3.org/2000/svg';
   /* one grid for every drawing: agents place boxes in cells, never in pixels */
   var G = { cw: 240, ch: 132, nw: 172, nh: 56, px: 22, py: 18, r: 10, lane: 4.5 };
-  var LABEL_ROOM = G.nw - 54 - 12;      // width a box label may use before it shrinks
+  /* a box's icon and label are one group, centred in the box, with 9px to spare each side */
+  var ICON = 36, IGAP = 8;
+  var LABEL_ROOM = G.nw - 2 * 9 - ICON - IGAP;   // width a box label may use before it shrinks
   var KIND = { client: 'client', edge: 'edge', service: 'service', data: 'data', stream: 'stream', external: 'ext',
               threat: 'threat' };
   var KIND_NAME = { client: 'Client', edge: 'Edge', service: 'Service', data: 'Data', stream: 'Event stream', external: 'External',
@@ -57,6 +59,16 @@
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* a text's width; where it is not laid out (a hidden view) it is measured from its font */
+  var MEAS = null;
+  function textW(t) {
+    var w = t.getComputedTextLength();
+    if (w) return w;
+    var cs = window.getComputedStyle(t), s = t.textContent || '';
+    if (!MEAS) MEAS = document.createElement('canvas').getContext('2d');
+    MEAS.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    return MEAS.measureText(s).width + (parseFloat(cs.letterSpacing) || 0) * s.length;
   }
   function words(s) { return String(s || '').trim().split(/\s+/).filter(Boolean).length; }
   function ease(k) { return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; }
@@ -771,16 +783,26 @@
         'aria-label': (n.label || n.id) + (n.peek ? '. ' + n.peek : '')
       }, S.layer.nodes);
       el('rect', { class: 'shape', x: b.x, y: b.y, width: b.w, height: b.h, rx: 12 }, g);
-      el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), x: b.x + 10, y: b.cy - 18, width: 36, height: 36 }, g);
-      var lg = el('g', { class: 'lblg' }, g);
-      var t = el('text', { class: 'lbl', x: b.x + 54, y: b.cy + 4.5 }, lg);
+      /* the icon and the label travel as one group, centred in the box; with the Labels
+         layer on, the group slides to centre on the wider of the label and the tech line */
+      var cg = el('g', { class: 'cnt' }, g);
+      var ico = el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), y: b.cy - ICON / 2, width: ICON, height: ICON }, cg);
+      var lg = el('g', { class: 'lblg' }, cg);
+      var t = el('text', { class: 'lbl', y: b.cy + 4.5 }, lg);
       t.textContent = n.label || n.id;
       fit(t, LABEL_ROOM);
+      var lw = textW(t), tw = 0, tt = null;
       if (n.tech) {
-        var tt = el('text', { class: 'tech', x: b.x + 54, y: b.cy + 14 }, g);
+        tt = el('text', { class: 'tech', y: b.cy + 14 }, cg);
         tt.textContent = n.tech;
-        fit(tt, b.w - 54 - 10);
+        fit(tt, LABEL_ROOM);
+        tw = textW(tt);
       }
+      var x0 = b.cx - (ICON + IGAP + lw) / 2, x1 = b.cx - (ICON + IGAP + Math.max(lw, tw)) / 2;
+      ico.setAttribute('x', f(x0));
+      t.setAttribute('x', f(x0 + ICON + IGAP));
+      if (tt) tt.setAttribute('x', f(x0 + ICON + IGAP));
+      if (x1 < x0 - 0.5) cg.style.setProperty('--sx', f(x1 - x0) + 'px');
       if (n.segment && !n.ghost) {
         var sg = el('g', { class: 'seg', role: 'button', 'aria-label': 'Open the inside of ' + (n.label || n.id) }, g);
         el('circle', { cx: b.x + b.w - 3, cy: b.y + 3, r: 9.5 }, sg);
@@ -992,10 +1014,12 @@
         var g = el('g', { class: 'node k-' + (KIND[n.kind] ? n.kind : 'service') + (n.ghost ? ' ghost' : ''), 'data-node': id,
           tabindex: 0, role: 'button', 'aria-label': n.label || id }, gLife);
         el('rect', { class: 'shape', x: x - w / 2, y: top, width: w, height: headH - 6, rx: 10 }, g);
-        el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), x: x - w / 2 + 7, y: top + 5, width: 30, height: 30 }, g);
-        var t = el('text', { class: 'lbl', x: x - w / 2 + 42, y: top + 24.5 }, g);
+        var hu = el('use', { class: 'ico', href: '#i-' + (n.icon || 'service'), y: top + 5, width: 30, height: 30 }, g);
+        var t = el('text', { class: 'lbl', y: top + 24.5 }, g);
         t.textContent = n.label || id;
         if (visible) fit(t, w - 50);
+        var hx = x - (36 + Math.min(textW(t), w - 50)) / 2;     // icon, gap and label, centred on the lifeline
+        hu.setAttribute('x', f(hx)); t.setAttribute('x', f(hx + 36));
         wireHover(g, 'node', id, g);
       });
       rows.forEach(function (r, k) {
