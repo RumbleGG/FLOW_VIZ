@@ -35,6 +35,16 @@
   var KIND_NAME = { client: 'Client', edge: 'Edge', service: 'Service', data: 'Data', stream: 'Event stream', external: 'External',
                    threat: 'Threat' };
   var TONES = ['f1', 'f2', 'f3'];
+  /* what the change a drawing explains did to a box: an ink tag on its foot, apart
+     from the kind tint (fill) and a result (border and corner glyph) — SPEC §2.4 */
+  var STATUS = { new: { tag: 'NEW', word: 'Added by this change' },
+                 changed: { tag: 'CHANGED', word: 'Changed by this change' },
+                 removed: { tag: 'REMOVED', word: 'Removed by this change' } };
+  /* the cap tiers (SPEC §2.2): a report's spine and Results drawing, a report's
+     detail drawing, and every other canvas. bin/flowviz-audit.py holds the same
+     numbers in TIERS: change both. */
+  var TIER = { page: { boxes: 12, flows: 3, steps: 9 }, spine: { boxes: 9, flows: 3, steps: 9 },
+               detail: { boxes: 20, flows: 2, steps: 20 } };
   var reduce = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 
   /* ── helpers ───────────────────────────────────────────────────────────── */
@@ -492,14 +502,14 @@
         style: 'position:absolute;left:-9999px;top:0;width:10px;height:10px;min-width:0;visibility:hidden' });
     }
     if (scratch.parentNode !== host) host.appendChild(scratch);
-    var g = el('g', { class: 'node' }, scratch), n = 0;
+    var g = el('g', { class: 'node' }, scratch), out = [];
     (spec.nodes || []).forEach(function (x) {
       var t = el('text', { class: 'lbl' }, g);
       t.textContent = x.label || '';
-      if (t.getComputedTextLength() > LABEL_ROOM + 1) n++;
+      if (t.getComputedTextLength() > LABEL_ROOM + 1) out.push(x.id + ' "' + (x.label || '') + '"');
     });
     g.remove();
-    return n;
+    return out;
   }
   /* zone labels a connection runs through, measured where drawZone puts them */
   function zoneLabelHits(L, host) {
@@ -566,6 +576,11 @@
     };
     var RANK = { pass: 1, error: 2, fail: 3 };
     function resultOf(x) { var r = x && x.result; return RES[r] ? r : null; }
+    function statusOf(x) { var s = x && x.status; return typeof s === 'string' && STATUS.hasOwnProperty(s) ? s : null; }
+    function statusTag(x) {
+      var s = statusOf(x);
+      return s ? ' <span class="fv-stag s-' + s + '" title="' + esc(STATUS[s].word) + '">' + STATUS[s].tag + '</span>' : '';
+    }
     function stronger(a, b) { return !a ? b : !b ? a : (RANK[b] > RANK[a] ? b : a); }
     function hasFlows() { return (S.spec.flows || []).length > 0; }
     function flowOutcome(fl) {
@@ -750,12 +765,12 @@
       while (s.length > 3 && t.getComputedTextLength() > max) { s = s.slice(0, -1); t.textContent = s + '…'; }
     }
     function drawNode(n, b) {
-      var nr = resultOf(n);
+      var nr = resultOf(n), ns = statusOf(n);
       var g = el('g', {
         class: 'node k-' + (KIND[n.kind] ? n.kind : 'service') + (n.ghost ? ' ghost' : '') + (n.tech ? ' has-tech' : '') +
-          (nr ? ' r-' + nr : ''),
+          (nr ? ' r-' + nr : '') + (ns ? ' st-' + ns : ''),
         'data-node': n.id, tabindex: 0, role: 'button',
-        'aria-label': (n.label || n.id) + (n.peek ? '. ' + n.peek : '')
+        'aria-label': (n.label || n.id) + (ns ? '. ' + STATUS[ns].word : '') + (n.peek ? '. ' + n.peek : '')
       }, S.layer.nodes);
       el('rect', { class: 'shape', x: b.x, y: b.y, width: b.w, height: b.h, rx: 14 }, g);
       el('rect', { class: 'tile', x: b.x + 11, y: b.y + 11, width: 34, height: 34, rx: 10 }, g);
@@ -764,6 +779,10 @@
       var t = el('text', { class: 'lbl', x: b.x + 55, y: b.cy + 4.5 }, lg);
       t.textContent = n.label || n.id;
       fit(t, LABEL_ROOM);
+      if (ns === 'removed') {
+        var sx = t.getComputedTextLength() || LABEL_ROOM;
+        el('line', { class: 'strike', x1: b.x + 55, y1: f(b.cy + 0.5), x2: f(b.x + 55 + sx), y2: f(b.cy + 0.5) }, lg);
+      }
       if (n.tech) {
         var tt = el('text', { class: 'tech', x: b.x + 55, y: b.cy + 14 }, g);
         tt.textContent = n.tech;
@@ -780,6 +799,17 @@
         var rb = el('g', { class: 'nres r-' + nr, transform: 'translate(' + f(b.x + 3) + ' ' + f(b.y + 3) + ')' }, g);
         resGlyph(rb, nr, 9.5);
         var rt = el('title', {}, rb); rt.textContent = RES[nr].word;
+      }
+      if (ns) {
+        /* the tag straddles the box's foot, right-aligned: the corners hold the result and ⤢ */
+        var sg2 = el('g', { class: 'nstat s-' + ns }, g);
+        var sr = el('rect', { y: f(b.y + b.h - 8), height: 16, rx: 4.5 }, sg2);
+        var stx = el('text', { y: f(b.y + b.h + 0.5), 'text-anchor': 'middle', 'dominant-baseline': 'central' }, sg2);
+        stx.textContent = STATUS[ns].tag;
+        var sw = (stx.getComputedTextLength() || STATUS[ns].tag.length * 6.8) + 13, sx1 = b.x + b.w - 12;
+        sr.setAttribute('x', f(sx1 - sw)); sr.setAttribute('width', f(sw));
+        stx.setAttribute('x', f(sx1 - sw / 2));
+        var st0 = el('title', {}, sg2); st0.textContent = STATUS[ns].word;
       }
       S.nref[n.id] = { g: g, b: b };
       wireHover(g, 'node', n.id, g);
@@ -895,6 +925,11 @@
       if (any.fail) rows.push('<svg viewBox="0 0 44 14"><g class="edge m-sync r-fail"><path class="line" d="M2 7H42"/></g><g class="rmark r-fail" transform="translate(27 7)"><circle class="rbg" r="6.5"/><path class="rfg" d="M-2.3 -2.3L2.3 2.3M2.3 -2.3L-2.3 2.3"/></g></svg><span>Failed here: the target said no</span>');
       if (any.error) rows.push('<svg viewBox="0 0 44 14"><g class="edge m-sync r-error"><path class="line" d="M2 7H42"/></g><g class="rmark r-error" transform="translate(9 7)"><path class="rbg" d="M0 -6.2L5.9 4.4H-5.9Z"/><path class="rfg" d="M0 -2.5V.8M0 2.6v.1"/></g></svg><span>Rejected: the command never ran</span>');
       rows.push('<svg viewBox="0 0 44 14"><g class="node k-service"><g class="seg"><circle cx="22" cy="7" r="6.5"/><path d="M19.8 4.8h4.4v4.4M24.2 4.8l-4.4 4.4"/></g></g></svg><span>Opens a segment: the inside of that box</span>');
+      Object.keys(STATUS).forEach(function (s0) {
+        if (!(sp.nodes || []).some(function (n) { return statusOf(n) === s0; })) return;
+        rows.push('<svg viewBox="0 0 44 14"><g class="nstat s-' + s0 + '"><rect x="0.5" y="1" width="43" height="12" rx="3.5"/>' +
+          '<text x="22" y="7.4" text-anchor="middle" dominant-baseline="central">' + STATUS[s0].tag + '</text></g></svg><span>' + STATUS[s0].word + '</span>');
+      });
       R.key.innerHTML = rows.join('');
     }
     function renderBadges() {
@@ -1348,7 +1383,7 @@
           var n = S.nodes[id]; if (!n) return;
           k = n.ghost ? 'var(--dim2)' : kindVar(n.kind);
           html = '<div class="pk">' + esc(n.ghost ? 'In the whole system' : (KIND_NAME[n.kind] || 'Box')) +
-            (n.tech ? ' · ' + esc(n.tech) : '') + '</div><h4>' + esc(n.label || id) + '</h4>' +
+            (n.tech ? ' · ' + esc(n.tech) : '') + '</div><h4>' + esc(n.label || id) + statusTag(n) + '</h4>' +
             (resultOf(n) ? '<div class="res r-' + resultOf(n) + '">' + RES[resultOf(n)].glyph + ' ' + esc(RES[resultOf(n)].word) + '</div>' : '') +
             '<p>' + esc(n.peek || '') + '</p>' +
             factsHtml(n.facts) + '<div class="hint">' + (n.ghost && S.seg ? '<span>Click to go back to it</span>'
@@ -1451,6 +1486,7 @@
       D.kind.textContent = (n.ghost ? 'In the whole system' : (KIND_NAME[n.kind] || 'Box')) + (n.tech ? ' · ' + n.tech : '');
       D.title.textContent = n.label || n.id;
       add(D.body, '<p class="lead">' + esc(n.peek || '') + '</p>');
+      if (statusOf(n)) add(D.body, '<p class="fv-stline">' + statusTag(n).trim() + ' ' + esc(STATUS[statusOf(n)].word) + '.</p>');
       if (resultOf(n)) add(D.body, resBox(resultOf(n)));
       if (n.facts && n.facts.length) add(D.body, '<div class="facts-grid">' + n.facts.map(function (x) {
         return '<div>' + esc(x) + '</div>'; }).join('') + '</div>');
@@ -1578,35 +1614,49 @@
 
     /* ── the audit: every canvas, measured from the routing itself ───────── */
     function audit(add) {
-      var inSpine = !!fig.closest('.spine, .results'), cap = inSpine ? 9 : 12, pre = 'drawing ' + ID + ': ';
-      var canvases = [{ name: 'root', spec: ROOT }];
-      Object.keys(ROOT.segments || {}).forEach(function (k) { canvases.push({ name: k, spec: ROOT.segments[k] }); });
-      var segMax = 0, zones = 0, flowsOk = true, flowsMax = 0, longest = 0, cross = [], thru = [], shrunk = 0, zl = [];
+      /* the root canvas takes its slot's tier; a segment is always a whole canvas of its own */
+      var detail = !!fig.closest('body > div.detail'), T = detail ? TIER.detail : fig.closest('.spine, .results') ? TIER.spine : TIER.page;
+      var pre = (detail ? 'detail ' : 'drawing ') + ID + ': ';
+      var canvases = [{ name: 'root', spec: ROOT, t: T }];
+      Object.keys(ROOT.segments || {}).forEach(function (k) { canvases.push({ name: k, spec: ROOT.segments[k], t: TIER.page }); });
+      var segMax = 0, zones = 0, flowsOk = true, flowsMax = 0, longest = 0, longOk = true, cross = [], thru = [], shrunk = [], zl = [];
       canvases.forEach(function (c, i) {
         var sp = c.spec, n = (sp.nodes || []).length, fl = (sp.flows || []).length;
         if (i) segMax = Math.max(segMax, n);
         zones = Math.max(zones, (sp.zones || []).length);
         flowsMax = Math.max(flowsMax, fl);
-        if (fl > 3) flowsOk = false;
-        (sp.flows || []).forEach(function (x) { longest = Math.max(longest, (x.steps || []).length); });
+        if (fl > c.t.flows) flowsOk = false;
+        (sp.flows || []).forEach(function (x) {
+          var k = (x.steps || []).length;
+          longest = Math.max(longest, k);
+          if (k > c.t.steps) longOk = false;
+        });
         var L = layout(sp);
         crossings(L).forEach(function (x) { cross.push(c.name + ': ' + x); });
         throughBoxes(L).forEach(function (x) { thru.push(c.name + ': ' + x); });
-        shrunk += shrunkLabels(sp, fig);
+        shrunkLabels(sp, fig).forEach(function (x) { shrunk.push(c.name + ': ' + x); });
         zoneLabelHits(L, fig).forEach(function (x) { zl.push(c.name + ': ' + x); });
       });
       var nRoot = ROOT.nodes.length;
-      add(pre + 'boxes', nRoot, '≤ ' + cap, nRoot <= cap);
+      add(pre + 'boxes', nRoot, '≤ ' + T.boxes, nRoot <= T.boxes);
       if (canvases.length > 1) add(pre + 'boxes in the largest segment', segMax, '≤ 12', segMax <= 12);
       add(pre + 'zones', zones, '≤ 4', zones <= 4);
-      add(pre + 'flows', flowsMax, '0 – 3', flowsOk);
-      add(pre + 'longest flow', longest, '≤ 9', longest <= 9);
+      add(pre + 'flows', flowsMax, '0 – ' + T.flows, flowsOk);
+      add(pre + 'longest flow', longest, '≤ ' + T.steps, longOk);
       var w = restWords(ROOT);
       add(pre + 'words on canvas at rest', w, '≤ 60', w <= 60);
       add(pre + 'crossings', cross.length ? cross.length + ' (' + cross.join('; ') + ')' : 0, '0', !cross.length);
       add(pre + 'connections through boxes', thru.length ? thru.length + ' (' + thru.join('; ') + ')' : 0, '0', !thru.length);
-      add(pre + 'labels shrunk to fit', shrunk, '0', shrunk === 0);
+      add(pre + 'labels shrunk to fit', shrunk.length ? shrunk.length + ' (' + shrunk.join('; ') + ')' : 0, '0', !shrunk.length);
       add(pre + 'zone labels crossed', zl.length ? zl.length + ' (' + zl.join('; ') + ')' : 0, '0', !zl.length);
+      /* "N of M classes changed" at a glance: reported, never a cap */
+      var real = ROOT.nodes.filter(function (n) { return !n.ghost; }), byS = {};
+      real.forEach(function (n) { var s0 = statusOf(n); if (s0) byS[s0] = (byS[s0] || 0) + 1; });
+      var marked = Object.keys(byS).reduce(function (a, k) { return a + byS[k]; }, 0);
+      if (marked) {
+        add(pre + 'boxes with a status', marked + ' of ' + real.length + ' (' + Object.keys(STATUS).filter(function (k) { return byS[k]; })
+          .map(function (k) { return byS[k] + ' ' + k; }).join(' · ') + ')', 'reported', true);
+      }
     }
 
     /* ── Copy HTML: this drawing as one paste-able, self-contained snippet ── */
@@ -1627,7 +1677,7 @@
       (sp.nodes || []).forEach(function (n) {
         if (n.ghost) return;
         out.push('<details><summary><strong>' + esc(n.label || n.id) + '</strong> · ' + esc(KIND_NAME[n.kind] || 'Box') +
-          (n.tech ? ' · ' + esc(n.tech) : '') + resWords(n) + '</summary>');
+          (n.tech ? ' · ' + esc(n.tech) : '') + (statusOf(n) ? ' · ' + STATUS[statusOf(n)].tag.toLowerCase() : '') + resWords(n) + '</summary>');
         if (n.peek) out.push('<p>' + esc(n.peek) + '</p>');
         if (n.facts && n.facts.length) out.push('<ul>' + n.facts.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>');
         out.push(depthHtml(n.id));

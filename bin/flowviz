@@ -5,7 +5,7 @@ import sys
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(BIN)
-COMMANDS = ('new', 'build', 'audit', 'serve', 'captures', 'fold', 'results', 'relabel', 'shot')
+COMMANDS = ('new', 'build', 'audit', 'serve', 'captures', 'fold', 'results', 'relabel', 'shot', 'pr')
 
 
 def version():
@@ -16,9 +16,9 @@ def version():
 
 
 SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one human
-  entry doc ~/Projects/FLOW_VIZ/AGENTS.md (read only that) · the standard SPEC.md
+  entry doc {R}/AGENTS.md (read only that) · the standard SPEC.md
 
-  F=~/Projects/FLOW_VIZ/bin/flowviz
+  F={R}/bin/flowviz
 
   REPORT   a claim, the shape of the argument, evidence, a checklist the human runs and pastes into
     1  $F new report "<claim with a verb>" --dir <work folder> --rows 4 --steps 5
@@ -29,7 +29,8 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
        <figure class="shot"><img src="shots/ready.png"><figcaption>one sentence</figcaption></figure>
     3  $F build <dir>/<NAME>.src.html          inlines css, js, icons and every figure: one file
     4  $F audit --browser <dir>/<NAME>.html     fix every OVER and FAIL; split, never raise a cap
-    5  parse-check every command yourself: bash -n · python3 -m py_compile · Parser::ParseFile
+    5  parse-check every command yourself: bash -n · python3 -m py_compile · Parser::ParseFile;
+       SQL has no parse check here: run it read-only against the real database before handover
     6  $F serve <dir> --open                    hand over served; from Finder nothing reaches disk
     7  $F captures <dir>/<NAME>.html            what they pasted, per step, every note, every step they
                                                 added (+ b3a, in place) and every to-do
@@ -38,6 +39,17 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
     9  $F results <dir>/<NAME>.src.html         once they have run it: a Results section on top (outcome,
                                                 a diagram marking where it passed or failed, summary, next,
                                                 a gated archive step); write it, rebuild, audit, hand back
+
+  DETAIL   a system and the code inside it: $F new report "<claim>" --dir <dir> --detail 12
+           one more drawing under the spine, one box per class: boxes <=20, flows <=2 of <=20 steps;
+           "status": "new"|"changed"|"removed" tags a box. Still <=3 screens: two-line title, short verdict
+
+  PR       one pull request, explained to its reviewer, read-only. $F pr prints the inputs to save first
+    1  $F pr new "<claim>" --dir <dir> --pr <dir>/pr/pr.json --diff <dir>/pr/pr.diff --checkout <head checkout>
+    2  write the spine, the detail (status on each changed class), the hops, the shared changes, each file's
+       one sentence; code by marker: <!-- pr:lines PATH A-B -->  <!-- pr:hunk PATH N -->  <!-- pr:diff PATH -->
+    3  $F pr fill <dir>/<NAME>.src.html         files in GitHub's order, diffs verbatim, counts counted
+    4  build · audit --browser · serve, as for any report (the audit fails rows that do not match the diff)
 
   DRAWING  a whole system, or one segment of it, in motion
     1  $F new drawing "<claim with a verb>" --dir <work folder> --boxes 8 --flows 2
@@ -48,14 +60,15 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
     report   title <=70 chars with a verb · verdict <=50 words · so what <=30 · vitals <=5 · next <=4
              (<=14 words, tagged read-only|write) · exactly 1 spine diagram · rows <=6 (summary <=14)
              under <=3 section headers (<=4 words) · every row has a data-kind · open at load <=1
-             · step = one sentence <=20 words · words at rest <=350 · screens <=3
+             · step = one sentence <=20 words · words at rest <=350 · screens <=3 (unrounded: 3.01 is over)
     kinds    context finding record (read) · investigation test change rollback (action) · decision
     results  above the card · outcome pass|fail|blocked|inconclusive · claim <=70 with a verb · summary
              <=50 words · 1 drawing marking "result": pass|fail|error · next 1-4 · 1 gated archive step
-    drawing  title <=70 with a verb · lede <=30 · boxes <=12 (<=9 as a report spine) · zones <=4
+    drawing  title <=70 with a verb · lede <=30 · boxes <=12 (<=9 as a report spine, <=20 as its detail) · zones <=4
              · flows 0-3 (0 unless a walkthrough is asked for) · steps <=9, one sentence <=20
              · label <=16 chars · peek <=25 words
              · facts <=3 · connection label <=16 · words on canvas <=60 · crossings 0 · screens <=2
+             · labels shrunk 0 counts box labels; a connection label grows to fit, so look with Labels on
 
   FIGURES  $F shot <url | file.html[?audit=1]> --out <dir>/shots/<name>.png [--size 1440x900] [--theme dark]
            a screenshot by headless Chrome, of anything with an address: a dashboard, a built page. A picture
@@ -78,16 +91,18 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
            Ids are join keys: never rename one after handover.
            A step the human adds after b3 is b3a (then b3b); to-dos are t1, t2. Neither moves another id.
            $F relabel <NAME>.src.html moves an older report onto a / b1 naming, pasted state included.
-  EXAMPLES ~/Projects/FLOW_VIZ/PLAN.html (a report with a drawing spine)
-           ~/Projects/FLOW_VIZ/examples/checkout/checkout.html (a drawing with 3 flows and a segment)
-           ~/Projects/FLOW_VIZ/examples/deploy/DEPLOY.html (a report after its run, with a carried value)
+  EXAMPLES {R}/PLAN.html (a report with a drawing spine)
+           {R}/examples/checkout/checkout.html (a drawing with 3 flows and a segment)
+           {R}/examples/deploy/DEPLOY.html (a report after its run, with a carried value)
+           {R}/examples/pr/PR-418.html (a PR helper: spine, detail with status, every file's diff)
 '''
 
 
 def main():
     args = sys.argv[1:]
     if not args or args[0] in ('-h', '--help', 'help'):
-        print(SHEET.format(v=version()), end='')
+        # the toolkit's real location, wherever this copy lives: a worktree, a clone elsewhere
+        print(SHEET.format(v=version(), R=ROOT.replace(os.path.expanduser('~'), '~', 1)), end='')
         return
     if args[0] in ('-V', '--version', 'version'):
         print(version())

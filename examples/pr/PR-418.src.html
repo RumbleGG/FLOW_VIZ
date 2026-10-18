@@ -1,0 +1,1128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="flowviz-doc" content="pr-418">
+<meta name="flowviz-kind" content="report">
+<meta name="flowviz-pr" content='{"url": "https://git.example.test/shop/shop-api/pull/418", "number": 418, "head": "8021405c657a8e0ff2f76bcc0b2f8273006ea6b9", "pr": "pr/pr.json", "diff": "pr/pr.diff", "checkout": "checkout"}'>
+<title>Refunds ride the payment path and change three things it shares</title>
+<!-- flowviz:head -->
+</head>
+<body>
+
+<!-- A reference PR helper (SPEC §1.8), for a fictional service: the inputs are in pr/ and the head's
+     files in checkout/. Scaffolded with `flowviz pr new`; every code excerpt, diff, count, commit,
+     review and check below was written by `flowviz pr fill`, never by hand. -->
+
+<!-- ══════════════ LAYER 1 — THE CARD ══════════════ -->
+<div class="card">
+  <div class="top">
+    <span class="chip warn"><span class="d"></span>One question still open</span>
+    <span class="meta"><a href="https://git.example.test/shop/shop-api/pull/418">PR #418</a> · head <code>8021405</code> · read-only: nothing to run</span>
+  </div>
+
+  <h1>Refunds ride the payment path and change three things it shares</h1>
+
+  <div class="slot">
+    <span class="k">Verdict</span>
+    <div class="v" data-slot="verdict">The refund path is sound and tested: it requires a key, retries resend it, and the policy refuses over-refunds. Approve once someone decides what a discount above the order total should do, because Money.minus now raises there.</div>
+  </div>
+
+  <div class="slot wh">
+    <span class="k">So what</span>
+    <div class="v" data-slot="sowhat">Discounts and every POST behave differently after the merge, not only refunds: read row b before approving.</div>
+  </div>
+
+  <div class="vitals">
+    <div><div class="n" data-pr="files">15</div><div class="l">files changed</div></div>
+    <div><div class="n" data-pr="lines">+230 −8</div><div class="l">lines added and removed</div></div>
+    <div><div class="n" data-pr="commits">4</div><div class="l">commits</div></div>
+    <div><div class="n" data-pr="tests">10</div><div class="l">new tests</div></div>
+    <div><div class="n">1</div><div class="l">new endpoint</div></div>
+  </div>
+
+  <div class="next">
+    <span class="k">Next</span>
+    <ol>
+      <li>Read row b: three shared changes, one still open <span class="badge ro">read-only</span></li>
+      <li>Decide whether a discount above the total raises or stops at zero <span class="badge ro">read-only</span></li>
+      <li>Approve PR #418 once that answer is in the code <span class="badge w">write</span></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══════════════ LAYER 2 — THE SPINE: the system, with what the PR touches zoned ══════════════ -->
+<div class="spine">
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "spine",
+  "name": "Refunds",
+  "title": "A refund crosses the API once and the provider at most three times",
+  "lede": "The API checks the order, asks the provider with the caller's key, records the refund and announces it.",
+  "grid": {"cols": 3, "rows": 2},
+  "zones": [
+    {"id": "touched", "label": "Changed by PR #418", "cols": [1, 1], "rows": [0, 1], "tone": "sync"}
+  ],
+  "nodes": [
+    {"id": "console", "label": "Support console", "kind": "client", "icon": "browser", "at": [0, 0], "tech": "internal web app", "peek": "Support staff refund an order from here; every request carries a fresh Idempotency-Key.", "facts": ["sends Idempotency-Key"]},
+    {"id": "api", "label": "Shop API", "kind": "service", "icon": "api", "at": [1, 0], "tech": "Python · shop/", "peek": "Owns orders and refunds. The PR adds POST /orders/{id}/refunds and changes three pieces other paths share.", "facts": ["+1 endpoint", "13 classes on the path"]},
+    {"id": "orders", "label": "Orders", "kind": "data", "icon": "db", "at": [1, 1], "tech": "OrderRepository", "peek": "Each order now carries how much of it was refunded, so a second refund cannot exceed what is left.", "facts": ["new field: refunded"]},
+    {"id": "provider", "label": "Card provider", "kind": "external", "icon": "card", "at": [2, 0], "tech": "POST /refunds", "peek": "Moves the money back to the card, and dedupes on the Idempotency-Key, so a retried call refunds once.", "facts": ["503 when shedding load"]},
+    {"id": "events", "label": "Events", "kind": "stream", "icon": "queue", "at": [2, 1], "tech": "EventPublisher", "peek": "Announces refund.issued in process; the audit log records it in order.", "facts": ["in process"]}
+  ],
+  "edges": [
+    {"id": "console-api", "from": "console", "to": "api", "mode": "sync", "label": "POST refunds", "peek": "Support asks for a refund of part or all of a paid order."},
+    {"id": "api-orders", "from": "api", "to": "orders", "mode": "sync", "label": "get · save", "peek": "The order is loaded before the check and saved with its refunded total after."},
+    {"id": "api-provider", "from": "api", "to": "provider", "mode": "sync", "label": "POST /refunds", "ms": "up to 3 tries", "peek": "One refund call, retried on a 503 with the same key."},
+    {"id": "api-events", "from": "api", "to": "events", "mode": "async", "label": "refund.issued", "peek": "Announced after the refund is recorded; nothing waits on it."}
+  ],
+  "flows": [
+    {"id": "issued", "label": "Refund issued", "summary": "6 steps; money moves at step 3, and only once whatever the retries.",
+      "steps": [
+        {"id": "i1", "path": ["console", "api"], "msg": "POST refunds", "say": "Support asks to refund part of a paid order, with a fresh key."},
+        {"id": "i2", "path": ["api", "orders"], "msg": "get order", "say": "The API loads the order and checks how much of it is left to refund."},
+        {"id": "i3", "path": ["api", "provider"], "msg": "POST /refunds", "say": "The provider refunds the card; a 503 is retried with the same key."},
+        {"id": "i4", "path": ["api", "orders"], "msg": "save", "say": "The API records the refund and the order's new refunded total."},
+        {"id": "i5", "path": ["api", "events"], "msg": "refund.issued", "say": "The refund is announced, and the audit log records it."},
+        {"id": "i6", "path": ["api", "console"], "msg": "201 Created", "say": "Support sees the refund; the same key sent again replays this answer."}
+      ]},
+    {"id": "refused", "label": "Refund refused", "summary": "4 steps; the policy stops it before any money moves.",
+      "steps": [
+        {"id": "x1", "path": ["console", "api"], "msg": "POST refunds", "say": "Support asks to refund more than is left on the order."},
+        {"id": "x2", "path": ["api", "orders"], "msg": "get order", "say": "The API loads the order; only part of it is left to refund."},
+        {"id": "x3", "path": ["api", "provider"], "msg": "never sent", "fail": true, "say": "The policy refuses first, so the provider is never asked."},
+        {"id": "x4", "path": ["api", "console"], "msg": "422", "say": "Support gets a 422 saying how much is left to refund."}
+      ]}
+  ]
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="api">
+  <p>What PR #418 adds to the shop API, at <code>8021405</code>:</p>
+  <ul>
+    <li><b>New:</b> <code>POST /orders/{id}/refunds</code>, in <code>shop/refunds/</code> — four classes, drawn one per box in the detail drawing below.</li>
+    <li><b>Changed, shared:</b> the idempotency key, the 503 retry and <code>Money.minus</code> — row b.</li>
+  </ul>
+</section>
+<section data-for="provider">
+  <p>The provider dedupes on <code>Idempotency-Key</code>: a second call with the same key returns the first result and moves no money. That is what makes the new 503 retry safe for refunds and charges alike.</p>
+</section>
+</div>
+</figure>
+</div>
+
+<!-- ══════════════ THE DETAIL: the classes on the same path, one box each ══════════════ -->
+<div class="detail">
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "calls",
+  "name": "Refund call graph",
+  "title": "One refund makes thirteen calls through thirteen classes",
+  "lede": "POST /orders/{id}/refunds at 8021405, one box per class: the tags mark what PR #418 added or changed.",
+  "grid": {"cols": 5, "rows": 3},
+  "zones": [
+    {"id": "every-request", "label": "Every request runs these", "cols": [0, 2], "rows": [0, 0], "tone": "neutral"},
+    {"id": "every-call", "label": "Every provider call", "cols": [3, 4], "rows": [1, 1], "tone": "ext"}
+  ],
+  "nodes": [
+    {"id": "auth", "label": "AuthMiddleware", "kind": "edge", "icon": "lock", "at": [0, 0], "tech": "middleware.py", "peek": "Turns the bearer token into a user, or answers 401."},
+    {"id": "idem", "label": "Idempotency", "kind": "edge", "icon": "key", "at": [1, 0], "tech": "IdempotencyMiddleware", "peek": "Replays the stored answer for a repeated key; the PR scopes keys to method and path and stops storing 5xx answers.", "status": "changed"},
+    {"id": "router", "label": "Router", "kind": "edge", "icon": "gateway", "at": [2, 0], "tech": "app.py", "peek": "Matches method and path to a handler; build(), beside it, now registers the refund route."},
+    {"id": "handler", "label": "RefundHandler", "kind": "service", "icon": "service", "at": [2, 1], "tech": "refunds/handler.py", "peek": "Runs the refund: key, parse, load, check, refund, record, announce, and answers 201, 400, 404 or 422.", "facts": ["33 lines", "5 tests"], "status": "new"},
+    {"id": "request", "label": "RefundRequest", "kind": "service", "icon": "json", "at": [1, 1], "tech": "refunds/request.py", "peek": "Parses amount_cents and reason from the body, or raises BadRequest before anything is looked up.", "status": "new"},
+    {"id": "policy", "label": "RefundPolicy", "kind": "service", "icon": "check", "at": [3, 0], "tech": "refunds/policy.py", "peek": "Refuses an unpaid order, and an amount above what is left to refund.", "status": "new"},
+    {"id": "money", "label": "Money", "kind": "data", "icon": "bank", "at": [4, 0], "tech": "money.py", "peek": "Integer cents. minus now raises instead of going below zero, for refunds and for discounts alike.", "status": "changed"},
+    {"id": "payment", "label": "PaymentClient", "kind": "service", "icon": "card", "at": [3, 1], "tech": "payments.py", "peek": "Gains refund(): posts /refunds with the caller's key and returns the provider's refund id.", "status": "changed"},
+    {"id": "http", "label": "HttpTransport", "kind": "service", "icon": "relay", "at": [4, 1], "tech": "payments.py", "peek": "Retries a 503 up to twice with the same key, for refunds and charges alike.", "status": "changed"},
+    {"id": "orders", "label": "Orders", "kind": "data", "icon": "table", "at": [1, 2], "tech": "OrderRepository · Order", "peek": "Loads and saves orders. Order, folded into this box, gains refunded and refundable().", "status": "changed"},
+    {"id": "store", "label": "RefundStore", "kind": "data", "icon": "db", "at": [2, 2], "tech": "refunds/store.py", "peek": "Keeps one row per refund, and adds the amount to the order's refunded total.", "status": "new"},
+    {"id": "events", "label": "EventPublisher", "kind": "stream", "icon": "queue", "at": [3, 2], "tech": "events.py", "peek": "Delivers refund.issued to every subscriber, in order."},
+    {"id": "audit", "label": "AuditLog", "kind": "data", "icon": "file", "at": [4, 2], "tech": "audit.py", "peek": "Subscribed to every event; records refund.issued with its payload."}
+  ],
+  "edges": [
+    {"id": "auth-idem", "from": "auth", "to": "idem", "mode": "sync", "label": "inner()", "peek": "The request, now with its user, goes on to the idempotency check."},
+    {"id": "idem-router", "from": "idem", "to": "router", "mode": "sync", "label": "inner()", "peek": "An unseen key goes on to routing; a seen one is answered from the store."},
+    {"id": "router-handler", "from": "router", "to": "handler", "mode": "sync", "label": "post()", "peek": "The matched route calls RefundHandler.post with the order id from the path."},
+    {"id": "handler-request", "from": "handler", "to": "request", "mode": "sync", "label": "parse()", "peek": "The body in, a RefundRequest or a BadRequest out."},
+    {"id": "handler-orders", "from": "handler", "to": "orders", "mode": "sync", "label": "get() · save()", "peek": "The order is loaded before the policy and saved after the store."},
+    {"id": "handler-policy", "from": "handler", "to": "policy", "mode": "sync", "label": "check()", "peek": "The order and the request in; Refused out when the refund is not allowed."},
+    {"id": "policy-money", "from": "policy", "to": "money", "mode": "sync", "label": "minus()", "peek": "Through Order.refundable(): what is left, minus the amount asked for."},
+    {"id": "handler-payment", "from": "handler", "to": "payment", "mode": "sync", "label": "refund()", "peek": "The order, the amount and the caller's key; the provider's refund id back."},
+    {"id": "payment-http", "from": "payment", "to": "http", "mode": "sync", "label": "post()", "peek": "POST /refunds with the key as Idempotency-Key."},
+    {"id": "handler-store", "from": "handler", "to": "store", "mode": "sync", "label": "save()", "peek": "The order, the request and the provider id; the stored row back."},
+    {"id": "handler-events", "from": "handler", "to": "events", "mode": "sync", "label": "publish()", "peek": "refund.issued with the stored row."},
+    {"id": "events-audit", "from": "events", "to": "audit", "mode": "sync", "label": "record()", "peek": "Every subscriber, in order; the audit log is one."}
+  ],
+  "flows": [
+    {"id": "order", "label": "Refund call order", "summary": "14 steps; the money moves at step 9, the answer is stored at step 14.",
+      "steps": [
+        {"id": "c1", "path": ["auth", "idem"], "msg": "inner(request)", "say": "AuthMiddleware accepts the support token and passes the request on."},
+        {"id": "c2", "path": ["idem", "router"], "msg": "inner(request)", "say": "Idempotency hashes method, path and key, and an unseen key goes through."},
+        {"id": "c3", "path": ["router", "handler"], "msg": "post(request, id)", "say": "The router matches the refund route to RefundHandler.post."},
+        {"id": "c4", "path": ["handler", "request"], "msg": "parse(id, body)", "say": "The handler requires a key, then RefundRequest parses the amount and the reason."},
+        {"id": "c5", "path": ["handler", "orders"], "msg": "get(id)", "say": "The order is loaded, and a missing one answers 404 here."},
+        {"id": "c6", "path": ["handler", "policy"], "msg": "check(order, refund)", "say": "RefundPolicy refuses an unpaid order or an amount above what is left."},
+        {"id": "c7", "path": ["policy", "money"], "msg": "minus(amount)", "say": "Money.minus raises when the refund would take the order below zero."},
+        {"id": "c8", "path": ["handler", "payment"], "msg": "refund(order, amt, key)", "say": "PaymentClient.refund asks the provider, passing the caller's key through."},
+        {"id": "c9", "path": ["payment", "http"], "msg": "post(/refunds)", "say": "HttpTransport posts the refund, retrying a 503 twice with the same key."},
+        {"id": "c10", "path": ["handler", "store"], "msg": "save(...)", "say": "RefundStore keeps the row and adds the amount to the order's refunded total."},
+        {"id": "c11", "path": ["handler", "orders"], "msg": "save(order)", "say": "The order is saved with its new refunded total."},
+        {"id": "c12", "path": ["handler", "events"], "msg": "publish(refund.issued)", "say": "The handler publishes refund.issued with the stored row."},
+        {"id": "c13", "path": ["events", "audit"], "msg": "record()", "say": "AuditLog records the event, in order."},
+        {"id": "c14", "path": ["handler", "router", "idem", "auth"], "msg": "201 Created", "say": "The 201 travels back, and Idempotency stores it so the same key replays it."}
+      ]}
+  ]
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="auth">
+  <p>Unchanged by the PR.</p>
+<!-- pr:lines shop/middleware.py 5-15 -->
+<div class="cmd fig src" data-pr-src="shop/middleware.py" data-pr-lines="5-15"><p class="at"><code>shop/middleware.py</code> lines 5–15 at <code>8021405</code></p><pre><code><span class="ln">5</span>class AuthMiddleware:
+<span class="ln">6</span>    def __init__(self, inner, tokens):
+<span class="ln">7</span>        self.inner = inner
+<span class="ln">8</span>        self.tokens = tokens
+<span class="ln">9</span>
+<span class="ln">10</span>    def __call__(self, request):
+<span class="ln">11</span>        who = self.tokens.get(request.headers.get("Authorization", ""))
+<span class="ln">12</span>        if who is None:
+<span class="ln">13</span>            return {"status": 401, "body": {"error": "unauthorized"}}
+<span class="ln">14</span>        request.user = who
+<span class="ln">15</span>        return self.inner(request)</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="idem">
+  <p>Changed, and shared by every POST: the two hunks are in row b.</p>
+<!-- pr:lines shop/middleware.py 18-42 -->
+<div class="cmd fig src" data-pr-src="shop/middleware.py" data-pr-lines="18-42"><p class="at"><code>shop/middleware.py</code> lines 18–42 at <code>8021405</code></p><pre><code><span class="ln">18</span>class IdempotencyMiddleware:
+<span class="ln">19</span>    """Replays the stored response when a POST arrives again with the same Idempotency-Key."""
+<span class="ln">20</span>
+<span class="ln">21</span>    def __init__(self, inner):
+<span class="ln">22</span>        self.inner = inner
+<span class="ln">23</span>        self._seen = {}
+<span class="ln">24</span>
+<span class="ln">25</span>    def key(self, request):
+<span class="ln">26</span>        raw = request.headers.get("Idempotency-Key")
+<span class="ln">27</span>        if not raw:
+<span class="ln">28</span>            return None
+<span class="ln">29</span>        return hashlib.sha256(("%s %s %s" % (request.method, request.path, raw)).encode()).hexdigest()
+<span class="ln">30</span>
+<span class="ln">31</span>    def __call__(self, request):
+<span class="ln">32</span>        if request.method != "POST":
+<span class="ln">33</span>            return self.inner(request)
+<span class="ln">34</span>        k = self.key(request)
+<span class="ln">35</span>        if k is None:
+<span class="ln">36</span>            return self.inner(request)
+<span class="ln">37</span>        if k in self._seen:
+<span class="ln">38</span>            return self._seen[k]
+<span class="ln">39</span>        response = self.inner(request)
+<span class="ln">40</span>        if response["status"] &lt; 500:
+<span class="ln">41</span>            self._seen[k] = response
+<span class="ln">42</span>        return response</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="router">
+  <p>The class is unchanged; <code>build()</code> beside it registers the new route (line 35).</p>
+<!-- pr:lines shop/app.py 17-36 -->
+<div class="cmd fig src" data-pr-src="shop/app.py" data-pr-lines="17-36"><p class="at"><code>shop/app.py</code> lines 17–36 at <code>8021405</code></p><pre><code><span class="ln">17</span>class Router:
+<span class="ln">18</span>    def __init__(self):
+<span class="ln">19</span>        self._routes = []
+<span class="ln">20</span>
+<span class="ln">21</span>    def add(self, method, pattern, handler):
+<span class="ln">22</span>        self._routes.append((method, re.compile("^%s$" % pattern), handler))
+<span class="ln">23</span>
+<span class="ln">24</span>    def __call__(self, request):
+<span class="ln">25</span>        for method, rx, handler in self._routes:
+<span class="ln">26</span>            m = rx.match(request.path)
+<span class="ln">27</span>            if m and method == request.method:
+<span class="ln">28</span>                return handler(request, *m.groups())
+<span class="ln">29</span>        return {"status": 404, "body": {"error": "no route"}}
+<span class="ln">30</span>
+<span class="ln">31</span>
+<span class="ln">32</span>def build(orders, payments, refunds, tokens):
+<span class="ln">33</span>    router = Router()
+<span class="ln">34</span>    router.add("GET", r"/orders/([\w-]+)", lambda req, oid: {"status": 200, "body": orders.get(oid)})
+<span class="ln">35</span>    router.add("POST", r"/orders/([\w-]+)/refunds", refunds.post)
+<span class="ln">36</span>    return AuthMiddleware(IdempotencyMiddleware(router), tokens)</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="handler">
+<!-- pr:lines shop/refunds/handler.py 6-33 -->
+<div class="cmd fig src" data-pr-src="shop/refunds/handler.py" data-pr-lines="6-33"><p class="at"><code>shop/refunds/handler.py</code> lines 6–33 at <code>8021405</code></p><pre><code><span class="ln">6</span>class RefundHandler:
+<span class="ln">7</span>    def __init__(self, orders, policy, payments, store, events):
+<span class="ln">8</span>        self.orders = orders
+<span class="ln">9</span>        self.policy = policy
+<span class="ln">10</span>        self.payments = payments
+<span class="ln">11</span>        self.store = store
+<span class="ln">12</span>        self.events = events
+<span class="ln">13</span>
+<span class="ln">14</span>    def post(self, request, order_id):
+<span class="ln">15</span>        key = request.headers.get("Idempotency-Key")
+<span class="ln">16</span>        if not key:
+<span class="ln">17</span>            return {"status": 400, "body": {"error": "an Idempotency-Key header is required"}}
+<span class="ln">18</span>        try:
+<span class="ln">19</span>            refund = RefundRequest.parse(order_id, request.body)
+<span class="ln">20</span>        except BadRequest as e:
+<span class="ln">21</span>            return {"status": 400, "body": {"error": str(e)}}
+<span class="ln">22</span>        order = self.orders.get(order_id)
+<span class="ln">23</span>        if order is None:
+<span class="ln">24</span>            return {"status": 404, "body": {"error": "no order %s" % order_id}}
+<span class="ln">25</span>        try:
+<span class="ln">26</span>            self.policy.check(order, refund)
+<span class="ln">27</span>        except Refused as e:
+<span class="ln">28</span>            return {"status": 422, "body": {"error": str(e)}}
+<span class="ln">29</span>        provider_id = self.payments.refund(order, refund.amount, key)
+<span class="ln">30</span>        row = self.store.save(order, refund, provider_id)
+<span class="ln">31</span>        self.orders.save(order)
+<span class="ln">32</span>        self.events.publish("refund.issued", row)
+<span class="ln">33</span>        return {"status": 201, "body": row}</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="request">
+<!-- pr:lines shop/refunds/request.py 7-28 -->
+<div class="cmd fig src" data-pr-src="shop/refunds/request.py" data-pr-lines="7-28"><p class="at"><code>shop/refunds/request.py</code> lines 7–28 at <code>8021405</code></p><pre><code><span class="ln">7</span>class BadRequest(ValueError):
+<span class="ln">8</span>    pass
+<span class="ln">9</span>
+<span class="ln">10</span>
+<span class="ln">11</span>@dataclass(frozen=True)
+<span class="ln">12</span>class RefundRequest:
+<span class="ln">13</span>    order_id: str
+<span class="ln">14</span>    amount: Money
+<span class="ln">15</span>    reason: str
+<span class="ln">16</span>
+<span class="ln">17</span>    @classmethod
+<span class="ln">18</span>    def parse(cls, order_id, body):
+<span class="ln">19</span>        try:
+<span class="ln">20</span>            cents = int(body["amount_cents"])
+<span class="ln">21</span>        except (KeyError, TypeError, ValueError):
+<span class="ln">22</span>            raise BadRequest("amount_cents must be a whole number of cents")
+<span class="ln">23</span>        if cents &lt;= 0:
+<span class="ln">24</span>            raise BadRequest("amount_cents must be above zero")
+<span class="ln">25</span>        reason = str(body.get("reason", "")).strip()
+<span class="ln">26</span>        if not reason:
+<span class="ln">27</span>            raise BadRequest("a reason is required")
+<span class="ln">28</span>        return cls(order_id, Money(cents), reason[:200])</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="policy">
+<!-- pr:lines shop/refunds/policy.py 4-15 -->
+<div class="cmd fig src" data-pr-src="shop/refunds/policy.py" data-pr-lines="4-15"><p class="at"><code>shop/refunds/policy.py</code> lines 4–15 at <code>8021405</code></p><pre><code><span class="ln">4</span>class Refused(Exception):
+<span class="ln">5</span>    pass
+<span class="ln">6</span>
+<span class="ln">7</span>
+<span class="ln">8</span>class RefundPolicy:
+<span class="ln">9</span>    def check(self, order, request):
+<span class="ln">10</span>        if not order.paid:
+<span class="ln">11</span>            raise Refused("order %s was never paid" % order.id)
+<span class="ln">12</span>        try:
+<span class="ln">13</span>            order.refundable().minus(request.amount)
+<span class="ln">14</span>        except ValueError:
+<span class="ln">15</span>            raise Refused("only %s of order %s is left to refund" % (order.refundable(), order.id))</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="money">
+<!-- pr:lines shop/money.py 14-18 -->
+<div class="cmd fig src" data-pr-src="shop/money.py" data-pr-lines="14-18"><p class="at"><code>shop/money.py</code> lines 14–18 at <code>8021405</code></p><pre><code><span class="ln">14</span>    def minus(self, other):
+<span class="ln">15</span>        self._same(other)
+<span class="ln">16</span>        if other.cents &gt; self.cents:
+<span class="ln">17</span>            raise ValueError("%s minus %s would go below zero" % (self, other))
+<span class="ln">18</span>        return Money(self.cents - other.cents, self.currency)</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="payment">
+<!-- pr:lines shop/payments.py 27-41 -->
+<div class="cmd fig src" data-pr-src="shop/payments.py" data-pr-lines="27-41"><p class="at"><code>shop/payments.py</code> lines 27–41 at <code>8021405</code></p><pre><code><span class="ln">27</span>class PaymentClient:
+<span class="ln">28</span>    def __init__(self, transport):
+<span class="ln">29</span>        self.transport = transport
+<span class="ln">30</span>
+<span class="ln">31</span>    def charge(self, order, key):
+<span class="ln">32</span>        status, reply = self.transport.post("/charges", {"amount": order.total.cents, "order": order.id}, key)
+<span class="ln">33</span>        if status != 201:
+<span class="ln">34</span>            raise RuntimeError("charge refused: %s" % reply.get("error"))
+<span class="ln">35</span>        return reply["id"]
+<span class="ln">36</span>
+<span class="ln">37</span>    def refund(self, order, amount, key):
+<span class="ln">38</span>        status, reply = self.transport.post("/refunds", {"charge": order.charge_id, "amount": amount.cents}, key)
+<span class="ln">39</span>        if status != 201:
+<span class="ln">40</span>            raise RuntimeError("refund refused: %s" % reply.get("error"))
+<span class="ln">41</span>        return reply["id"]</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="http">
+<!-- pr:lines shop/payments.py 4-24 -->
+<div class="cmd fig src" data-pr-src="shop/payments.py" data-pr-lines="4-24"><p class="at"><code>shop/payments.py</code> lines 4–24 at <code>8021405</code></p><pre><code><span class="ln">4</span>class ProviderUnavailable(Exception):
+<span class="ln">5</span>    pass
+<span class="ln">6</span>
+<span class="ln">7</span>
+<span class="ln">8</span>class HttpTransport:
+<span class="ln">9</span>    """Posts JSON to the provider with an Idempotency-Key, which the provider dedupes on.
+<span class="ln">10</span>    A 503 is the provider shedding load: retried up to twice, with the same key."""
+<span class="ln">11</span>
+<span class="ln">12</span>    RETRY_ON = (503,)
+<span class="ln">13</span>
+<span class="ln">14</span>    def __init__(self, send, retries=2):
+<span class="ln">15</span>        self.send = send
+<span class="ln">16</span>        self.retries = retries
+<span class="ln">17</span>
+<span class="ln">18</span>    def post(self, path, body, idempotency_key):
+<span class="ln">19</span>        headers = {"Idempotency-Key": idempotency_key}
+<span class="ln">20</span>        for attempt in range(self.retries + 1):
+<span class="ln">21</span>            status, reply = self.send(path, body, headers)
+<span class="ln">22</span>            if status not in self.RETRY_ON:
+<span class="ln">23</span>                return status, reply
+<span class="ln">24</span>        raise ProviderUnavailable("%s answered 503 %d times" % (path, self.retries + 1))</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="orders">
+  <p><code>Order</code> is folded into this box: it is only ever reached through the repository here, and a box of its own would add a crossing. It gains <code>refunded</code> and <code>refundable()</code>; the repository is unchanged.</p>
+<!-- pr:lines shop/orders.py 7-34 -->
+<div class="cmd fig src" data-pr-src="shop/orders.py" data-pr-lines="7-34"><p class="at"><code>shop/orders.py</code> lines 7–34 at <code>8021405</code></p><pre><code><span class="ln">7</span>@dataclass
+<span class="ln">8</span>class Order:
+<span class="ln">9</span>    id: str
+<span class="ln">10</span>    customer: str
+<span class="ln">11</span>    total: Money
+<span class="ln">12</span>    paid: bool = False
+<span class="ln">13</span>    charge_id: str = ""
+<span class="ln">14</span>    refunded: Money = field(default_factory=lambda: Money(0))
+<span class="ln">15</span>
+<span class="ln">16</span>    def apply_discount(self, amount):
+<span class="ln">17</span>        self.total = self.total.minus(amount)
+<span class="ln">18</span>
+<span class="ln">19</span>    def refundable(self):
+<span class="ln">20</span>        return self.total.minus(self.refunded)
+<span class="ln">21</span>
+<span class="ln">22</span>
+<span class="ln">23</span>class OrderRepository:
+<span class="ln">24</span>    def __init__(self):
+<span class="ln">25</span>        self._orders = {}
+<span class="ln">26</span>
+<span class="ln">27</span>    def add(self, order):
+<span class="ln">28</span>        self._orders[order.id] = order
+<span class="ln">29</span>
+<span class="ln">30</span>    def get(self, order_id):
+<span class="ln">31</span>        return self._orders.get(order_id)
+<span class="ln">32</span>
+<span class="ln">33</span>    def save(self, order):
+<span class="ln">34</span>        self._orders[order.id] = order</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="store">
+<!-- pr:lines shop/refunds/store.py 5-15 -->
+<div class="cmd fig src" data-pr-src="shop/refunds/store.py" data-pr-lines="5-15"><p class="at"><code>shop/refunds/store.py</code> lines 5–15 at <code>8021405</code></p><pre><code><span class="ln">5</span>class RefundStore:
+<span class="ln">6</span>    def __init__(self):
+<span class="ln">7</span>        self._rows = []
+<span class="ln">8</span>        self._ids = itertools.count(1)
+<span class="ln">9</span>
+<span class="ln">10</span>    def save(self, order, request, provider_id):
+<span class="ln">11</span>        row = {"id": "rf_%d" % next(self._ids), "order": order.id, "amount_cents": request.amount.cents,
+<span class="ln">12</span>               "reason": request.reason, "provider_id": provider_id}
+<span class="ln">13</span>        self._rows.append(row)
+<span class="ln">14</span>        order.refunded = order.refunded.plus(request.amount)
+<span class="ln">15</span>        return row</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="events">
+  <p>Unchanged by the PR.</p>
+<!-- pr:lines shop/events.py 4-13 -->
+<div class="cmd fig src" data-pr-src="shop/events.py" data-pr-lines="4-13"><p class="at"><code>shop/events.py</code> lines 4–13 at <code>8021405</code></p><pre><code><span class="ln">4</span>class EventPublisher:
+<span class="ln">5</span>    def __init__(self):
+<span class="ln">6</span>        self._subs = []
+<span class="ln">7</span>
+<span class="ln">8</span>    def subscribe(self, fn):
+<span class="ln">9</span>        self._subs.append(fn)
+<span class="ln">10</span>
+<span class="ln">11</span>    def publish(self, name, payload):
+<span class="ln">12</span>        for fn in self._subs:
+<span class="ln">13</span>            fn(name, payload)</code></pre></div>
+<!-- /pr -->
+</section>
+<section data-for="audit">
+  <p>Unchanged by the PR.</p>
+<!-- pr:lines shop/audit.py 4-10 -->
+<div class="cmd fig src" data-pr-src="shop/audit.py" data-pr-lines="4-10"><p class="at"><code>shop/audit.py</code> lines 4–10 at <code>8021405</code></p><pre><code><span class="ln">4</span>class AuditLog:
+<span class="ln">5</span>    def __init__(self, events):
+<span class="ln">6</span>        self.rows = []
+<span class="ln">7</span>        events.subscribe(self.record)
+<span class="ln">8</span>
+<span class="ln">9</span>    def record(self, name, payload):
+<span class="ln">10</span>        self.rows.append((name, dict(payload)))</code></pre></div>
+<!-- /pr -->
+</section>
+</div>
+</figure>
+</div>
+
+<div class="ctl">
+  <button id="flowExpand">Expand all</button>
+  <button id="flowCollapse">Collapse all</button>
+  <button id="flowAgentCopy">Copy captures for agent</button>
+  <button id="flowEvidence">Save evidence</button>
+  <span class="hint">nothing is open at load, by design</span>
+</div>
+
+<h2 class="sec">What is new</h2>
+<details class="row" data-row="a" data-kind="context">
+<summary><span class="ord">a</span><span class="cl">A refund is parsed, checked, paid, recorded and announced in one call</span><span class="rt">3 min</span></summary>
+<div class="in">
+<p><code>POST /orders/{id}/refunds</code> enters through the same middleware as every POST, then runs in <code>RefundHandler.post</code>. Each hop is one line, with its code at <code>8021405</code> one click down.</p>
+<details class="more"><summary>Hop 1 · the handler refuses a request with no Idempotency-Key, with a 400</summary><div class="in">
+<!-- pr:lines shop/refunds/handler.py 14-17 -->
+<div class="cmd fig src" data-pr-src="shop/refunds/handler.py" data-pr-lines="14-17"><p class="at"><code>shop/refunds/handler.py</code> lines 14–17 at <code>8021405</code></p><pre><code><span class="ln">14</span>    def post(self, request, order_id):
+<span class="ln">15</span>        key = request.headers.get("Idempotency-Key")
+<span class="ln">16</span>        if not key:
+<span class="ln">17</span>            return {"status": 400, "body": {"error": "an Idempotency-Key header is required"}}</code></pre></div>
+<!-- /pr -->
+</div></details>
+<details class="more"><summary>Hop 2 · RefundRequest turns the body into an amount and a reason, or a 400</summary><div class="in">
+<!-- pr:lines shop/refunds/request.py 17-28 -->
+<div class="cmd fig src" data-pr-src="shop/refunds/request.py" data-pr-lines="17-28"><p class="at"><code>shop/refunds/request.py</code> lines 17–28 at <code>8021405</code></p><pre><code><span class="ln">17</span>    @classmethod
+<span class="ln">18</span>    def parse(cls, order_id, body):
+<span class="ln">19</span>        try:
+<span class="ln">20</span>            cents = int(body["amount_cents"])
+<span class="ln">21</span>        except (KeyError, TypeError, ValueError):
+<span class="ln">22</span>            raise BadRequest("amount_cents must be a whole number of cents")
+<span class="ln">23</span>        if cents &lt;= 0:
+<span class="ln">24</span>            raise BadRequest("amount_cents must be above zero")
+<span class="ln">25</span>        reason = str(body.get("reason", "")).strip()
+<span class="ln">26</span>        if not reason:
+<span class="ln">27</span>            raise BadRequest("a reason is required")
+<span class="ln">28</span>        return cls(order_id, Money(cents), reason[:200])</code></pre></div>
+<!-- /pr -->
+</div></details>
+<details class="more"><summary>Hop 3 · RefundPolicy refuses unpaid orders and over-refunds, with a 422</summary><div class="in">
+<!-- pr:lines shop/refunds/policy.py 8-15 -->
+<div class="cmd fig src" data-pr-src="shop/refunds/policy.py" data-pr-lines="8-15"><p class="at"><code>shop/refunds/policy.py</code> lines 8–15 at <code>8021405</code></p><pre><code><span class="ln">8</span>class RefundPolicy:
+<span class="ln">9</span>    def check(self, order, request):
+<span class="ln">10</span>        if not order.paid:
+<span class="ln">11</span>            raise Refused("order %s was never paid" % order.id)
+<span class="ln">12</span>        try:
+<span class="ln">13</span>            order.refundable().minus(request.amount)
+<span class="ln">14</span>        except ValueError:
+<span class="ln">15</span>            raise Refused("only %s of order %s is left to refund" % (order.refundable(), order.id))</code></pre></div>
+<!-- /pr -->
+</div></details>
+<details class="more"><summary>Hop 4 · PaymentClient.refund calls the provider with the caller's key</summary><div class="in">
+<!-- pr:lines shop/payments.py 37-41 -->
+<div class="cmd fig src" data-pr-src="shop/payments.py" data-pr-lines="37-41"><p class="at"><code>shop/payments.py</code> lines 37–41 at <code>8021405</code></p><pre><code><span class="ln">37</span>    def refund(self, order, amount, key):
+<span class="ln">38</span>        status, reply = self.transport.post("/refunds", {"charge": order.charge_id, "amount": amount.cents}, key)
+<span class="ln">39</span>        if status != 201:
+<span class="ln">40</span>            raise RuntimeError("refund refused: %s" % reply.get("error"))
+<span class="ln">41</span>        return reply["id"]</code></pre></div>
+<!-- /pr -->
+</div></details>
+<details class="more"><summary>Hop 5 · RefundStore records the row and the order's refunded total</summary><div class="in">
+<!-- pr:lines shop/refunds/store.py 10-15 -->
+<div class="cmd fig src" data-pr-src="shop/refunds/store.py" data-pr-lines="10-15"><p class="at"><code>shop/refunds/store.py</code> lines 10–15 at <code>8021405</code></p><pre><code><span class="ln">10</span>    def save(self, order, request, provider_id):
+<span class="ln">11</span>        row = {"id": "rf_%d" % next(self._ids), "order": order.id, "amount_cents": request.amount.cents,
+<span class="ln">12</span>               "reason": request.reason, "provider_id": provider_id}
+<span class="ln">13</span>        self._rows.append(row)
+<span class="ln">14</span>        order.refunded = order.refunded.plus(request.amount)
+<span class="ln">15</span>        return row</code></pre></div>
+<!-- /pr -->
+</div></details>
+<details class="more"><summary>Hop 6 · the handler saves the order, announces refund.issued, and answers 201</summary><div class="in">
+<!-- pr:lines shop/refunds/handler.py 29-33 -->
+<div class="cmd fig src" data-pr-src="shop/refunds/handler.py" data-pr-lines="29-33"><p class="at"><code>shop/refunds/handler.py</code> lines 29–33 at <code>8021405</code></p><pre><code><span class="ln">29</span>        provider_id = self.payments.refund(order, refund.amount, key)
+<span class="ln">30</span>        row = self.store.save(order, refund, provider_id)
+<span class="ln">31</span>        self.orders.save(order)
+<span class="ln">32</span>        self.events.publish("refund.issued", row)
+<span class="ln">33</span>        return {"status": 201, "body": row}</code></pre></div>
+<!-- /pr -->
+</div></details>
+</div>
+</details>
+
+<h2 class="sec">Shared changes</h2>
+<details class="row" data-row="b" data-kind="finding">
+<summary><span class="ord">b</span><span class="cl">Three changes also run outside refunds, and one still needs a decision</span><span class="rt">3 min</span></summary>
+<div class="in">
+<p>These run on paths that have nothing to do with refunds. The Money change alters what a discount does, and is still open with the reviewer.</p>
+<table>
+<thead><tr><th>Change</th><th>Who else runs it</th><th>Risk</th></tr></thead>
+<tbody>
+<tr><td><details class="more"><summary>Idempotency keys are scoped to method and path, and a 5xx answer is no longer stored</summary><div class="in">
+<!-- pr:hunk shop/middleware.py 2 -->
+<div class="cmd fig diff" data-pr-hunk="shop/middleware.py" data-pr-n="2"><p class="at"><code>shop/middleware.py</code> hunk 2 of 3 · new lines 23–32</p><pre><code><span class="dh">@@ -22,7 +23,10 @@ class IdempotencyMiddleware:</span>
+         self._seen = {}
+ 
+     def key(self, request):
+<span class="dd">-        return request.headers.get("Idempotency-Key")</span>
+<span class="da">+        raw = request.headers.get("Idempotency-Key")</span>
+<span class="da">+        if not raw:</span>
+<span class="da">+            return None</span>
+<span class="da">+        return hashlib.sha256(("%s %s %s" % (request.method, request.path, raw)).encode()).hexdigest()</span>
+ 
+     def __call__(self, request):
+         if request.method != "POST":</code></pre></div>
+<!-- /pr -->
+<!-- pr:hunk shop/middleware.py 3 -->
+<div class="cmd fig diff" data-pr-hunk="shop/middleware.py" data-pr-n="3"><p class="at"><code>shop/middleware.py</code> hunk 3 of 3 · new lines 37–42</p><pre><code><span class="dh">@@ -33,5 +37,6 @@ class IdempotencyMiddleware:</span>
+         if k in self._seen:
+             return self._seen[k]
+         response = self.inner(request)
+<span class="dd">-        self._seen[k] = response</span>
+<span class="da">+        if response["status"] &lt; 500:</span>
+<span class="da">+            self._seen[k] = response</span>
+         return response</code></pre></div>
+<!-- /pr -->
+</div></details></td><td>Every POST: checkout, carts and refunds</td><td>Low. A key reused on two routes now gets two answers, and a retry after a 5xx runs again.</td></tr>
+<tr><td><details class="more"><summary>HttpTransport retries a 503 twice, with the same key</summary><div class="in">
+<!-- pr:hunk shop/payments.py @20 -->
+<div class="cmd fig diff" data-pr-hunk="shop/payments.py" data-pr-n="1"><p class="at"><code>shop/payments.py</code> hunk 1 of 2 · new lines 1–27</p><pre><code><span class="dh">@@ -1,14 +1,27 @@</span>
+ """Calls to the payment provider."""
+ 
+ 
+<span class="da">+class ProviderUnavailable(Exception):</span>
+<span class="da">+    pass</span>
+<span class="da">+</span>
+<span class="da">+</span>
+ class HttpTransport:
+<span class="dd">-    """Posts JSON to the provider with an Idempotency-Key, which the provider dedupes on."""</span>
+<span class="da">+    """Posts JSON to the provider with an Idempotency-Key, which the provider dedupes on.</span>
+<span class="da">+    A 503 is the provider shedding load: retried up to twice, with the same key."""</span>
+<span class="da">+</span>
+<span class="da">+    RETRY_ON = (503,)</span>
+ 
+<span class="dd">-    def __init__(self, send):</span>
+<span class="da">+    def __init__(self, send, retries=2):</span>
+         self.send = send
+<span class="da">+        self.retries = retries</span>
+ 
+     def post(self, path, body, idempotency_key):
+<span class="dd">-        return self.send(path, body, {"Idempotency-Key": idempotency_key})</span>
+<span class="da">+        headers = {"Idempotency-Key": idempotency_key}</span>
+<span class="da">+        for attempt in range(self.retries + 1):</span>
+<span class="da">+            status, reply = self.send(path, body, headers)</span>
+<span class="da">+            if status not in self.RETRY_ON:</span>
+<span class="da">+                return status, reply</span>
+<span class="da">+        raise ProviderUnavailable("%s answered 503 %d times" % (path, self.retries + 1))</span>
+ 
+ 
+ class PaymentClient:</code></pre></div>
+<!-- /pr -->
+</div></details></td><td><code>PaymentClient.charge</code>, so every checkout</td><td>Low. The provider dedupes on the key; <code>test_retry_a_503_with_the_same_key</code> pins it.</td></tr>
+<tr><td><details class="more"><summary>Money.minus raises instead of going below zero</summary><div class="in">
+<!-- pr:hunk shop/money.py 1 -->
+<div class="cmd fig diff" data-pr-hunk="shop/money.py" data-pr-n="1"><p class="at"><code>shop/money.py</code> hunk 1 of 1 · new lines 13–20</p><pre><code><span class="dh">@@ -13,6 +13,8 @@ class Money:</span>
+ 
+     def minus(self, other):
+         self._same(other)
+<span class="da">+        if other.cents &gt; self.cents:</span>
+<span class="da">+            raise ValueError("%s minus %s would go below zero" % (self, other))</span>
+         return Money(self.cents - other.cents, self.currency)
+ 
+     def _same(self, other):</code></pre></div>
+<!-- /pr -->
+</div></details></td><td><code>Order.apply_discount</code>, and anything else that subtracts money</td><td><b>Medium, open.</b> A discount above the order total now raises where it went negative, and nothing catches it.</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<h2 class="sec">Files and review</h2>
+<details class="row" data-row="c" data-kind="record">
+<summary><span class="ord">c</span><span class="cl">Fifteen files change: six new, nine edited, ten new tests</span><span class="rt">5 min</span></summary>
+<div class="in">
+<!-- pr:files -->
+<div class="prf" data-pr-files="15">
+<details class="prf-file" data-file="docs/api.md" data-add="6" data-del="0">
+<summary><code class="prf-name">docs/api.md</code><span class="prf-n"><span class="a">+6</span> <span class="d">−0</span></span><span class="prf-s">Documents the new endpoint, its required key and its four answers.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>The 422 wording matches <code>RefundPolicy</code>; the 400 for a missing key is in the last commit.</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="docs/api.md"><p class="at"><code>docs/api.md</code> · 1 hunk · +6 −0</p><pre><code><span class="dh">@@ -6,3 +6,9 @@ same key again replays the first response instead of doing the work twice.</span>
+ ## GET /orders/{id}
+ 
+ The order, or 404.
+<span class="da">+</span>
+<span class="da">+## POST /orders/{id}/refunds</span>
+<span class="da">+</span>
+<span class="da">+Refunds part or all of a paid order to the card that paid it. Requires `Idempotency-Key`. Body:</span>
+<span class="da">+`amount_cents` (above zero) and `reason`. Answers 201 with the refund, 400 for a bad body, 404 for no such order, and 422 when the order</span>
+<span class="da">+was never paid or less than `amount_cents` is left to refund.</span></code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="shop/app.py" data-add="2" data-del="1">
+<summary><code class="prf-name">shop/app.py</code><span class="prf-n"><span class="a">+2</span> <span class="d">−1</span></span><span class="prf-s">Registers the refund route; build() now takes the refund handler.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li><code>build()</code> gained a parameter, so every caller of it changes; the tests are the only caller in this repository.</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="shop/app.py"><p class="at"><code>shop/app.py</code> · 1 hunk · +2 −1</p><pre><code><span class="dh">@@ -29,7 +29,8 @@ class Router:</span>
+         return {"status": 404, "body": {"error": "no route"}}
+ 
+ 
+<span class="dd">-def build(orders, payments, tokens):</span>
+<span class="da">+def build(orders, payments, refunds, tokens):</span>
+     router = Router()
+     router.add("GET", r"/orders/([\w-]+)", lambda req, oid: {"status": 200, "body": orders.get(oid)})
+<span class="da">+    router.add("POST", r"/orders/([\w-]+)/refunds", refunds.post)</span>
+     return AuthMiddleware(IdempotencyMiddleware(router), tokens)</code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="shop/middleware.py" data-add="7" data-del="2">
+<summary><code class="prf-name">shop/middleware.py</code><span class="prf-n"><span class="a">+7</span> <span class="d">−2</span></span><span class="prf-s">Scopes idempotency keys to method and path, and stops storing 5xx answers.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>Shared by every POST: row b.</li><li>Keys already stored before the deploy are in memory only, so none survive it.</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="shop/middleware.py"><p class="at"><code>shop/middleware.py</code> · 3 hunks · +7 −2</p><pre><code><span class="dh">@@ -1,4 +1,5 @@</span>
+ """Request middleware: who is calling, and whether this request has been seen before."""
+<span class="da">+import hashlib</span>
+ 
+ 
+ class AuthMiddleware:
+<span class="dh">@@ -22,7 +23,10 @@ class IdempotencyMiddleware:</span>
+         self._seen = {}
+ 
+     def key(self, request):
+<span class="dd">-        return request.headers.get("Idempotency-Key")</span>
+<span class="da">+        raw = request.headers.get("Idempotency-Key")</span>
+<span class="da">+        if not raw:</span>
+<span class="da">+            return None</span>
+<span class="da">+        return hashlib.sha256(("%s %s %s" % (request.method, request.path, raw)).encode()).hexdigest()</span>
+ 
+     def __call__(self, request):
+         if request.method != "POST":
+<span class="dh">@@ -33,5 +37,6 @@ class IdempotencyMiddleware:</span>
+         if k in self._seen:
+             return self._seen[k]
+         response = self.inner(request)
+<span class="dd">-        self._seen[k] = response</span>
+<span class="da">+        if response["status"] &lt; 500:</span>
+<span class="da">+            self._seen[k] = response</span>
+         return response</code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="shop/money.py" data-add="2" data-del="0">
+<summary><code class="prf-name">shop/money.py</code><span class="prf-n"><span class="a">+2</span> <span class="d">−0</span></span><span class="prf-s">Makes minus raise rather than return a negative amount.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>Shared: <code>Order.apply_discount</code> calls it too. Open with the reviewer, row d.</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="shop/money.py"><p class="at"><code>shop/money.py</code> · 1 hunk · +2 −0</p><pre><code><span class="dh">@@ -13,6 +13,8 @@ class Money:</span>
+ 
+     def minus(self, other):
+         self._same(other)
+<span class="da">+        if other.cents &gt; self.cents:</span>
+<span class="da">+            raise ValueError("%s minus %s would go below zero" % (self, other))</span>
+         return Money(self.cents - other.cents, self.currency)
+ 
+     def _same(self, other):</code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="shop/orders.py" data-add="5" data-del="1">
+<summary><code class="prf-name">shop/orders.py</code><span class="prf-n"><span class="a">+5</span> <span class="d">−1</span></span><span class="prf-s">Gives an order a refunded total and a refundable() amount.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li><code>refunded</code> defaults to zero, so existing orders load unchanged.</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="shop/orders.py"><p class="at"><code>shop/orders.py</code> · 2 hunks · +5 −1</p><pre><code><span class="dh">@@ -1,5 +1,5 @@</span>
+ """Orders and where they are kept."""
+<span class="dd">-from dataclasses import dataclass</span>
+<span class="da">+from dataclasses import dataclass, field</span>
+ 
+ from shop.money import Money
+ 
+<span class="dh">@@ -11,10 +11,14 @@ class Order:</span>
+     total: Money
+     paid: bool = False
+     charge_id: str = ""
+<span class="da">+    refunded: Money = field(default_factory=lambda: Money(0))</span>
+ 
+     def apply_discount(self, amount):
+         self.total = self.total.minus(amount)
+ 
+<span class="da">+    def refundable(self):</span>
+<span class="da">+        return self.total.minus(self.refunded)</span>
+<span class="da">+</span>
+ 
+ class OrderRepository:
+     def __init__(self):</code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="shop/payments.py" data-add="22" data-del="3">
+<summary><code class="prf-name">shop/payments.py</code><span class="prf-n"><span class="a">+22</span> <span class="d">−3</span></span><span class="prf-s">Adds PaymentClient.refund, and a 503 retry under every provider call.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>The retry is shared with <code>charge</code>: row b.</li><li>After three 503s it raises <code>ProviderUnavailable</code>, which the handler does not catch: a 500, and the key is not stored, so the client may retry.</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="shop/payments.py"><p class="at"><code>shop/payments.py</code> · 2 hunks · +22 −3</p><pre><code><span class="dh">@@ -1,14 +1,27 @@</span>
+ """Calls to the payment provider."""
+ 
+ 
+<span class="da">+class ProviderUnavailable(Exception):</span>
+<span class="da">+    pass</span>
+<span class="da">+</span>
+<span class="da">+</span>
+ class HttpTransport:
+<span class="dd">-    """Posts JSON to the provider with an Idempotency-Key, which the provider dedupes on."""</span>
+<span class="da">+    """Posts JSON to the provider with an Idempotency-Key, which the provider dedupes on.</span>
+<span class="da">+    A 503 is the provider shedding load: retried up to twice, with the same key."""</span>
+<span class="da">+</span>
+<span class="da">+    RETRY_ON = (503,)</span>
+ 
+<span class="dd">-    def __init__(self, send):</span>
+<span class="da">+    def __init__(self, send, retries=2):</span>
+         self.send = send
+<span class="da">+        self.retries = retries</span>
+ 
+     def post(self, path, body, idempotency_key):
+<span class="dd">-        return self.send(path, body, {"Idempotency-Key": idempotency_key})</span>
+<span class="da">+        headers = {"Idempotency-Key": idempotency_key}</span>
+<span class="da">+        for attempt in range(self.retries + 1):</span>
+<span class="da">+            status, reply = self.send(path, body, headers)</span>
+<span class="da">+            if status not in self.RETRY_ON:</span>
+<span class="da">+                return status, reply</span>
+<span class="da">+        raise ProviderUnavailable("%s answered 503 %d times" % (path, self.retries + 1))</span>
+ 
+ 
+ class PaymentClient:
+<span class="dh">@@ -20,3 +33,9 @@ class PaymentClient:</span>
+         if status != 201:
+             raise RuntimeError("charge refused: %s" % reply.get("error"))
+         return reply["id"]
+<span class="da">+</span>
+<span class="da">+    def refund(self, order, amount, key):</span>
+<span class="da">+        status, reply = self.transport.post("/refunds", {"charge": order.charge_id, "amount": amount.cents}, key)</span>
+<span class="da">+        if status != 201:</span>
+<span class="da">+            raise RuntimeError("refund refused: %s" % reply.get("error"))</span>
+<span class="da">+        return reply["id"]</span></code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="shop/refunds/__init__.py" data-add="1" data-del="0">
+<summary><code class="prf-name">shop/refunds/__init__.py</code><span class="prf-n"><span class="a">+1</span> <span class="d">−0</span> · new file</span><span class="prf-s">Starts the refunds package.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>A docstring only.</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="shop/refunds/__init__.py"><p class="at"><code>shop/refunds/__init__.py</code> · 1 hunk · +1 −0 · new file</p><pre><code><span class="dh">@@ -0,0 +1 @@</span>
+<span class="da">+"""Refunds: part or all of a paid order, back to the card that paid it."""</span></code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="shop/refunds/handler.py" data-add="33" data-del="0">
+<summary><code class="prf-name">shop/refunds/handler.py</code><span class="prf-n"><span class="a">+33</span> <span class="d">−0</span> · new file</span><span class="prf-s">Runs the endpoint: key, parse, load, check, refund, record, announce.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>Every refusal returns before the provider is called; the money moves at line 29.</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="shop/refunds/handler.py"><p class="at"><code>shop/refunds/handler.py</code> · 1 hunk · +33 −0 · new file</p><pre><code><span class="dh">@@ -0,0 +1,33 @@</span>
+<span class="da">+"""POST /orders/{id}/refunds — refund part or all of a paid order."""</span>
+<span class="da">+from shop.refunds.policy import Refused</span>
+<span class="da">+from shop.refunds.request import BadRequest, RefundRequest</span>
+<span class="da">+</span>
+<span class="da">+</span>
+<span class="da">+class RefundHandler:</span>
+<span class="da">+    def __init__(self, orders, policy, payments, store, events):</span>
+<span class="da">+        self.orders = orders</span>
+<span class="da">+        self.policy = policy</span>
+<span class="da">+        self.payments = payments</span>
+<span class="da">+        self.store = store</span>
+<span class="da">+        self.events = events</span>
+<span class="da">+</span>
+<span class="da">+    def post(self, request, order_id):</span>
+<span class="da">+        key = request.headers.get("Idempotency-Key")</span>
+<span class="da">+        if not key:</span>
+<span class="da">+            return {"status": 400, "body": {"error": "an Idempotency-Key header is required"}}</span>
+<span class="da">+        try:</span>
+<span class="da">+            refund = RefundRequest.parse(order_id, request.body)</span>
+<span class="da">+        except BadRequest as e:</span>
+<span class="da">+            return {"status": 400, "body": {"error": str(e)}}</span>
+<span class="da">+        order = self.orders.get(order_id)</span>
+<span class="da">+        if order is None:</span>
+<span class="da">+            return {"status": 404, "body": {"error": "no order %s" % order_id}}</span>
+<span class="da">+        try:</span>
+<span class="da">+            self.policy.check(order, refund)</span>
+<span class="da">+        except Refused as e:</span>
+<span class="da">+            return {"status": 422, "body": {"error": str(e)}}</span>
+<span class="da">+        provider_id = self.payments.refund(order, refund.amount, key)</span>
+<span class="da">+        row = self.store.save(order, refund, provider_id)</span>
+<span class="da">+        self.orders.save(order)</span>
+<span class="da">+        self.events.publish("refund.issued", row)</span>
+<span class="da">+        return {"status": 201, "body": row}</span></code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="shop/refunds/policy.py" data-add="15" data-del="0">
+<summary><code class="prf-name">shop/refunds/policy.py</code><span class="prf-n"><span class="a">+15</span> <span class="d">−0</span> · new file</span><span class="prf-s">Refuses unpaid orders and refunds above what is left.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>Uses the new <code>Money.minus</code> refusal as its test of "too much".</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="shop/refunds/policy.py"><p class="at"><code>shop/refunds/policy.py</code> · 1 hunk · +15 −0 · new file</p><pre><code><span class="dh">@@ -0,0 +1,15 @@</span>
+<span class="da">+"""Whether an order may be refunded this amount."""</span>
+<span class="da">+</span>
+<span class="da">+</span>
+<span class="da">+class Refused(Exception):</span>
+<span class="da">+    pass</span>
+<span class="da">+</span>
+<span class="da">+</span>
+<span class="da">+class RefundPolicy:</span>
+<span class="da">+    def check(self, order, request):</span>
+<span class="da">+        if not order.paid:</span>
+<span class="da">+            raise Refused("order %s was never paid" % order.id)</span>
+<span class="da">+        try:</span>
+<span class="da">+            order.refundable().minus(request.amount)</span>
+<span class="da">+        except ValueError:</span>
+<span class="da">+            raise Refused("only %s of order %s is left to refund" % (order.refundable(), order.id))</span></code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="shop/refunds/request.py" data-add="28" data-del="0">
+<summary><code class="prf-name">shop/refunds/request.py</code><span class="prf-n"><span class="a">+28</span> <span class="d">−0</span> · new file</span><span class="prf-s">Parses and checks the request body before anything is looked up.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>A reason is required and kept to 200 characters.</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="shop/refunds/request.py"><p class="at"><code>shop/refunds/request.py</code> · 1 hunk · +28 −0 · new file</p><pre><code><span class="dh">@@ -0,0 +1,28 @@</span>
+<span class="da">+"""What a refund request says, checked before anything is looked up."""</span>
+<span class="da">+from dataclasses import dataclass</span>
+<span class="da">+</span>
+<span class="da">+from shop.money import Money</span>
+<span class="da">+</span>
+<span class="da">+</span>
+<span class="da">+class BadRequest(ValueError):</span>
+<span class="da">+    pass</span>
+<span class="da">+</span>
+<span class="da">+</span>
+<span class="da">+@dataclass(frozen=True)</span>
+<span class="da">+class RefundRequest:</span>
+<span class="da">+    order_id: str</span>
+<span class="da">+    amount: Money</span>
+<span class="da">+    reason: str</span>
+<span class="da">+</span>
+<span class="da">+    @classmethod</span>
+<span class="da">+    def parse(cls, order_id, body):</span>
+<span class="da">+        try:</span>
+<span class="da">+            cents = int(body["amount_cents"])</span>
+<span class="da">+        except (KeyError, TypeError, ValueError):</span>
+<span class="da">+            raise BadRequest("amount_cents must be a whole number of cents")</span>
+<span class="da">+        if cents &lt;= 0:</span>
+<span class="da">+            raise BadRequest("amount_cents must be above zero")</span>
+<span class="da">+        reason = str(body.get("reason", "")).strip()</span>
+<span class="da">+        if not reason:</span>
+<span class="da">+            raise BadRequest("a reason is required")</span>
+<span class="da">+        return cls(order_id, Money(cents), reason[:200])</span></code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="shop/refunds/store.py" data-add="15" data-del="0">
+<summary><code class="prf-name">shop/refunds/store.py</code><span class="prf-n"><span class="a">+15</span> <span class="d">−0</span> · new file</span><span class="prf-s">Keeps refund rows and adds each amount to the order.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>In memory, like the order store; ids are <code>rf_1</code>, <code>rf_2</code>….</li></ul>
+<!-- /pr:notes -->
+<div class="cmd fig diff" data-pr-diff="shop/refunds/store.py"><p class="at"><code>shop/refunds/store.py</code> · 1 hunk · +15 −0 · new file</p><pre><code><span class="dh">@@ -0,0 +1,15 @@</span>
+<span class="da">+"""Refunds that were issued, one row each."""</span>
+<span class="da">+import itertools</span>
+<span class="da">+</span>
+<span class="da">+</span>
+<span class="da">+class RefundStore:</span>
+<span class="da">+    def __init__(self):</span>
+<span class="da">+        self._rows = []</span>
+<span class="da">+        self._ids = itertools.count(1)</span>
+<span class="da">+</span>
+<span class="da">+    def save(self, order, request, provider_id):</span>
+<span class="da">+        row = {"id": "rf_%d" % next(self._ids), "order": order.id, "amount_cents": request.amount.cents,</span>
+<span class="da">+               "reason": request.reason, "provider_id": provider_id}</span>
+<span class="da">+        self._rows.append(row)</span>
+<span class="da">+        order.refunded = order.refunded.plus(request.amount)</span>
+<span class="da">+        return row</span></code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="tests/test_idempotency.py" data-add="17" data-del="0">
+<summary><code class="prf-name">tests/test_idempotency.py</code><span class="prf-n"><span class="a">+17</span> <span class="d">−0</span></span><span class="prf-s">Pins the two middleware changes: per-route keys, and no 5xx replay.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>Both are shared behaviour, so these tests guard checkout too.</li></ul>
+<!-- /pr:notes -->
+<p class="prf-tests">New tests: <code>test_same_key_on_two_routes_is_two_requests</code>, <code>test_a_5xx_is_not_replayed</code></p>
+<div class="cmd fig diff" data-pr-diff="tests/test_idempotency.py"><p class="at"><code>tests/test_idempotency.py</code> · 1 hunk · +17 −0</p><pre><code><span class="dh">@@ -21,3 +21,20 @@ class IdempotencyTests(unittest.TestCase):</span>
+         b = mw(Request("POST", "/x", {"Idempotency-Key": "k"}))
+         self.assertEqual(a, b)
+         self.assertEqual(inner.n, 1)
+<span class="da">+</span>
+<span class="da">+    def test_same_key_on_two_routes_is_two_requests(self):</span>
+<span class="da">+        inner = Counter()</span>
+<span class="da">+        mw = IdempotencyMiddleware(inner)</span>
+<span class="da">+        mw(Request("POST", "/x", {"Idempotency-Key": "k"}))</span>
+<span class="da">+        mw(Request("POST", "/y", {"Idempotency-Key": "k"}))</span>
+<span class="da">+        self.assertEqual(inner.n, 2)</span>
+<span class="da">+</span>
+<span class="da">+    def test_a_5xx_is_not_replayed(self):</span>
+<span class="da">+        calls = []</span>
+<span class="da">+</span>
+<span class="da">+        def flaky(request):</span>
+<span class="da">+            calls.append(1)</span>
+<span class="da">+            return {"status": 503 if len(calls) == 1 else 201, "body": {}}</span>
+<span class="da">+        mw = IdempotencyMiddleware(flaky)</span>
+<span class="da">+        mw(Request("POST", "/x", {"Idempotency-Key": "k"}))</span>
+<span class="da">+        self.assertEqual(mw(Request("POST", "/x", {"Idempotency-Key": "k"}))["status"], 201)</span></code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="tests/test_money.py" data-add="4" data-del="0">
+<summary><code class="prf-name">tests/test_money.py</code><span class="prf-n"><span class="a">+4</span> <span class="d">−0</span></span><span class="prf-s">Pins minus refusing to go below zero.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>No test covers a discount above the total, the open question.</li></ul>
+<!-- /pr:notes -->
+<p class="prf-tests">New tests: <code>test_minus_refuses_to_go_below_zero</code></p>
+<div class="cmd fig diff" data-pr-diff="tests/test_money.py"><p class="at"><code>tests/test_money.py</code> · 1 hunk · +4 −0</p><pre><code><span class="dh">@@ -10,3 +10,7 @@ class MoneyTests(unittest.TestCase):</span>
+     def test_currencies_never_mix(self):
+         with self.assertRaises(ValueError):
+             Money(1).plus(Money(1, "EUR"))
+<span class="da">+</span>
+<span class="da">+    def test_minus_refuses_to_go_below_zero(self):</span>
+<span class="da">+        with self.assertRaises(ValueError):</span>
+<span class="da">+            Money(100).minus(Money(101))</span></code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="tests/test_payments.py" data-add="12" data-del="1">
+<summary><code class="prf-name">tests/test_payments.py</code><span class="prf-n"><span class="a">+12</span> <span class="d">−1</span></span><span class="prf-s">Pins the 503 retry: same key every attempt, and three tries at most.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>The evidence for the answer to kofi in row d.</li></ul>
+<!-- /pr:notes -->
+<p class="prf-tests">New tests: <code>test_retry_a_503_with_the_same_key</code>, <code>test_give_up_after_three_503s</code></p>
+<div class="cmd fig diff" data-pr-diff="tests/test_payments.py"><p class="at"><code>tests/test_payments.py</code> · 2 hunks · +12 −1</p><pre><code><span class="dh">@@ -2,7 +2,7 @@ import unittest</span>
+ 
+ from shop.money import Money
+ from shop.orders import Order
+<span class="dd">-from shop.payments import HttpTransport, PaymentClient</span>
+<span class="da">+from shop.payments import HttpTransport, PaymentClient, ProviderUnavailable</span>
+ from tests.fakes import FakeProvider
+ 
+ 
+<span class="dh">@@ -11,3 +11,14 @@ class PaymentTests(unittest.TestCase):</span>
+         provider = FakeProvider()
+         PaymentClient(HttpTransport(provider)).charge(Order("o-1", "c-9", Money(900)), "k-1")
+         self.assertEqual(provider.calls[0][2], {"Idempotency-Key": "k-1"})
+<span class="da">+</span>
+<span class="da">+    def test_retry_a_503_with_the_same_key(self):</span>
+<span class="da">+        provider = FakeProvider([503, 201])</span>
+<span class="da">+        PaymentClient(HttpTransport(provider)).charge(Order("o-1", "c-9", Money(900)), "k-1")</span>
+<span class="da">+        self.assertEqual([c[2] for c in provider.calls], [{"Idempotency-Key": "k-1"}] * 2)</span>
+<span class="da">+</span>
+<span class="da">+    def test_give_up_after_three_503s(self):</span>
+<span class="da">+        provider = FakeProvider([503, 503, 503])</span>
+<span class="da">+        with self.assertRaises(ProviderUnavailable):</span>
+<span class="da">+            HttpTransport(provider).post("/refunds", {}, "k-1")</span>
+<span class="da">+        self.assertEqual(len(provider.calls), 3)</span></code></pre></div>
+</div>
+</details>
+<details class="prf-file" data-file="tests/test_refunds.py" data-add="61" data-del="0">
+<summary><code class="prf-name">tests/test_refunds.py</code><span class="prf-n"><span class="a">+61</span> <span class="d">−0</span> · new file</span><span class="prf-s">Drives the endpoint end to end through the real middleware.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>Covers 201, both 422s, the 400 for a missing key, and a replayed key refunding once.</li></ul>
+<!-- /pr:notes -->
+<p class="prf-tests">New tests: <code>test_refund_part_of_a_paid_order</code>, <code>test_refuse_more_than_is_left</code>, <code>test_refuse_an_unpaid_order</code>, <code>test_same_key_refunds_once</code>, <code>test_require_an_idempotency_key</code></p>
+<div class="cmd fig diff" data-pr-diff="tests/test_refunds.py"><p class="at"><code>tests/test_refunds.py</code> · 1 hunk · +61 −0 · new file</p><pre><code><span class="dh">@@ -0,0 +1,61 @@</span>
+<span class="da">+import unittest</span>
+<span class="da">+</span>
+<span class="da">+from shop.app import Request, build</span>
+<span class="da">+from shop.audit import AuditLog</span>
+<span class="da">+from shop.events import EventPublisher</span>
+<span class="da">+from shop.money import Money</span>
+<span class="da">+from shop.orders import Order, OrderRepository</span>
+<span class="da">+from shop.payments import HttpTransport, PaymentClient</span>
+<span class="da">+from shop.refunds.handler import RefundHandler</span>
+<span class="da">+from shop.refunds.policy import RefundPolicy</span>
+<span class="da">+from shop.refunds.store import RefundStore</span>
+<span class="da">+from tests.fakes import FakeProvider</span>
+<span class="da">+</span>
+<span class="da">+</span>
+<span class="da">+def shop(provider=None):</span>
+<span class="da">+    orders = OrderRepository()</span>
+<span class="da">+    orders.add(Order("o-1", "c-9", Money(5000), paid=True, charge_id="ch_1"))</span>
+<span class="da">+    orders.add(Order("o-2", "c-9", Money(1200)))</span>
+<span class="da">+    events = EventPublisher()</span>
+<span class="da">+    log = AuditLog(events)</span>
+<span class="da">+    payments = PaymentClient(HttpTransport(provider or FakeProvider()))</span>
+<span class="da">+    handler = RefundHandler(orders, RefundPolicy(), payments, RefundStore(), events)</span>
+<span class="da">+    return build(orders, payments, handler, {"Bearer t": "support"}), orders, log</span>
+<span class="da">+</span>
+<span class="da">+</span>
+<span class="da">+def post(app, path, body, key="k-1"):</span>
+<span class="da">+    headers = {"Authorization": "Bearer t"}</span>
+<span class="da">+    if key:</span>
+<span class="da">+        headers["Idempotency-Key"] = key</span>
+<span class="da">+    return app(Request("POST", path, headers, body))</span>
+<span class="da">+</span>
+<span class="da">+</span>
+<span class="da">+class RefundTests(unittest.TestCase):</span>
+<span class="da">+    def test_refund_part_of_a_paid_order(self):</span>
+<span class="da">+        app, orders, log = shop()</span>
+<span class="da">+        r = post(app, "/orders/o-1/refunds", {"amount_cents": 1500, "reason": "arrived late"})</span>
+<span class="da">+        self.assertEqual(r["status"], 201)</span>
+<span class="da">+        self.assertEqual(orders.get("o-1").refundable(), Money(3500))</span>
+<span class="da">+        self.assertEqual(log.rows[-1][0], "refund.issued")</span>
+<span class="da">+</span>
+<span class="da">+    def test_refuse_more_than_is_left(self):</span>
+<span class="da">+        app, _, _ = shop()</span>
+<span class="da">+        r = post(app, "/orders/o-1/refunds", {"amount_cents": 6000, "reason": "arrived late"})</span>
+<span class="da">+        self.assertEqual(r["status"], 422)</span>
+<span class="da">+</span>
+<span class="da">+    def test_refuse_an_unpaid_order(self):</span>
+<span class="da">+        app, _, _ = shop()</span>
+<span class="da">+        r = post(app, "/orders/o-2/refunds", {"amount_cents": 100, "reason": "arrived late"})</span>
+<span class="da">+        self.assertEqual(r["status"], 422)</span>
+<span class="da">+</span>
+<span class="da">+    def test_same_key_refunds_once(self):</span>
+<span class="da">+        app, orders, _ = shop()</span>
+<span class="da">+        a = post(app, "/orders/o-1/refunds", {"amount_cents": 1500, "reason": "arrived late"})</span>
+<span class="da">+        b = post(app, "/orders/o-1/refunds", {"amount_cents": 1500, "reason": "arrived late"})</span>
+<span class="da">+        self.assertEqual(a, b)</span>
+<span class="da">+        self.assertEqual(orders.get("o-1").refundable(), Money(3500))</span>
+<span class="da">+</span>
+<span class="da">+    def test_require_an_idempotency_key(self):</span>
+<span class="da">+        app, _, _ = shop()</span>
+<span class="da">+        r = post(app, "/orders/o-1/refunds", {"amount_cents": 100, "reason": "arrived late"}, key=None)</span>
+<span class="da">+        self.assertEqual(r["status"], 400)</span></code></pre></div>
+</div>
+</details>
+</div>
+<!-- /pr -->
+</div>
+</details>
+<details class="row" data-row="d" data-kind="record">
+<summary><span class="ord">d</span><span class="cl">ana approved; kofi asked for changes, and the discount question is open</span><span class="rt">2 min</span></summary>
+<div class="in">
+<table>
+<thead><tr><th>Who</th><th>Asked</th><th>At the pinned head</th></tr></thead>
+<tbody>
+<tr><td>ana</td><td>What does a refund do when the caller sends no Idempotency-Key?</td><td><b>Fixed</b> in <code>8021405</code>: a 400, pinned by <code>test_require_an_idempotency_key</code>.</td></tr>
+<tr><td>kofi</td><td>Can the 503 retry refund twice?</td><td><b>Disputed with evidence:</b> every attempt resends the same key and the provider dedupes on it — <code>payments.py</code> lines 18–24, <code>test_retry_a_503_with_the_same_key</code>.</td></tr>
+<tr><td>kofi</td><td>What happens to a discount larger than the total, now that minus raises?</td><td><b>Open:</b> <code>Order.apply_discount</code> still calls <code>minus</code>, and nothing catches the error.</td></tr>
+</tbody>
+</table>
+<!-- pr:reviews -->
+<table class="prv"><thead><tr><th>Reviewer</th><th>Latest review</th><th>Left on</th><th>When</th></tr></thead><tbody>
+<tr><td>ana</td><td>approved</td><td>the pinned head</td><td><time datetime="2026-10-15T18:02:31Z">2026-10-15 11:02 PDT</time></td></tr>
+<tr><td>kofi</td><td>changes requested</td><td><code>127788c</code>, before the head</td><td><time datetime="2026-10-15T02:14:47Z">2026-10-14 19:14 PDT</time></td></tr>
+</tbody></table>
+<!-- /pr -->
+<!-- pr:checks -->
+<p class="prk">2 CI checks at <code>8021405</code>: 2 success.</p>
+<!-- /pr -->
+</div>
+</details>
+<details class="row" data-row="e" data-kind="record">
+<summary><span class="ord">e</span><span class="cl">Four commits add the policy, then payments, the endpoint, and a review fix</span><span class="rt">1 min</span></summary>
+<div class="in">
+<!-- pr:commits -->
+<table class="prc"><thead><tr><th>Commit</th><th>When</th><th>What it did</th></tr></thead><tbody>
+<tr data-sha="f0511750c2e7f83a5a9d706c53ea5b8b6ee86b72"><td><code>f051175</code></td><td><time datetime="2026-10-12T16:20:41Z">2026-10-12 09:20 PDT</time></td><td class="what">Add refund request parsing and the refund policy</td></tr>
+<tr data-sha="2febdd1ff9aecf1628344b905e0b33205097e06a"><td><code>2febdd1</code></td><td><time datetime="2026-10-13T18:05:12Z">2026-10-13 11:05 PDT</time></td><td class="what">Add PaymentClient.refund; retry a 503 with the same key</td></tr>
+<tr data-sha="127788cfe41d1cd21ee795e76ed6a5dd73a66b69"><td><code>127788c</code></td><td><time datetime="2026-10-14T21:40:03Z">2026-10-14 14:40 PDT</time></td><td class="what">Wire POST /orders/{id}/refunds</td></tr>
+<tr data-sha="8021405c657a8e0ff2f76bcc0b2f8273006ea6b9"><td><code>8021405</code></td><td><time datetime="2026-10-15T17:10:55Z">2026-10-15 10:10 PDT</time></td><td class="what">Requires an Idempotency-Key on refunds, answering ana's review</td></tr>
+</tbody></table>
+<!-- /pr -->
+</div>
+</details>
+
+<!-- flowviz:foot -->
+<!-- flowviz:js -->
+</body>
+</html>

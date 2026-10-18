@@ -24,7 +24,7 @@ import sys
 sys.dont_write_bytecode = True
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE = os.path.join(ROOT, 'template')
-F = '~/Projects/FLOW_VIZ/bin/flowviz'
+F = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'bin', 'flowviz').replace(os.path.expanduser('~'), '~', 1)   # wherever this toolkit lives
 
 
 def die(msg, code=1):

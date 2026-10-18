@@ -98,6 +98,58 @@
 </figure>
 </div>
 
+<!-- detail:begin -->
+<!-- ══════════════ THE DETAIL (optional: flowviz new report … --detail) ══════════════
+     Exactly one more drawing, directly under the spine: the code inside the system the
+     spine draws — one box per class, one connection per method call, one "call order"
+     flow. Its own caps: ≤20 boxes, ≤4 zones, ≤2 flows of ≤20 steps; every other cap is
+     the spine's. "status": "new" | "changed" | "removed" tags what a change did to a box.
+     The page keeps ≤3 screens at rest: expect a two-line title and a shorter verdict,
+     and split the report when it still does not fit. -->
+<div class="detail">
+<figure class="fv-drawing">
+<script type="application/json">
+{
+  "id": "calls",
+  "name": "Code path name",
+  "title": "Say what this code path does, as a claim with a verb",
+  "lede": "One sentence: the request this traces, and which classes the change touches.",
+  "grid": { "cols": 4, "rows": 1 },
+  "zones": [
+    { "id": "zone1", "label": "Zone name", "cols": [1, 3], "rows": [0, 0], "tone": "neutral" }
+  ],
+  "nodes": [
+    { "id": "class1", "label": "Class 1", "kind": "service", "icon": "function", "at": [0, 0], "tech": "file name",
+      "peek": "One sentence: what this class does on this path.", "status": "changed" },
+    { "id": "class2", "label": "Class 2", "kind": "service", "icon": "function", "at": [1, 0], "tech": "file name",
+      "peek": "One sentence: what this class does on this path.", "status": "new" },
+    { "id": "class3", "label": "Class 3", "kind": "data", "icon": "table", "at": [2, 0], "tech": "file name",
+      "peek": "One sentence: what this class does on this path." }
+  ],
+  "edges": [
+    { "id": "class1-class2", "from": "class1", "to": "class2", "mode": "sync", "label": "method()",
+      "peek": "One sentence: what this call passes and returns." },
+    { "id": "class2-class3", "from": "class2", "to": "class3", "mode": "sync", "label": "method()",
+      "peek": "One sentence: what this call passes and returns." }
+  ],
+  "flows": [
+    { "id": "order", "label": "Name the call order", "summary": "One sentence: how many calls there are, and the one to watch.",
+      "steps": [
+        { "id": "c1", "path": ["class1", "class2"], "msg": "method()", "say": "One sentence: what this call does." },
+        { "id": "c2", "path": ["class2", "class3"], "msg": "method()", "say": "One sentence: what this call does." }
+      ] }
+  ]
+}
+</script>
+<div class="fv-depth" hidden>
+<section data-for="class1">
+  <p>Layer 3 for this class: the exact lines at the pinned commit, in a div.cmd.fig, with file and line numbers.</p>
+</section>
+</div>
+</figure>
+</div>
+<!-- detail:end -->
+
 <div class="ctl">
   <button id="flowExpand">Expand all</button>
   <button id="flowCollapse">Collapse all</button>

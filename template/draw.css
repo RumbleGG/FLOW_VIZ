@@ -460,6 +460,24 @@
 .fv-drawing .node.r-fail .shape{stroke:var(--bad);stroke-width:2}
 .fv-drawing .node.r-error .shape{stroke:var(--warn);stroke-width:2}
 
+/* a box's status — what the change being explained did to it — is an ink tag on its foot: no hue,
+   so it never reads as a kind tint or a result, and new / changed / removed differ in grey print too */
+.fv-drawing .nstat rect{fill:var(--fg);stroke:var(--fg);stroke-width:1.2}
+.fv-drawing .nstat text{fill:var(--paper);font:700 9.5px var(--f-mono);letter-spacing:.5px}
+.fv-drawing .nstat.s-changed rect{fill:var(--paper)}
+.fv-drawing .nstat.s-changed text{fill:var(--fg)}
+.fv-drawing .nstat.s-removed rect{fill:var(--paper);stroke:var(--dim);stroke-dasharray:3 2}
+.fv-drawing .nstat.s-removed text{fill:var(--dim)}
+.fv-drawing .node.st-removed .lbl{fill:var(--dim)}
+.fv-drawing .node .strike{stroke:var(--dim);stroke-width:1.4;stroke-linecap:round}
+.fv-key .nstat text{font-size:7px;letter-spacing:.3px}
+.fv-stag{display:inline-block;margin-left:6px;padding:2px 5px;border:1.2px solid var(--fg);border-radius:4px;
+  background:var(--fg);color:var(--paper);font:700 9.5px/1.1 var(--f-mono);letter-spacing:.6px;vertical-align:2px}
+.fv-stag.s-changed{background:transparent;color:var(--fg)}
+.fv-stag.s-removed{background:transparent;color:var(--dim);border-color:var(--dim);border-style:dashed}
+.fv-drawer .fv-stline{margin:0;font:600 12.5px var(--f-ui);color:var(--dim)}
+.fv-drawer .fv-stline .fv-stag{margin:0 6px 0 0}
+
 /* a step's result on its badge, its rail dot, its drawer number and its packet */
 .fv-drawing .stepno.r-pass circle{fill:var(--ok)}
 .fv-drawing .stepno.r-fail circle{fill:var(--bad)}

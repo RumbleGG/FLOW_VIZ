@@ -229,6 +229,7 @@ def report_caps(a, doc):
     spine = doc.first(cls('spine'))
     dias = spine.find(lambda e: e.has('dia') or e.has('mermaid') or e.has('fv-drawing')) if spine else []
     a.cap(S, 'diagrams in the spine', len(dias), '= 1', len(dias) == 1)
+    detail_checks(a, doc, spine)
 
     rows = doc.find(lambda e: e.tag == 'details' and e.has('row'))
     a.cap(S, 'rows', len(rows), '≤ 6', len(rows) <= 6)
@@ -265,6 +266,31 @@ def report_caps(a, doc):
     a.cap(S, 'words at rest', rest, '≤ 350', rest <= 350)
     a.unmeasured(S, 'screens at rest', 'needs layout: --browser')
 
+
+
+def is_detail(e):
+    """The detail slot: a div.detail that is a child of <body>, like the spine (SPEC §1.2c)."""
+    return e.tag == 'div' and e.has('detail') and e.parent is not None and e.parent.tag == 'body'
+
+
+def detail_checks(a, doc, spine):
+    """Optional. Where a detail slot exists it holds exactly one drawing and sits directly under the
+    spine; a report without one audits exactly as before."""
+    dets = doc.find(is_detail)
+    if not dets:
+        return
+    S = 'report'
+    a.cap(S, 'detail slots', len(dets), '≤ 1', len(dets) <= 1)
+    figs = dets[0].find(lambda e: e.tag == 'figure' and e.has('fv-drawing'))
+    other = dets[0].find(lambda e: e.has('dia') or e.has('mermaid'))
+    a.cap(S, 'drawings in the detail', len(figs), '= 1', len(figs) == 1 and not other)
+    sib = None
+    if spine is not None and spine.parent is not None:
+        kids = [k for k in spine.parent.kids if isinstance(k, El)]
+        i = kids.index(spine)
+        sib = kids[i + 1] if i + 1 < len(kids) else None
+    under = sib is dets[0]
+    a.cap(S, 'detail directly under the spine', 'yes' if under else 'no', 'yes', under)
 
 
 def results_checks(a, doc):
@@ -337,7 +363,18 @@ MODES = {'sync', 'async'}
 TONES = {'neutral', 'sync', 'async', 'ext', 'data', 'svc'}
 TAGS = {'tl', 'tr', 'bl', 'br'}
 ROUTES = {'h', 'v', 'hvh', 'vhv'}
+STATUSES = ('new', 'changed', 'removed')
 ID = re.compile(r'^[a-z0-9][a-z0-9-]*$')
+# The cap tiers (SPEC §2.2): every canvas, a report's spine (and Results) drawing, and a report's detail
+# drawing. template/draw.js holds the same numbers in TIER: change both.
+TIERS = {
+    'page': {'boxes': 12, 'flows': 3, 'steps': 9},
+    'spine': {'boxes': 9, 'flows': 3, 'steps': 9},
+    'detail': {'boxes': 20, 'flows': 2, 'steps': 20},
+}
+# a marker typed into a label to say "this changed": what "status" replaced in 3.5.0
+TYPED_MARK = re.compile(r'^[*+~]+\s|\s[*+~]+$|\*$|^[✱✳✶†‡•●◆◇★☆Δ±]|[✱✳✶†‡•●◆◇★☆Δ±]$'
+                        r'|[(\[](?:new|changed|modified|added|removed|deleted|updated)[)\]]', re.I)
 BOX_W, BOX_H = 0.36, 0.21        # half a box, in cells — the runtime's 172×56 on a 240×132 grid
 
 
@@ -383,13 +420,12 @@ def placeholders():
     """Every string a template spec or template page carries, as matchers. A string that ends in a
     number ("Box 1") matches its whole family ("Box 7"); {{TOKENS}} match anything."""
     exact, fams, page = set(), [], []
-    for name in ('report.src.html', 'drawing.src.html'):
+    for name in ('report.src.html', 'drawing.src.html', 'pr.src.html'):
         path = os.path.join(TEMPLATE, name)
         if not os.path.exists(path):
             continue
         text = open(path, encoding='utf-8').read()
-        m = re.search(r'<script type="application/json">\n(.*?)\n</script>', text, re.S)
-        if m:
+        for m in re.finditer(r'<script type="application/json">\n(.*?)\n</script>', text, re.S):
             for s in spec_strings(json.loads(m.group(1))):
                 if '{{' in s:
                     continue
@@ -398,7 +434,10 @@ def placeholders():
                     fams.append(re.compile('^' + re.escape(f.group(1)) + r'\d+$'))
                 else:
                     exact.add(s)
-        page.append(parse(text))
+        doc = parse(text)
+        # a PR helper's three section headers are the recipe's own words, kept on purpose
+        doc.skip = {'section header'} if name == 'pr.src.html' else set()
+        page.append(doc)
     rpath = os.path.join(TEMPLATE, 'results.src.html')
     if os.path.exists(rpath):
         rtext = open(rpath, encoding='utf-8').read()
@@ -441,7 +480,7 @@ def spec_strings(spec, paths=False):
     return out
 
 
-def canvas_checks(a, S, spec, root, max_boxes, icons, unfilled, exact, fams):
+def canvas_checks(a, S, spec, root, tier, icons, unfilled, exact, fams):
     nodes, edges, flows, zones = (spec.get(k) or [] for k in ('nodes', 'edges', 'flows', 'zones'))
     grid = spec.get('grid') or {}
     cols, rows = grid.get('cols', 0), grid.get('rows', 0)
@@ -449,11 +488,11 @@ def canvas_checks(a, S, spec, root, max_boxes, icons, unfilled, exact, fams):
     a.cap(S, 'title chars', len(title), '≤ 70', 0 < len(title) <= 70)
     a.cap(S, 'title contains a verb', 'yes' if has_verb(title) else 'no', 'a claim', has_verb(title))
     a.cap(S, 'lede words', words(lede), '≤ 30', words(lede) <= 30)
-    a.cap(S, 'boxes', len(nodes), '≤ %d' % max_boxes, len(nodes) <= max_boxes)
+    a.cap(S, 'boxes', len(nodes), '≤ %d' % tier['boxes'], len(nodes) <= tier['boxes'])
     a.cap(S, 'zones', len(zones), '≤ 4', len(zones) <= 4)
-    a.cap(S, 'flows', len(flows), '0 to 3', len(flows) <= 3)
+    a.cap(S, 'flows', len(flows), '0 to %d' % tier['flows'], len(flows) <= tier['flows'])
     most = max([len(f.get('steps') or []) for f in flows] or [0])
-    a.cap(S, 'longest flow (steps)', most, '≤ 9', most <= 9)
+    a.cap(S, 'longest flow (steps)', most, '≤ %d' % tier['steps'], most <= tier['steps'])
     says = [s.get('say') or '' for f in flows for s in f.get('steps') or []]
     a.cap(S, 'longest step (words)', max([words(s) for s in says] or [0]), '≤ 20',
           all(words(s) <= 20 for s in says))
@@ -528,6 +567,8 @@ def canvas_checks(a, S, spec, root, max_boxes, icons, unfilled, exact, fams):
     for n in nodes:
         if n.get('kind') not in KINDS:
             vocab.append('box %s: kind "%s"' % (n.get('id'), n.get('kind')))
+        if n.get('status') is not None and n.get('status') not in STATUSES:
+            vocab.append('box %s: status "%s" is not new, changed or removed' % (n.get('id'), n.get('status')))
         if icons is not None and n.get('icon') not in icons:
             vocab.append('box %s: icon "%s" is not in template/icons.svg' % (n.get('id'), n.get('icon')))
         at = n.get('at')
@@ -573,13 +614,25 @@ def canvas_checks(a, S, spec, root, max_boxes, icons, unfilled, exact, fams):
     unused = [e.get('id') for e in edges if (e.get('from'), e.get('to')) not in walked] if flows else []
     if unused:
         a.note(S, 'unused connection', ', '.join(unused) + ' — no flow walks it')
+    real = [n for n in nodes if not n.get('ghost')]
+    marked = {k: sum(1 for n in real if n.get('status') == k) for k in STATUSES}
+    if any(marked.values()):
+        a.note(S, 'boxes with a status', '%d of %d: %s' % (sum(marked.values()), len(real),
+               ', '.join('%d %s' % (v, k) for k, v in marked.items() if v)))
+    typed = [n.get('id') for n in nodes if TYPED_MARK.search((n.get('label') or '').strip())]
+    if typed:
+        a.note(S, 'marker typed into a label', '%s — remove it and set "status": "new", "changed" or "removed"; '
+               'no id changes' % ', '.join(typed))
     for path, s in spec_strings(spec, paths=True):
         if s in exact or any(f.match(s) for f in fams):
             unfilled.append('%s: %s' % (S, path))
 
 
-def drawing_checks(a, doc, kind, exact, fams, unfilled):
+def drawing_checks(a, doc, kind, exact, fams, unfilled, tpl_pages):
     icons = icon_names()
+    # a depth section still holding a template's own words, whichever template it came from
+    tpl_depth = {sec.text() for p in tpl_pages for d in p.find(cls('fv-depth'))
+                 for sec in d.find(lambda e: e.tag == 'section') if sec.text()}
     figs = doc.find(lambda e: e.tag == 'figure' and e.has('fv-drawing'))
     ids = []
     for fig in figs:
@@ -591,19 +644,20 @@ def drawing_checks(a, doc, kind, exact, fams, unfilled):
             continue
         sid = spec.get('id', '?')
         ids.append(sid)
-        S = 'drawing %s' % sid
+        detail = fig.inside(is_detail)
+        S = '%s %s' % ('detail' if detail else 'drawing', sid)
         small = fig.inside(cls('spine')) or fig.inside(lambda p: p.tag == 'section' and p.has('results'))
-        canvas_checks(a, S, spec, spec, 9 if small else 12, icons, unfilled, exact, fams)
+        tier = TIERS['detail'] if detail else TIERS['spine'] if small else TIERS['page']
+        canvas_checks(a, S, spec, spec, tier, icons, unfilled, exact, fams)
         for key, seg in (spec.get('segments') or {}).items():
             T = '%s › %s' % (S, key)
             if seg.get('parent') not in {n.get('id') for n in spec.get('nodes') or []}:
                 a.check(T, 'spec: parent', ['segment %s: parent "%s" is not a box' % (key, seg.get('parent'))])
-            canvas_checks(a, T, seg, spec, 12, icons, unfilled, exact, fams)
+            canvas_checks(a, T, seg, spec, TIERS['page'], icons, unfilled, exact, fams)
         depth = fig.first(cls('fv-depth'))
         if depth:
-            tpl_depth = 'Layer 3 for this box: tables, logs and file:line citations, as long as it needs.'
             for sec in depth.find(lambda e: e.tag == 'section'):
-                if sec.text() == tpl_depth:
+                if sec.text() in tpl_depth:
                     unfilled.append('%s: depth for "%s"' % (S, sec.attrs.get('data-for')))
     dup = sorted(set(i for i in ids if ids.count(i) > 1))
     if dup:
@@ -722,10 +776,17 @@ def page_checks(a, doc, tpl_pages, unfilled):
         ('pass/fail line', lambda e: e.has('expect')),
         ('write gate', lambda e: e.has('gate')),
         ('why this step', lambda e: e.tag == 'p' and e.inside(cls('more'))),
+        ('disclosure', lambda e: e.tag == 'summary' and e.parent is not None and e.parent.has('more')
+            and not e.inside(lambda p: p.tag == 'li' and p.has('step'))),
+        ('table cell', lambda e: e.tag == 'td'),
+        ('file sentence', lambda e: e.has('prf-s')),
+        ('file note', lambda e: e.tag == 'li' and e.inside(cls('prf-notes'))),
     ]
     tpl = {}
     for p in tpl_pages:
         for name, pred in SEL:
+            if name in getattr(p, 'skip', ()):
+                continue
             for e in p.find(pred):
                 t = e.text()
                 if t:
@@ -756,7 +817,7 @@ def page_checks(a, doc, tpl_pages, unfilled):
 
     counted = {}
     for u in unfilled:
-        u = re.sub(r'^(drawing [^:]+: )(box|connection|flow|step|zone) \S+ ', r'\1\2 ', u)
+        u = re.sub(r'^((?:drawing|detail) [^:]+: )(box|connection|flow|step|zone) \S+ ', r'\1\2 ', u)
         counted[u] = counted.get(u, 0) + 1
     a.check(S, 'unfilled slots', ['%s%s' % (k, ' ×%d' % v if v > 1 else '') for k, v in counted.items()])
 
@@ -1028,6 +1089,8 @@ def place_of(e):
             return 'the card'
         if p.has('spine'):
             return 'the spine'
+        if is_detail(p):
+            return 'the detail'
         p = p.parent
     return 'the page'
 
@@ -1076,8 +1139,10 @@ def figure_checks(a, doc, kind, path):
         in_depth = fig.inside(cls('fv-depth'))
         if kind == 'drawing' and not in_depth:
             placed.append('%s: on a drawing page a figure lives in a depth section, where it is one click away' % name)
-        elif kind != 'drawing' and not in_depth and (fig.inside(cls('card')) or fig.inside(cls('spine'))):
-            placed.append('%s: a figure goes in a row, a step or a depth section — never on the card or the spine' % name)
+        elif kind != 'drawing' and not in_depth and (fig.inside(cls('card')) or fig.inside(cls('spine'))
+                                                     or fig.inside(is_detail)):
+            placed.append('%s: a figure goes in a row, a step or a depth section — never on the card, the spine '
+                          'or the detail' % name)
     if sizes:
         big = max(sizes, key=lambda x: x[1])
         total = sum(b for _, b in sizes)
@@ -1099,6 +1164,142 @@ def figure_checks(a, doc, kind, path):
     a.check(S, 'figure: placement', placed)
     for x in outside:
         a.note(S, 'figure: file outside the folder', x)
+
+
+# ── a PR helper: one pull request, explained to its reviewer (SPEC §1.8) ─────
+def pr_module():
+    import importlib.util
+    sys.dont_write_bytecode = True
+    spec = importlib.util.spec_from_file_location('fvpr', os.path.join(ROOT, 'bin', 'flowviz-pr.py'))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def code_text(el, numbered):
+    """What a reader sees in a code block, line numbers left out."""
+    pre = el.first(lambda e: e.tag == 'pre') or el
+    code = pre.first(lambda e: e.tag == 'code') or pre
+    parts = []
+
+    def go(n):
+        for k in n.kids:
+            if isinstance(k, str):
+                parts.append(k)
+            elif not (numbered and k.has('ln')):
+                go(k)
+    go(code)
+    return ''.join(parts)
+
+
+def pr_checks(a, doc, text, path):
+    """Only where <meta name="flowviz-pr"> exists. Read-only, pinned to one head commit, two diagrams,
+    every changed file in GitHub's order with the diff's counts, every excerpt and hunk still verbatim, and
+    every count on the card counted — read against the inputs the report names, beside it."""
+    meta_el = doc.first(lambda e: e.tag == 'meta' and e.attrs.get('name') == 'flowviz-pr')
+    if meta_el is None:
+        return
+    S = 'pr helper'
+    try:
+        meta = json.loads(meta_el.attrs.get('content') or '')
+    except ValueError:
+        a.check(S, 'pr: the flowviz-pr meta parses', ['<meta name="flowviz-pr"> is not JSON'])
+        return
+    prm = pr_module()
+    pr, diff, checkout, probs = prm.inputs(path, meta)
+    a.check(S, 'pr: inputs beside the report', probs)
+    head = meta.get('head') or ''
+    card = doc.first(cls('card'))
+    line = card.first(cls('meta')) if card else None
+    pin = []
+    if not re.match(r'^[0-9a-f]{7,40}$', head):
+        pin.append('the report names no head commit')
+    elif line is None or head[:7] not in line.text():
+        pin.append("the card's meta line does not show the head commit %s" % head[:7])
+    if pr and pr.get('headRefOid') and head and pr['headRefOid'] != head:
+        pin.append('pr.json is at %s and the report at %s: re-read the PR, then flowviz pr fill --repin'
+                   % (pr['headRefOid'][:7], head[:7]))
+    a.check(S, 'pr: pinned to one head commit', pin)
+    ro = []
+    steps = [li for li in doc.find(lambda e: e.tag == 'li' and e.has('step'))
+             if not li.inside(lambda p: p.tag == 'section' and p.has('results'))]
+    if steps:
+        ro.append('%d playbook step%s: a PR helper is read-only' % (len(steps), '' if len(steps) == 1 else 's'))
+    if card is not None and 'read-only' not in card.text().lower():
+        ro.append('the card does not say the report is read-only')
+    a.check(S, 'pr: read-only', ro)
+    a.check(S, 'pr: two diagrams', [] if doc.find(is_detail) else
+            ['no detail drawing: the spine draws the system, the detail draws the classes'])
+    marks = []
+    for m in prm.MARK.finditer(text):
+        args = m.group(2).split()
+        nxt = prm.MARK.search(text, m.end())
+        close = text.find(prm.CLOSE, m.end())
+        if set(args) & prm.UNWRITTEN:
+            marks.append('<!-- pr:%s %s --> is still the template\'s: name the file and lines' % (m.group(1), ' '.join(args)))
+        elif close < 0 or (nxt is not None and nxt.start() < close):
+            marks.append('<!-- pr:%s %s --> is not filled: flowviz pr fill' % (m.group(1), ' '.join(args)))
+    a.check(S, 'pr: markers filled', marks)
+    if diff is None or pr is None:
+        return
+    rows, order = prm.expected_files(pr, diff)
+    want = [r['path'] for r in rows]
+    byp = {r['path']: r for r in rows}
+    have = [(e.attrs.get('data-file'), e) for e in doc.find(lambda e: e.tag == 'details' and e.has('prf-file'))]
+    names = [n for n, _ in have]
+    files = list(order)
+    if want and not have:
+        files.append('no per-file list: put <!-- pr:files --> in a row and run flowviz pr fill')
+    files += ['%s has no row' % p for p in want if p not in names]
+    files += ['%s has a row but is not in the diff' % p for p in dict.fromkeys(names) if p not in byp]
+    files += ['%s has %d rows' % (p, names.count(p)) for p in dict.fromkeys(names) if names.count(p) > 1]
+    seen = [n for n in dict.fromkeys(names) if n in byp]
+    ref = [p for p in want if p in seen]
+    for i, (x, y) in enumerate(zip(seen, ref)):
+        if x != y:
+            files.append("out of GitHub's order: row %d is %s, where the Files changed tab lists %s" % (i + 1, x, y))
+            break
+    for n, e in have:
+        r = byp.get(n)
+        if r and (e.attrs.get('data-add'), e.attrs.get('data-del')) != (str(r['add']), str(r['del'])):
+            files.append('%s reads +%s −%s; the diff says +%d −%d' % (n, e.attrs.get('data-add'), e.attrs.get('data-del'),
+                                                                   r['add'], r['del']))
+    a.check(S, 'pr: file rows match the diff', files)
+    allf = {f['path']: f for f in diff}
+    verb, unread = [], 0
+    for e in doc.find(lambda e: 'data-pr-hunk' in e.attrs or 'data-pr-diff' in e.attrs or 'data-pr-src' in e.attrs):
+        where = place_of(e)
+        if 'data-pr-src' in e.attrs:
+            p, rng = e.attrs['data-pr-src'], e.attrs.get('data-pr-lines') or ''
+            src = prm.file_at(checkout, head, p) if checkout and os.path.isdir(checkout) else None
+            if src is None:
+                unread += 1
+                continue
+            lines = src.split('\n')
+            m = re.match(r'^(\d+)-(\d+)$', rng)
+            want_t = '\n'.join(lines[int(m.group(1)) - 1:int(m.group(2))]) if m else None
+            if want_t is None or code_text(e, True).replace('\r', '') != want_t.replace('\r', ''):
+                verb.append('%s: lines %s of %s differ from the checkout at %s' % (where, rng, p, head[:7]))
+            continue
+        p = e.attrs.get('data-pr-hunk') or e.attrs.get('data-pr-diff')
+        f = allf.get(p)
+        if f is None:
+            verb.append('%s: %s is not in the diff' % (where, p))
+            continue
+        if 'data-pr-hunk' in e.attrs:
+            k = int(e.attrs.get('data-pr-n') or 0)
+            want_t = prm.hunk_text(f['hunks'][k - 1]) if 1 <= k <= len(f['hunks']) else None
+        else:
+            want_t = '\n'.join(l for h in f['hunks'] for l in h['lines'])
+        if want_t is None or code_text(e, False).replace('\r', '') != want_t:
+            verb.append('%s: the diff of %s is not the saved diff, verbatim' % (where, p))
+    a.check(S, 'pr: code and diffs verbatim', verb)
+    if unread:
+        a.note(S, 'pr: excerpts not re-read', '%d — the checkout %s is not on this machine' % (unread, meta.get('checkout')))
+    c = prm.counts(rows, pr)
+    vit = ['%s reads %s; counted %s' % (e.attrs['data-pr'], e.text(), c[e.attrs['data-pr']])
+           for e in doc.find(lambda e: e.attrs.get('data-pr') in c) if e.text() != c[e.attrs['data-pr']]]
+    a.check(S, 'pr: card counts', vit)
 
 
 def additions_notes(a, doc, path):
@@ -1212,12 +1413,13 @@ def main():
     if kind == 'report':
         report_caps(a, doc)
         results_checks(a, doc)
-    drawing_checks(a, doc, kind, exact, fams, unfilled)
+    drawing_checks(a, doc, kind, exact, fams, unfilled, tpl_pages)
     if kind == 'drawing':
         a.unmeasured('page', 'screens at rest', 'needs layout: --browser')
     page_checks(a, doc, tpl_pages, unfilled)
     figure_checks(a, doc, kind, o.file)
     if kind == 'report':
+        pr_checks(a, doc, text, o.file)
         additions_notes(a, doc, o.file)
     if o.browser:
         a.rows = [r for r in a.rows if r[4] != '--']

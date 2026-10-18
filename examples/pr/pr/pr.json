@@ -1,0 +1,197 @@
+{
+  "number": 418,
+  "title": "Refunds: POST /orders/{id}/refunds",
+  "url": "https://git.example.test/shop/shop-api/pull/418",
+  "headRefOid": "8021405c657a8e0ff2f76bcc0b2f8273006ea6b9",
+  "baseRefName": "main",
+  "headRefName": "refunds",
+  "additions": 230,
+  "deletions": 8,
+  "files": [
+    {
+      "path": "docs/api.md",
+      "additions": 6,
+      "deletions": 0
+    },
+    {
+      "path": "shop/app.py",
+      "additions": 2,
+      "deletions": 1
+    },
+    {
+      "path": "shop/middleware.py",
+      "additions": 7,
+      "deletions": 2
+    },
+    {
+      "path": "shop/money.py",
+      "additions": 2,
+      "deletions": 0
+    },
+    {
+      "path": "shop/orders.py",
+      "additions": 5,
+      "deletions": 1
+    },
+    {
+      "path": "shop/payments.py",
+      "additions": 22,
+      "deletions": 3
+    },
+    {
+      "path": "shop/refunds/__init__.py",
+      "additions": 1,
+      "deletions": 0
+    },
+    {
+      "path": "shop/refunds/handler.py",
+      "additions": 33,
+      "deletions": 0
+    },
+    {
+      "path": "shop/refunds/policy.py",
+      "additions": 15,
+      "deletions": 0
+    },
+    {
+      "path": "shop/refunds/request.py",
+      "additions": 28,
+      "deletions": 0
+    },
+    {
+      "path": "shop/refunds/store.py",
+      "additions": 15,
+      "deletions": 0
+    },
+    {
+      "path": "tests/test_idempotency.py",
+      "additions": 17,
+      "deletions": 0
+    },
+    {
+      "path": "tests/test_money.py",
+      "additions": 4,
+      "deletions": 0
+    },
+    {
+      "path": "tests/test_payments.py",
+      "additions": 12,
+      "deletions": 1
+    },
+    {
+      "path": "tests/test_refunds.py",
+      "additions": 61,
+      "deletions": 0
+    }
+  ],
+  "commits": [
+    {
+      "oid": "f0511750c2e7f83a5a9d706c53ea5b8b6ee86b72",
+      "messageHeadline": "Add refund request parsing and the refund policy",
+      "committedDate": "2026-10-12T16:20:41Z",
+      "authoredDate": "2026-10-12T16:20:41Z",
+      "authors": [
+        {
+          "login": "sam-dev",
+          "name": "Example Author"
+        }
+      ]
+    },
+    {
+      "oid": "2febdd1ff9aecf1628344b905e0b33205097e06a",
+      "messageHeadline": "Add PaymentClient.refund; retry a 503 with the same key",
+      "committedDate": "2026-10-13T18:05:12Z",
+      "authoredDate": "2026-10-13T18:05:12Z",
+      "authors": [
+        {
+          "login": "sam-dev",
+          "name": "Example Author"
+        }
+      ]
+    },
+    {
+      "oid": "127788cfe41d1cd21ee795e76ed6a5dd73a66b69",
+      "messageHeadline": "Wire POST /orders/{id}/refunds",
+      "committedDate": "2026-10-14T21:40:03Z",
+      "authoredDate": "2026-10-14T21:40:03Z",
+      "authors": [
+        {
+          "login": "sam-dev",
+          "name": "Example Author"
+        }
+      ]
+    },
+    {
+      "oid": "8021405c657a8e0ff2f76bcc0b2f8273006ea6b9",
+      "messageHeadline": "Require an Idempotency-Key on refunds",
+      "committedDate": "2026-10-15T17:10:55Z",
+      "authoredDate": "2026-10-15T17:10:55Z",
+      "authors": [
+        {
+          "login": "sam-dev",
+          "name": "Example Author"
+        }
+      ]
+    }
+  ],
+  "reviews": [
+    {
+      "author": {
+        "login": "ana"
+      },
+      "state": "COMMENTED",
+      "submittedAt": "2026-10-15T01:32:10Z",
+      "body": "What does a refund do when the caller sends no Idempotency-Key?",
+      "commit": {
+        "oid": "127788cfe41d1cd21ee795e76ed6a5dd73a66b69"
+      }
+    },
+    {
+      "author": {
+        "login": "kofi"
+      },
+      "state": "CHANGES_REQUESTED",
+      "submittedAt": "2026-10-15T02:14:47Z",
+      "body": "Two things: can the 503 retry refund twice, and what happens to a discount larger than the total now that minus raises?",
+      "commit": {
+        "oid": "127788cfe41d1cd21ee795e76ed6a5dd73a66b69"
+      }
+    },
+    {
+      "author": {
+        "login": "ana"
+      },
+      "state": "APPROVED",
+      "submittedAt": "2026-10-15T18:02:31Z",
+      "body": "The 400 covers it.",
+      "commit": {
+        "oid": "8021405c657a8e0ff2f76bcc0b2f8273006ea6b9"
+      }
+    }
+  ],
+  "comments": [
+    {
+      "author": {
+        "login": "sam-dev"
+      },
+      "createdAt": "2026-10-15T17:20:00Z",
+      "body": "Pushed the key check. On the retry: every attempt resends the same key; the provider dedupes on it."
+    }
+  ],
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "workflowName": "ci",
+      "name": "unit tests",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "__typename": "CheckRun",
+      "workflowName": "ci",
+      "name": "lint",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    }
+  ]
+}

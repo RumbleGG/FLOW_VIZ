@@ -3,6 +3,52 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.5.0 — 2026-10-18 · a detail drawing under the spine, a box's status, and PR helpers
+
+**Why.** A report that explained one pull request worked for its reader but had to break the standard: under
+the spine sat a class call graph for the same path — one box per class, one edge per method call, a walkthrough
+of the calls — and it needed far more boxes and steps than a spine may have. Changed classes were marked by a
+symbol typed into their labels. And building it took a throwaway script to copy excerpts and hunks, escape them,
+list the files and count them — whose checks caught an excerpt off by one, a file left out and a wrong count. The
+user approved the shape and asked for it to stop being an exception.
+
+**The detail slot** (SPEC §1.2c, AGENTS.md *A second, finer drawing*). `div.detail`, directly under the spine,
+holds exactly one drawing on its own cap tier: ≤20 boxes, ≤4 zones, ≤2 flows, ≤20 steps per flow; every other
+cap is the spine's. `flowviz new report … --detail [boxes]` scaffolds it (off by default). The audit and
+`?audit=1` report it as its own section (`detail <id>`), and check that there is one, holding one drawing, right
+under the spine. Screens at rest stay ≤3 for the page: the brief says a report with a detail usually needs a
+two-line title and a shorter verdict, and that splitting is still the answer.
+
+**`status` on a box** (SPEC §2.3, §2.4). `"new" | "changed" | "removed"`, drawn as an ink tag on the box's foot —
+solid NEW, outlined CHANGED, dashed REMOVED with the label struck through — so it never collides with a kind's
+tint or a result's border and corner glyph, and the three differ in grey print. It is in the Key, the peek, the
+drawer and both halves of Copy HTML. The audit counts it per canvas (*9 of 13 boxes: 4 new, 5 changed*), as
+does `?audit=1`, and notes a label that still carries a typed marker: switching to `status` changes no id.
+
+**PR helpers and `flowviz pr`** (SPEC §1.8, AGENTS.md *Explaining a pull request*). A read-only report with two
+diagrams always (spine for the system, detail for the classes) and rows in three groups: what is new, hop by
+hop; shared changes, with who else runs them and the risk; files and review. `flowviz pr` prints the read-only
+commands that save the inputs; `pr new` scaffolds from them, pinned to the head commit; `pr fill` expands
+`<!-- pr:lines PATH A-B -->`, `pr:hunk PATH N|@L`, `pr:diff PATH`, `pr:files`, `pr:commits`, `pr:reviews`,
+`pr:checks` and the `data-pr` vitals from the saved diff, `pr.json` and the checkout — files in GitHub's order,
+one sentence visible and the verbatim diff behind one click, new test methods named — keeping what the author
+wrote, warning when a range cuts a block, writing nothing unless every marker resolves. The audit fails a PR
+helper whose file rows do not match the diff (missing, extra, out of order, miscounted), whose code or diffs are
+not verbatim, whose vitals are not the counts, whose head is not pinned, or that has a step or no detail.
+
+**Smaller.** `labels shrunk to fit` names each box and its label, as crossings name their pair; the brief and
+SPEC say that connection labels are never shrunk (their chip grows) and so are not measured. Screens at rest
+are compared unrounded and shown rounded up to two decimals, so `3.01` fails where `3.0` used to hide it. SQL in
+a command block is the author's to verify: nothing here parses it. The cheat sheet's `F=` line, its examples,
+the scaffolds' next-step lines, the captures hint and the footer's rollback command name the toolkit where it
+actually lives.
+
+**Reference.** `examples/pr/`: PR #418 of a fictional shop service — 15 files, 4 commits, a 5-box spine and a
+13-class detail with 9 status tags and a 14-step call order — built from its own `pr/` inputs and `checkout/`.
+
+Minor: a new slot and field with their own caps; no existing cap changed, and the audit fails nothing it passed
+before.
+
 ## 3.4.0 — 2026-10-09 · figures: the pictures the author shows
 
 **Why.** A report could draw a system and take the human's screenshots as evidence, but the author had no way

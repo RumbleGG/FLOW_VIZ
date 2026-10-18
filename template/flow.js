@@ -2361,6 +2361,15 @@
       }).length, 0);
       must('rows with no kind', rowsEls.filter(function (d) { return !ROW_KIND[d.dataset.kind]; }).length, 0);
       must('diagrams in spine', $$('.spine .dia, .spine .mermaid, .spine .fv-drawing').length, 1);
+      /* the detail slot is optional; where it exists it holds exactly one drawing,
+         directly under the spine (SPEC §1.2c) */
+      var dets = $$('body > div.detail');
+      if (dets.length) {
+        must('detail slots', dets.length, 1);
+        must('drawings in the detail', $$('.fv-drawing', dets[0]).length, 1);
+        var sp0 = $('.spine'), nx = sp0 && sp0.nextElementSibling;
+        must('detail directly under the spine', nx === dets[0] ? 'yes' : 'no', 'yes');
+      }
       /* textContent, not innerText: the rows were just closed to measure the page
          at rest, and innerText is '' for anything inside a closed <details> — so
          every step sentence silently measured 0 and the cap always read ok. */
@@ -2376,10 +2385,13 @@
       must('untagged next items', $$('.next li').filter(function (l) { return !$('.badge', l); }).length, 0);
       chk('words at rest', restWords, CAP.atRest);
     }
-    rows.push(['screens at rest', screens.toFixed(1), '≤ ' + CAP.screens, screens <= CAP.screens]);
+    /* compared unrounded, shown rounded up to two decimals: 3.004 reads 3.01 and fails,
+       so a failing figure never looks like it fits */
+    function up2(x) { return (Math.ceil(x * 100 - 1e-9) / 100).toFixed(2); }
+    rows.push(['screens at rest', up2(screens), '≤ ' + CAP.screens, screens <= CAP.screens]);
     if (resEl) {
       var rs = resH / window.innerHeight;
-      rows.push(['results screens', rs.toFixed(1), '≤ 1.5', rs <= 1.5]);
+      rows.push(['results screens', up2(rs), '≤ 1.5', rs <= 1.5]);
     }
     /* figures the author shows: bytes, because the page is one file (SPEC §1.3e);
        the same two caps as bin/flowviz-audit.py */

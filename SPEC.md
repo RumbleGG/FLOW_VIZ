@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 3.4.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 3.5.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -25,7 +25,7 @@ command — output pasted into a step, a note on a box, a step they found missin
 | Layer | Budget | Holds |
 |---|---|---|
 | **1 — Card** | one screen, never scrolls | status chip, claim-title, verdict, so-what, ≤5 vital tiles, ≤4 next actions |
-| **2 — Spine** | one diagram + ≤6 collapsed rows under ≤3 headers | the shape of the thing, then one labelled row per idea |
+| **2 — Spine** | one diagram (+ one detail drawing, §1.2c) + ≤6 collapsed rows under ≤3 headers | the shape of the thing, then one labelled row per idea |
 | **3 — Evidence** | unlimited | logs, stack traces, tables, transcripts, `file:line` citations — only inside rows |
 
 Layer 3 is where verbosity is *welcome*. Nothing gets deleted to satisfy this standard; it moves down a layer.
@@ -42,6 +42,7 @@ Hard limits. An agent that cannot fit splits the report — it does not grow the
 | Vitals | ≤5 tiles, number + label | Only measurements that carry the argument. |
 | Next | ≤4 items, ≤14 words each | Each tagged `read-only` or `write`. No exceptions. |
 | Diagram | exactly 1 in the spine | A drawing (`figure.fv-drawing`, ≤9 boxes), a hand-written `.dia` SVG, or `.mermaid`. Extra diagrams go inside rows. |
+| Detail | optional; exactly 1 drawing when present | Directly under the spine, on its own cap tier (§1.2c). |
 | Rows | ≤6 | Seven ideas is two reports. |
 | Row summary | a claim with a verb, ≤14 words | The collapsed spine reads as a six-line argument. |
 | Open at load | ≤1 row | The cap most often broken; it is what makes a file feel like a wall. |
@@ -49,7 +50,7 @@ Hard limits. An agent that cannot fit splits the report — it does not grow the
 | Row kind | every row has one (§1.2a) | The reader knows before opening a row whether to read it or act on it. |
 | Step sentence | exactly one sentence, ≤20 words | A nine-step playbook reads as nine sentences. |
 | Words at rest | ≤350 | Card text plus row summaries. The two-minute budget, made countable. |
-| Screens at rest | ≤3 | Needs layout: measured by `?audit=1` or `flowviz audit --browser`. |
+| Screens at rest | ≤3 | Needs layout: measured by `?audit=1` or `flowviz audit --browser`. Compared unrounded and shown rounded up to two decimals, so `3.01` is over and nothing over ever reads `3.0`. |
 
 Structural checks measured alongside the caps, all must be 0: multi-sentence steps, steps with no
 risk tag, write steps with no gate, untagged next items.
@@ -87,6 +88,22 @@ A step the human adds in the page (§1.3b) is named for the step it follows plus
 after `b3` it is `b3a`, then `b3b`; before a row's first step its anchor is `b0`, so `b0a`. No number moves,
 so every id the human has already typed against stays put. Once `flowviz fold` writes it into the source it
 keeps that id, and the convention accepts it there: a row reads `b1 b2 b3 b3a b4`.
+
+### 1.2c The detail slot — the code inside the system
+
+A spine draws a system at the scale of services. Some reports also need the scale below it — one box per
+class, one connection per method call, the calls of one request in order — and that picture needs more
+boxes and longer walkthroughs than a spine may have. It gets a place of its own instead of an exception.
+
+| Part | Rule |
+|---|---|
+| Markup | `<div class="detail">` holding exactly one `figure.fv-drawing`, a child of `<body>` placed **directly after `div.spine`**, before the control bar. At most one per report. `flowviz new report … --detail [boxes]` scaffolds it; off by default. |
+| Caps | **≤20 boxes, ≤4 zones, ≤2 flows, ≤20 steps per flow**. Title, lede, label, tech, peek, facts, words on canvas, crossings 0, labels shrunk 0, connections through boxes 0, zone labels crossed 0: as for every drawing. A segment of a detail drawing is an ordinary canvas (§2.2). |
+| Audit | Its own section, `detail <id>`, in `flowviz audit` and on `?audit=1`; three structural rows where a detail exists: one slot, one drawing in it, directly under the spine. A report without one audits as before. |
+| Status | A detail drawing usually marks what a change did to each class: `"status"` on a box (§2.4). |
+| Budget | The page keeps ≤3 screens at rest and ≤350 words. A report with a detail usually needs a two-line title and a shorter verdict; when it still does not fit, it is two reports. |
+
+The spine stays one drawing with its own caps, and further drawings still live inside rows.
 
 ### 1.3 Checklist steps
 
@@ -249,6 +266,7 @@ mangles column-0 constructs, and reports syntax errors away from the real cause.
 | Name the interpreter | PowerShell 5.1 and 7 differ in ways that break error handling silently. | you |
 | Echo every derived value | A block that pattern-matches its way to a path prints what it matched and how many. | you |
 | Parse-check before handover | `bash -n`, `python3 -m py_compile`, `Parser::ParseFile`. | you |
+| SQL is checked by running it | No parser here reads SQL: `bash -n` on `psql -c "…"` checks the quoting, not the statement. Run it read-only against the real database. | you |
 
 A block that is **shown, not run** — a JSON sample, a tree, a log excerpt — is `div.cmd.fig`: dashed, no
 copy button, exempt from all of the above. Never use it to smuggle a command past the audit.
@@ -285,6 +303,38 @@ and every to-do. **Print** is a mode of the one stylesheet:
 three after; each image prints full width under its step with its caption and hash, so print to PDF is a
 complete evidence document. Print CSS carries pagination and that only.
 
+### 1.8 PR helpers — one pull request, explained to its reviewer
+
+A PR helper is a report with a fixed shape, made often, read by the person who approves the change. It is
+read-only: no playbook steps, and the card says so. What a reviewer reads as code, diff or count is copied
+by `flowviz pr fill` from saved inputs, never typed.
+
+| Part | Rule |
+|---|---|
+| Inputs | Saved read-only beside the report, in `pr/`: `pr.json` (`gh pr view --json number,title,url,headRefOid,…,files,commits,reviews,comments,statusCheckRollup`), `pr.diff` (`gh pr diff`), `review-comments.json`; and a local checkout of the PR head. `<meta name="flowviz-pr" content='{"url","number","head","pr","diff","checkout"}'>` names them, relative to the report. |
+| Pin | The head commit is in the meta and on the card's meta line; every line number is read at that commit (`git show <head>:<path>`). A moved PR is re-pinned on purpose: `flowviz pr fill --repin`. |
+| Diagrams | Always two: the spine (the path through the system, a zone around what the PR touches, the happy path and the main rejection path as flows) and the detail (§1.2c: the class call graph for that path, one call-order flow, `status` on every class the PR adds or changes; an unchanged helper folded into its caller's box says so in that box's depth). |
+| Rows | Three groups, under the headers *What is new* (the new path hop by hop, each hop a disclosure: one line visible, the excerpt inside), *Shared changes* (each change that also runs outside the stated feature, in a table with *who else runs it* and *risk*, each with a disclosure) and *Files and review* (the per-file list; a reviewer table — who asked what, fixed, disputed with evidence, or open at the pinned head — above the generated reviews and CI; the commit table). |
+| Per-file list | **GitHub's order, strictly**: the order `pr.json` carries, which is the Files changed tab's; never alphabetized or regrouped. **One sentence visible, the exact diff behind one click**: name, `+added −removed` and the author's sentence at rest; inside, the author's bullets, the new test methods of a test file, then the file's hunks verbatim. |
+| Card | Vitals: files changed, lines added and removed, commits, new tests (counted: `data-pr`), and the PR's own unit of change. A broader tracker report, when one exists, is linked both ways by row id. |
+
+`flowviz pr fill` expands each marker after itself, up to `<!-- /pr -->`, and replaces that span on every
+fill; it writes nothing unless every marker resolves, and keeps the previous source in `.flowviz/history/`:
+
+| Marker | Becomes |
+|---|---|
+| `<!-- pr:lines PATH A-B -->` | `div.cmd.fig.src[data-pr-src][data-pr-lines]`: lines A–B of PATH at the head, numbered |
+| `<!-- pr:hunk PATH N\|@L -->` | `div.cmd.fig.diff[data-pr-hunk][data-pr-n]`: that hunk, verbatim |
+| `<!-- pr:diff PATH -->` | `div.cmd.fig.diff[data-pr-diff]`: every hunk of PATH, verbatim |
+| `<!-- pr:files -->` | `div.prf` of `details.prf-file[data-file][data-add][data-del]`, in GitHub's order |
+| `<!-- pr:commits -->` · `pr:reviews` · `pr:checks` | the commit table · each reviewer's latest review and the commit it was left on · the CI checks |
+
+The author's words survive a fill: `span.prf-s`, whatever sits between `<!-- pr:notes -->` and
+`<!-- /pr:notes -->`, and a commit's `td.what`. A range that cuts a block (braces that do not balance, or a
+next line indented deeper than the first) is warned about. A diff is coloured line by line and never
+altered; its `+` and `-` stay in the text. Caps are the report's; the per-file list, the excerpts and the
+diffs are layer 3.
+
 ---
 
 ## 2. Drawings
@@ -309,10 +359,10 @@ drawer, which also carries the peek.
 |---|---|
 | Title | ≤70 chars, contains a verb: a claim about the system, not its name |
 | Lede | ≤30 words |
-| Boxes | ≤12 per canvas; **≤9** when the drawing is a report's spine diagram. A 13th box means a segment. |
+| Boxes | ≤12 per canvas; **≤9** when the drawing is a report's spine diagram; **≤20** when it is a report's detail (§1.2c). One more means a segment. |
 | Zones | ≤4 |
-| Flows | 0 to 3 per canvas; 0 unless the human asked for a walkthrough |
-| Steps | ≤9 per flow |
+| Flows | 0 to 3 per canvas (≤2 in a detail); 0 unless the human asked for a walkthrough |
+| Steps | ≤9 per flow (≤20 in a detail) |
 | Step `say` | exactly one sentence, ≤20 words |
 | Step `msg` | ≤24 chars |
 | Box `label` | ≤16 chars |
@@ -324,12 +374,14 @@ drawer, which also carries the peek.
 | Words on canvas at rest | ≤60 — box labels plus zone labels |
 | At load | no drawer open, no layer switched on, one flow moving |
 | Crossings | 0 — needs layout |
-| Labels shrunk to fit | 0 — needs layout |
+| Labels shrunk to fit | 0 — needs layout. Box labels: a box is a fixed width. A connection's label chip grows to fit and shows only with Labels or Timings on, so it is never shrunk and not measured |
 | Zone labels crossed by a connection | 0 — needs layout |
 | Screens at rest (drawing page) | ≤2 — needs layout |
 
-The last four are measured by `?audit=1` or `flowviz audit --browser`; everything else is read from the
-spec without a browser.
+The last four are measured by `?audit=1` or `flowviz audit --browser`, which names each offender — the
+pair that crosses, the box and its label that shrank; everything else is read from the spec without a
+browser. The tiers — every canvas, a report's spine (and Results drawing), a report's detail — live in
+`TIER` in `draw.js` and `TIERS` in the audit.
 
 ### 2.3 Motion grammar
 
@@ -350,6 +402,13 @@ Motion carries meaning or it does not move. These meanings are fixed; a drawing 
 | Green, ✓ badge | `"result": "pass"` — verified by a real run |
 | Red, ✕ at the stop | `"result": "fail"` — the run failed here: the target said no |
 | Amber, ⚠ near the source | `"result": "error"` — the command was rejected; the target was never asked |
+| Solid ink tag NEW on a box's foot | `"status": "new"` — the change being explained adds this box |
+| Outlined tag CHANGED | `"status": "changed"` — the change alters it |
+| Dashed tag REMOVED, label struck through | `"status": "removed"` — the change takes it out |
+
+A status tag has no hue, so it never reads as a kind (fill) or a result (border, corner glyph, green, red
+or amber), and the three differ in grey print by fill and stroke. It appears in the Key when the drawing
+uses it, in the peek and the drawer, in the still picture and the details of Copy HTML.
 
 `prefers-reduced-motion` and the **Motion** switch stop the drift and the packet travel; direction is
 still carried by arrowheads, and every state stays reachable.
@@ -400,6 +459,7 @@ icons, motion, peeks, the drawer, the walkthrough, the sequence view and notes a
 | step `path` | two or more box ids; every consecutive pair must be joined by an edge, either direction |
 | step `fail` | `true` makes the last hop fail (a designed failure path) |
 | `result` | on a box, a connection or a flow step: `pass` · `fail` · `error` — what a real run proved (§1.6) |
+| node `status` | optional: `new` · `changed` · `removed` — what the change a drawing explains did to that box. Counted by the audit (*9 of 13 boxes: 4 new, 5 changed*) and on `?audit=1`. Replaces a marker typed into a label, with no id change |
 
 Routing is deterministic: a connection leaves the side of its box that faces the target and bends only in
 the gutter between cells. Straight connections own the centre of a side; bent ones fan out beside them.
@@ -457,7 +517,8 @@ Not caps — they measure the author, not the layout — and they block handover
 | spec: parses | a drawing's JSON does not parse |
 | spec: ids | a missing, malformed or duplicate id |
 | spec: references | an edge endpoint, step hop, segment, ghost or parent that does not resolve |
-| spec: vocabulary | a `kind`, `icon`, `mode`, `tone` or `tag` outside the lists above |
+| spec: vocabulary | a `kind`, `icon`, `mode`, `tone`, `tag` or `status` outside the lists above |
+| detail slot | where a `div.detail` exists: more than one, other than exactly one drawing in it, or not directly under the spine (§1.2c) |
 | spec: grid | a box outside the grid, two boxes in one cell, or a zone outside the grid |
 | spec: straight through a box | a straight connection that would pass through another box |
 | row kind matches its content | an action kind with nothing to run or tick, a read kind that holds steps, or a kind outside §1.2a |
@@ -467,7 +528,10 @@ Not caps — they measure the author, not the layout — and they block handover
 | figure: inlined | a built page holds an `<img>` whose `src` is not an inlined PNG, JPEG, GIF or WebP |
 | figure: captioned | a `figure.shot` with no caption (§1.3e) |
 | figure: image in a figure | an `<img>` outside `figure.shot`, or a `figure.shot` with no `img` |
-| figure: placement | a figure on the card or the spine; on a drawing page, outside a depth section |
+| figure: placement | a figure on the card, the spine or the detail; on a drawing page, outside a depth section |
+| pr: inputs · pinned · read-only · two diagrams · markers filled | a PR helper (§1.8) whose inputs are not beside it; whose head is not on the card or is not `pr.json`'s; that has a step or no detail drawing; or that holds a marker not yet filled or still reading `PATH` |
+| pr: file rows match the diff | a changed file with no row, a row for a file not in the diff, a file twice, a row out of GitHub's order, or counts that differ from the diff's |
+| pr: code and diffs verbatim · card counts | an excerpt that is not those lines at the head, a hunk that is not the saved diff's, or a `data-pr` vital that is not the count |
 
 The figure caps — largest figure ≤1 MB, figure bytes ≤6 MB, caption ≤20 words — are measured beside these,
 only where a figure exists. `flowviz build` refuses the two emit failures too, so a token that can never
@@ -481,7 +545,9 @@ step below a write that takes a restore point (snapshot, backup, checkpoint, the
 says *before X* where a write above already does X (§1.3d); **order: data-after points down** — a step
 that waits on one below it; **figure: file outside the folder** — a figure named by an absolute, `~` or
 `..` path, which a rebuild elsewhere will not find (copy it into `shots/`); **figure: over 1 MB** — with
-the command that shrinks it; **steps added in the page** and **open to-dos**
+the command that shrinks it; **boxes with a status** — *N of M boxes: …*, per canvas; **marker typed into
+a label** — a `✱`, `*`, `(new)` and the like at a label's edge: set `status` instead; **pr: excerpts not
+re-read** — the checkout a PR helper names is not on this machine; **steps added in the page** and **open to-dos**
 — read from the sidecar beside the page, when there is one: fold, reword or carry them (§1.3b).
 
 ---
@@ -597,7 +663,7 @@ server answers `409` to a tab still carrying the old ids instead of letting it w
 | Bump | Means |
 |---|---|
 | patch | CSS, wording, bug fix |
-| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand; 3.3.0 put playbooks in run order; 3.4.0 added figures the author shows, with their own caps, and `flowviz shot`) |
+| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand; 3.3.0 put playbooks in run order; 3.4.0 added figures the author shows, with their own caps, and `flowviz shot`; 3.5.0 added the detail slot with its own cap tier, a box's `status`, and PR helpers with `flowviz pr`) |
 | major | a cap changes, or the card or spine shape changes, or the audit starts failing reports it passed (1.0.0 labelled every row; 2.0.0 made flows optional; 3.0.0 named rows and steps by letter and number) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then
@@ -624,6 +690,10 @@ $F fold ~/work/sto/STO.src.html         # steps the human added, into the source
 $F results ~/work/sto/STO.src.html      # once it has run: start the Results section
 $F relabel ~/work/sto/STO.src.html      # an older report onto a, b, c and b1, b2, state included
 $F shot https://grafana.example.test/d/x --out ~/work/sto/shots/latency.png   # a figure's picture, by headless Chrome
+$F new report "Refunds reuse the payment path" --dir ~/work/pr --detail 14     # a report with the detail slot
+$F pr                                  # the inputs a PR helper needs, and the commands that save them
+$F pr new "<claim>" --dir ~/work/pr --pr ~/work/pr/pr/pr.json --diff ~/work/pr/pr/pr.diff --checkout ~/src/shop-418
+$F pr fill ~/work/pr/PR-418.src.html   # every marker from the saved inputs; --repin when the PR moved
 ```
 
 Authors edit `.src.html`. The built `.html` is one file: no asset paths, no network, every figure inlined.

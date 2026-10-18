@@ -25,12 +25,13 @@ equivalent, may run the test block at the end and relay it word for word.
 | `template/draw.css` | the drawing component + the drawing-page neutrals | uses core token names |
 | `template/draw.js` | the drawing runtime: layout, routing, motion, peek, drawer, walkthrough, sequence, segments, notes | mounts every `figure.fv-drawing` |
 | `template/icons.svg` | the icon sprite (`<symbol id="i-<name>">`) | inlined at build |
-| `template/report.src.html` | report skeleton with scaffold markers | `flowviz new report` expands it |
+| `template/report.src.html` | report skeleton with scaffold markers, the detail slot between `detail:begin/end` | `flowviz new report` expands it; `--detail` keeps the slot |
 | `template/drawing.src.html` | drawing skeleton | `flowviz new drawing` fills it |
-| `bin/flowviz` | the one entry point; bare = cheat sheet | pure passthroughs |
-| `bin/flowviz-*.py` | new, build, audit, serve, captures, fold, results, relabel, shot | stdlib Python 3 only; `shot` and `audit --browser` drive the Chrome on this Mac |
+| `template/pr.src.html` | a PR helper's blocks: vitals, rows, one file's disclosure | `flowviz pr` cuts from it; the audit reads its words |
+| `bin/flowviz` | the one entry point; bare = cheat sheet, with paths computed from where it lives | pure passthroughs |
+| `bin/flowviz-*.py` | new, build, audit, serve, captures, fold, results, relabel, shot, pr | stdlib Python 3 only; `shot` and `audit --browser` drive the Chrome on this Mac |
 | `PLAN.src.html` → `PLAN.html` | the toolkit's own plan, written to the standard | must audit clean |
-| `examples/` | reference deliverables | rebuilt and audited with every change |
+| `examples/` | reference deliverables: checkout (drawing), deploy (Results), pr (a PR helper, with its `pr/` inputs and `checkout/`) | rebuilt and audited with every change |
 
 ## The build contract
 
@@ -134,6 +135,22 @@ instance variable `--flow`, set on the figure — never `--acc`, which is the pa
 - **The figure caps exist twice** — `figure_checks()` in the audit and `buildAudit()` in `flow.js` (1 MB a
   figure, 6 MB a page). Change both. The audit's other figure checks read the built page, so an `<img>` the
   build did not inline is a failure there, never a broken picture in the human's browser.
+- **The cap tiers exist twice** — `TIER` in `draw.js` and `TIERS` in the audit: every canvas, a spine (and
+  a Results drawing), a detail. Change both, and the caps tables in SPEC §2.2 and AGENTS.md.
+- **The detail slot is `body > div.detail`, found in three places** — `is_detail()` in the audit, `buildAudit()`
+  in `flow.js` and `audit()` in `draw.js` — and written by `detail_slot()` in `flowviz new`, which `flowviz pr`
+  reuses. A `div.detail` anywhere else is an ordinary div, so an older report that used the class audits as before.
+- **`status` exists twice** — `STATUS` in `draw.js` (tag, Key, peek, drawer, Copy HTML) and `STATUSES` in the
+  audit (vocabulary, the count). Change both. A status is ink only: never give it a hue a kind or a result uses.
+- **A PR helper's inputs are parsed once.** `parse_diff()`, `expected_files()`, `file_at()`, `counts()` and the
+  marker regex live in `flowviz-pr.py`; the audit imports that file (`pr_module()`), so fill and audit cannot
+  disagree. The order is `pr.json`'s, never the diff's: that is GitHub's.
+- **`template/pr.src.html` is read two ways.** `flowviz pr` cuts its `pr-vitals`, `pr-rows` and `prfile` blocks;
+  the audit reads its words as placeholders, except the three section headers (`skip`), which are the recipe's
+  own. Keep fixed words out of its rows and cells, or every PR helper fails on them; the four counted vitals
+  are written by `pr.py` for that reason.
+- **Screens at rest are compared unrounded** and shown rounded up to two decimals (`up2()` in `flow.js`), so a
+  failing figure never reads as one that fits. The audit relays the page's own figure.
 - **`CORE_OK` in the build decides which core components reach a wiki page** through Copy HTML. A report
   component that may sit inside a depth section (`figure.shot` is one) must be in it, or it arrives unstyled.
 - **One viewer for two kinds of picture.** Evidence images (`openViewer`, `viewAt = {id, k}`) and figures
@@ -174,10 +191,15 @@ bin/flowviz build PLAN.src.html && bin/flowviz audit --browser PLAN.html
 bin/flowviz new report "The toolkit scaffolds a report" --dir /tmp/fvt --rows 3 --steps 3
 bin/flowviz build /tmp/fvt/FVT.src.html; bin/flowviz audit /tmp/fvt/FVT.html   # must fail on unfilled slots only
 bin/flowviz shot "PLAN.html?audit=1" --out /tmp/fvt/shots/panel.png             # a PNG in seconds, Chrome stopped
+bin/flowviz new report "The toolkit scaffolds a detail" --dir /tmp/fvd --detail 15
+bin/flowviz build /tmp/fvd/FVD.src.html; bin/flowviz audit /tmp/fvd/FVD.html   # unfilled slots only, no OVER
+bin/flowviz pr fill examples/pr/PR-418.src.html && bin/flowviz build examples/pr/PR-418.src.html
+bin/flowviz audit --browser examples/pr/PR-418.html                              # clean; the source must not change
 ```
 
 `PLAN.html` carries two figures (`shots/`): a build that drops one, or an audit that fails or stops measuring
-them, is a regression. The scaffold's row comment names `shots/ready.png`; a build that tries to inline it is
+them, is a regression. `examples/pr/` is the PR helper: a fill that changes its source, or an audit that stops
+naming a dropped, reordered or miscounted file row, is a regression — mutate a copy beside it to check. The scaffold's row comment names `shots/ready.png`; a build that tries to inline it is
 reading comments.
 
 Look at every change in light, dark and print before calling it done. Headless Chrome reaches all three:

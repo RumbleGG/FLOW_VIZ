@@ -1,0 +1,85 @@
+<!-- template/pr.src.html — the parts of a PR helper (SPEC §1.8) that report.src.html lacks.
+     `flowviz pr new` builds the report from report.src.html and these blocks, and `flowviz pr fill`
+     cuts each file's disclosure from the prfile block. The audit reads this file too: a sentence, a
+     cell or a disclosure left in these words is an unfilled slot (the three section headers are
+     the recipe's own, so they are not). Markers still reading PATH, A-B or N are unwritten. -->
+
+<div class="vitals">
+<!-- pr-vitals:begin -->
+    <div><div class="n">1</div><div class="l">name the PR's unit: an endpoint, a table</div></div>
+<!-- pr-vitals:end -->
+</div>
+
+<!-- pr-rows:begin -->
+<h2 class="sec">What is new</h2>
+<details class="row" data-row="a" data-kind="context">
+<summary><span class="ord">a</span><span class="cl">State what the new path does, as a claim with a verb</span><span class="rt">3 min</span></summary>
+<div class="in">
+<p>One or two sentences: where the new path starts, where it ends, and what it adds. Each hop below is one line, with its code one click down.</p>
+<details class="more"><summary>Hop 1 · one line: what this hop does, and in which class</summary><div class="in">
+<!-- pr:lines PATH A-B -->
+</div></details>
+<details class="more"><summary>Hop 2 · one line: what this hop does, and in which class</summary><div class="in">
+<!-- pr:lines PATH A-B -->
+</div></details>
+<details class="more"><summary>Hop 3 · one line: what this hop does, and in which class</summary><div class="in">
+<!-- pr:lines PATH A-B -->
+</div></details>
+</div>
+</details>
+
+<h2 class="sec">Shared changes</h2>
+<details class="row" data-row="b" data-kind="finding">
+<summary><span class="ord">b</span><span class="cl">State what else runs the changed code, and how risky it is</span><span class="rt">3 min</span></summary>
+<div class="in">
+<p>One sentence: how many changes also run outside this feature, and the one to read before approving.</p>
+<table>
+<thead><tr><th>Change</th><th>Who else runs it</th><th>Risk</th></tr></thead>
+<tbody>
+<tr><td><details class="more"><summary>One line: what changed in shared code</summary><div class="in">
+<!-- pr:hunk PATH N -->
+</div></details></td><td>Every caller outside the feature, by name</td><td>low, medium or high, and why</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<h2 class="sec">Files and review</h2>
+<details class="row" data-row="c" data-kind="record">
+<summary><span class="ord">c</span><span class="cl">State what the changed files add up to</span><span class="rt">5 min</span></summary>
+<div class="in">
+<!-- pr:files -->
+</div>
+</details>
+<details class="row" data-row="d" data-kind="record">
+<summary><span class="ord">d</span><span class="cl">State where review stands at the pinned head</span><span class="rt">2 min</span></summary>
+<div class="in">
+<table>
+<thead><tr><th>Who</th><th>Asked</th><th>At the pinned head</th></tr></thead>
+<tbody>
+<tr><td>a reviewer</td><td>One line: what they asked for, in their words</td><td>fixed, disputed with evidence, or open</td></tr>
+</tbody>
+</table>
+<!-- pr:reviews -->
+<!-- pr:checks -->
+</div>
+</details>
+<details class="row" data-row="e" data-kind="record">
+<summary><span class="ord">e</span><span class="cl">State how the change evolved across its commits</span><span class="rt">1 min</span></summary>
+<div class="in">
+<!-- pr:commits -->
+</div>
+</details>
+<!-- pr-rows:end -->
+
+<!-- prfile:begin -->
+<details class="prf-file" data-file="{{FILE}}" data-add="{{ADD}}" data-del="{{DEL}}">
+<summary><code class="prf-name">{{FILE}}</code><span class="prf-n"><span class="a">+{{ADD}}</span> <span class="d">−{{DEL}}</span>{{KIND}}</span><span class="prf-s">One plain sentence: what this file's change does.</span></summary>
+<div class="in">
+<!-- pr:notes -->
+<ul class="prf-notes"><li>A few bullets: why it changed, and what a reviewer should check.</li></ul>
+<!-- /pr:notes -->
+{{TESTS}}{{DIFF}}
+</div>
+</details>
+<!-- prfile:end -->

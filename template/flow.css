@@ -185,6 +185,10 @@ section.results .archive .pb{margin:6px 0 0}
   padding:14px;overflow-x:auto}
 /* a drawing as the spine diagram: draw.css styles the component itself */
 .spine .fv-drawing{margin:0}
+/* the detail slot (SPEC §1.2c): one more drawing, directly under the spine — the code
+   inside the system the spine draws, on its own larger cap tier */
+.detail{margin:14px 0 4px}
+.detail .fv-drawing{margin:0}
 
 .ctl{display:flex;gap:8px;align-items:center;margin:20px 0 10px;flex-wrap:wrap}
 .ctl button{background:var(--panel2);color:var(--dim);border:1px solid var(--line);
@@ -233,6 +237,23 @@ details.more[open]>summary::before{transform:rotate(90deg)}
 details.more .in{padding:8px 0 2px;font-size:.95em;color:var(--dim)}
 details.more .in b{color:var(--fg)}
 
+/* a pull request's files, in GitHub's order (SPEC §1.8): one line each at rest — the name, the
+   counts and one sentence — and the file's diff one click down */
+.prf{margin:10px 0}
+details.prf-file{margin:0;border-top:1px dashed var(--line);padding:7px 0}
+details.prf-file:last-child{border-bottom:1px dashed var(--line)}
+details.prf-file>summary{cursor:pointer;list-style:none;font:13px/1.5 var(--f-ui);color:var(--dim)}
+details.prf-file>summary::-webkit-details-marker{display:none}
+details.prf-file>summary::before{content:"\25B8 ";display:inline-block;width:1.1em;color:var(--acc);
+  transition:transform .12s}
+details.prf-file[open]>summary::before{transform:rotate(90deg)}
+details.prf-file .prf-name{font:600 12px var(--f-mono);background:none;border:none;padding:0;color:var(--fg)}
+details.prf-file .prf-n{margin:0 8px 0 6px;font:600 11.5px var(--f-mono);white-space:nowrap}
+details.prf-file .prf-n .a{color:var(--ok)}
+details.prf-file .prf-n .d{color:var(--bad)}
+details.prf-file>.in{padding:6px 0 4px 1.1em;font-size:.95em;color:var(--dim)}
+details.prf-file .prf-tests code{font-size:11.5px}
+
 /* ── tables ───────────────────────────────────────────────────────────────── */
 table{border-collapse:collapse;width:100%;margin:12px 0;font:13.5px/1.55 var(--f-ui)}
 th,td{padding:7px 10px;text-align:left;vertical-align:top;
@@ -267,6 +288,16 @@ td code{font-size:12px}
    Dashed, so "you run this" and "you read this" do not look identical, and
    exempt from the paste-safety checks in flowviz-audit.py. */
 .cmd.fig{border-style:dashed}
+/* code read from a pull request, written by `flowviz pr fill` (SPEC §1.8): .src is lines
+   from the checkout with their numbers, .diff is hunks from the saved diff, verbatim.
+   Only the colour is added; the + and - stay in the text, so print and grey read the same. */
+.cmd.fig .at{margin:0 0 6px;font:11px var(--f-ui);color:var(--dim2)}
+.cmd.fig .at code{font-size:10.5px}
+.cmd.fig .ln{display:inline-block;min-width:4ch;margin-right:1.4ch;text-align:right;color:var(--dim2);
+  user-select:none;-webkit-user-select:none}
+.cmd.fig.diff .dh{color:var(--dim)}
+.cmd.fig.diff .da{color:var(--ok)}
+.cmd.fig.diff .dd{color:var(--bad)}
 .copy{background:var(--panel2);color:var(--dim);border:1px solid var(--line);
   border-radius:4px;font:10.5px var(--f-ui);padding:2px 8px;cursor:pointer;white-space:nowrap}
 .copy:hover{color:var(--fg);border-color:var(--acc)}
@@ -786,7 +817,7 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
   a{color:inherit;text-decoration:none}
 }
 @media (prefers-reduced-motion:reduce){
-  details.more>summary::before{transition:none}
+  details.more>summary::before,details.prf-file>summary::before{transition:none}
   /* the tick and the verdict still appear — only the motion is dropped */
   li.step .in .fin button.fd .bx.pop{animation:none}
   .vd.vdf.fl{animation:none}

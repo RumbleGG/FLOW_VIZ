@@ -317,8 +317,9 @@ def footer(doc, kind, version, built, sha):
              % (version, doc, kind, version, built[:10], sha or 'untracked', doc))
     if sha:
         rb = ('<div class="rb">Roll back the standard to this version: <span class="inl">'
-              '<code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v%s</code>'
-              '<button class="copy" data-for="flowRb">copy</button></span></div>' % version)
+              '<code id="flowRb">git -C %s checkout v%s</code>'
+              '<button class="copy" data-for="flowRb">copy</button></span></div>'
+              % (html.escape(ROOT.replace(os.path.expanduser('~'), '~', 1)), version))
     else:
         rb = '<div class="rb">No rollback handle yet: FLOW_VIZ is not its own git repository.</div>'
     return '<div class="foot">\n%s\n%s\n</div>' % (stamp, rb)

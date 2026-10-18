@@ -21,7 +21,7 @@ import sys
 
 sys.dont_write_bytecode = True
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-F = '~/Projects/FLOW_VIZ/bin/flowviz'
+F = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'bin', 'flowviz').replace(os.path.expanduser('~'), '~', 1)   # wherever this toolkit lives
 # every attribute whose value is a step id (the scaffold's step shapes, plus the gate)
 STEP_ATTRS = ('data-step', 'data-cap', 'data-ec', 'data-cnt', 'data-at', 'data-run', 'data-rr',
               'data-note', 'data-vd', 'data-after')

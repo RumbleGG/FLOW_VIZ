@@ -1,0 +1,32 @@
+[
+  {
+    "path": "shop/refunds/handler.py",
+    "line": 27,
+    "user": {
+      "login": "ana"
+    },
+    "commit_id": "127788cfe41d1cd21ee795e76ed6a5dd73a66b69",
+    "created_at": "2026-10-15T01:31:02Z",
+    "body": "request.headers[\"Idempotency-Key\"] raises KeyError when the header is missing: a 500, not a 400."
+  },
+  {
+    "path": "shop/payments.py",
+    "line": 21,
+    "user": {
+      "login": "kofi"
+    },
+    "commit_id": "127788cfe41d1cd21ee795e76ed6a5dd73a66b69",
+    "created_at": "2026-10-15T02:12:30Z",
+    "body": "Retrying a POST that moves money: could this refund twice?"
+  },
+  {
+    "path": "shop/money.py",
+    "line": 15,
+    "user": {
+      "login": "kofi"
+    },
+    "commit_id": "127788cfe41d1cd21ee795e76ed6a5dd73a66b69",
+    "created_at": "2026-10-15T02:13:55Z",
+    "body": "Order.apply_discount calls minus too. A discount bigger than the total used to go negative; now it raises. Intended?"
+  }
+]

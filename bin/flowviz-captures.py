@@ -724,7 +724,8 @@ def no_sidecar_message(sidecar_path, html_dir):
         "This deliverable was likely opened straight from Finder (file://), so whatever\n"
         "was typed into it only ever reached that browser tab's storage, never disk.\n\n"
         'Either serve the folder so saves reach disk:\n'
-        '    ~/Projects/FLOW_VIZ/bin/flowviz serve %s --open\n'
+        '    ' + os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'bin', 'flowviz')
+        .replace(os.path.expanduser('~'), '~', 1) + ' serve %s --open\n'
         'or, on the open page, click "Copy captures for agent" and paste that block back.'
     ) % (sidecar_path, html_dir)
 

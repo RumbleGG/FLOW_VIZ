@@ -23,7 +23,7 @@ import sys
 sys.dont_write_bytecode = True
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE = os.path.join(ROOT, 'template', 'report.src.html')
-F = '~/Projects/FLOW_VIZ/bin/flowviz'
+F = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'bin', 'flowviz').replace(os.path.expanduser('~'), '~', 1)   # wherever this toolkit lives
 # the template's own words for what fold cannot know; the audit's unfilled-slot check finds them
 PH_SENTENCE = ('State in one sentence what this step establishes.', 'State in one sentence what this step changes.')
 PH_COMMAND = ('echo replace-with-the-command-that-writes', 'echo replace-with-the-command')

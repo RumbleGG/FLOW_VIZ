@@ -2,10 +2,14 @@
 """flowviz new — scaffold a report or a drawing into the folder the work is in.
 
     flowviz new report  "<claim with a verb>" --dir DIR [--name NAME] [--rows 4] [--steps 3] [--boxes 4] [--flows 0]
+                        [--detail [BOXES]]
     flowviz new drawing "<claim with a verb>" --dir DIR [--name NAME] [--boxes 6] [--flows 0] [--steps N]
 
 Drawings start without flows: boxes and connections, no walkthrough. Add --flows N only when the human
 asked for a step-by-step walkthrough of the order of events.
+
+--detail adds the detail slot under the spine: one more drawing for the code inside the system — one box
+per class, one connection per call, one "Call order" flow (default 6 boxes, at most 20).
 
 Writes DIR/NAME.src.html (NAME defaults to the folder's name, upper-cased) and refuses to overwrite
 anything. Every slot carries the template's own words, so `flowviz audit` fails a scaffold that was
@@ -21,7 +25,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE = os.path.join(ROOT, 'template')
-F = '~/Projects/FLOW_VIZ/bin/flowviz'
+F = os.path.join(ROOT, 'bin', 'flowviz').replace(os.path.expanduser('~'), '~', 1)
 
 
 def die(msg):
@@ -64,7 +68,7 @@ def fmt(o, ind=0):
     return json.dumps(o, ensure_ascii=False)
 
 
-def gen_spec(tpl, n, flows, steps, max_cols, spec_id, title=None):
+def gen_spec(tpl, n, flows, steps, max_cols, spec_id, title=None, max_steps=9, noun='box', flow_ids=None):
     """n boxes on a snaking grid, joined in a chain, walked by `flows` flows.
     Every string comes from the template, so every string still reads as unfilled."""
     first, mid, last = tpl['nodes'][0], tpl['nodes'][1], tpl['nodes'][-1]
@@ -78,20 +82,23 @@ def gen_spec(tpl, n, flows, steps, max_cols, spec_id, title=None):
     nodes = []
     for i in range(n):
         node = dict(first if i == 0 else last if i == n - 1 else mid)
-        node.update(id='box%d' % (i + 1), label='Box %d' % (i + 1), at=at(i))
+        node.update(id='%s%d' % (noun, i + 1), label='%s %d' % (noun.title(), i + 1), at=at(i))
         nodes.append(node)
     edges = []
     for i in range(n - 1):
         e = dict(tpl['edges'][0])
-        e.update(id='box%d-box%d' % (i + 1, i + 2), **{'from': 'box%d' % (i + 1)}, to='box%d' % (i + 2))
+        e.update(id='%s%d-%s%d' % (noun, i + 1, noun, i + 2), **{'from': '%s%d' % (noun, i + 1)}, to='%s%d' % (noun, i + 2))
         edges.append(e)
     walks = []
     for f in range(flows):
         fl = dict(tpl['flows'][0])
-        fl.update(id='flow%d' % (f + 1), label='Flow %d' % (f + 1), steps=[
-            dict(tpl['flows'][0]['steps'][0], id='f%ds%d' % (f + 1, s + 1),
-                 path=['box%d' % (s + 1), 'box%d' % (s + 2)])
-            for s in range(min(steps, n - 1, 9))])
+        fid, prefix = flow_ids[f] if flow_ids else ('flow%d' % (f + 1), 'f%ds' % (f + 1))
+        fl.update(id=fid, steps=[
+            dict(tpl['flows'][0]['steps'][0], id='%s%d' % (prefix, s + 1),
+                 path=['%s%d' % (noun, s + 1), '%s%d' % (noun, s + 2)])
+            for s in range(min(steps, n - 1, max_steps))])
+        if not flow_ids:
+            fl['label'] = 'Flow %d' % (f + 1)
         walks.append(fl)
     zones = []
     if n >= 3:
@@ -136,7 +143,20 @@ def report(a, title, doc):
     out = re.sub(r'\n<!-- ═+ PLAYBOOK SHAPES.*?<!-- step-w:end -->\n', '\n', out, flags=re.S)
     _, tpl = spec_of(out)
     out = put_spec(out, gen_spec(tpl, a.boxes, a.flows, a.boxes - 1, 4, 'spine'))
-    return out
+    return detail_slot(out, a.detail)
+
+
+def detail_slot(out, n):
+    """The detail slot: one more drawing under the spine, on its own cap tier (≤20 boxes, one "Call
+    order" flow of ≤20 steps) — n classes in a chain, or no slot at all when n is 0."""
+    m = re.search(r'<!-- detail:begin -->\n(.*?)<!-- detail:end -->\n\n?', out, re.S)
+    if not n:
+        return out[:m.start()] + out[m.end():]
+    part = m.group(1)
+    dm, dtpl = spec_of(part)
+    spec = gen_spec(dtpl, n, 1, n - 1, 5, dtpl['id'], max_steps=20, noun='class',
+                    flow_ids=[(dtpl['flows'][0]['id'], 'c')])
+    return out[:m.start()] + part[:dm.start(2)] + fmt(spec) + part[dm.end(2):] + '\n' + out[m.end():]
 
 
 def drawing(a, title, doc):
@@ -161,6 +181,9 @@ def main():
     ap.add_argument('--boxes', type=int, default=None, help='drawing boxes (default 6, max 12); report spine (default 4, max 9)')
     ap.add_argument('--flows', type=int, default=0,
                     help='flows, 0-3 (default 0: no walkthrough unless the human asked for one)')
+    ap.add_argument('--detail', type=int, nargs='?', const=6, default=0, metavar='BOXES',
+                    help='report: add the detail drawing under the spine, for the code inside the system '
+                         '(default 6 boxes, 2-20)')
     a = ap.parse_args(argv)
 
     title = ' '.join(a.claim.split())
@@ -175,7 +198,11 @@ def main():
             die('--steps must be 0-30')
         if not 0 <= a.flows <= 3:
             die('--flows must be 0-3')
+        if a.detail and not 2 <= a.detail <= 20:
+            die('--detail must be 2-20 boxes: a 21st class means a segment, or a second report')
     else:
+        if a.detail:
+            die('--detail is a report slot; a drawing page is one drawing')
         a.boxes = 6 if a.boxes is None else a.boxes
         if not 2 <= a.boxes <= 12:
             die('--boxes must be 2-12: a 13th box means a segment')
@@ -201,8 +228,9 @@ def main():
     with open(src, 'w', encoding='utf-8') as f:
         f.write(body)
 
-    what = ('%d row%s · %d step%s · spine drawing %d boxes' % (a.rows, '' if a.rows == 1 else 's', a.steps,
-            '' if a.steps == 1 else 's', a.boxes) if a.kind == 'report'
+    what = ('%d row%s · %d step%s · spine drawing %d boxes%s' % (a.rows, '' if a.rows == 1 else 's', a.steps,
+            '' if a.steps == 1 else 's', a.boxes, ' · detail drawing %d boxes' % a.detail if a.detail else '')
+            if a.kind == 'report'
             else '%d boxes · %s' % (a.boxes, '%d flow%s' % (a.flows, '' if a.flows == 1 else 's') if a.flows else 'no flows'))
     print('created %s  (%s · doc %s · %s)' % (src, a.kind, doc, what))
     if len(title) > 70:

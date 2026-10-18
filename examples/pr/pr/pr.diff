@@ -1,0 +1,396 @@
+diff --git a/docs/api.md b/docs/api.md
+index 2a94609..4ed3dea 100644
+--- a/docs/api.md
++++ b/docs/api.md
+@@ -6,3 +6,9 @@ same key again replays the first response instead of doing the work twice.
+ ## GET /orders/{id}
+ 
+ The order, or 404.
++
++## POST /orders/{id}/refunds
++
++Refunds part or all of a paid order to the card that paid it. Requires `Idempotency-Key`. Body:
++`amount_cents` (above zero) and `reason`. Answers 201 with the refund, 400 for a bad body, 404 for no such order, and 422 when the order
++was never paid or less than `amount_cents` is left to refund.
+diff --git a/shop/app.py b/shop/app.py
+index 3222d1a..f011c2a 100644
+--- a/shop/app.py
++++ b/shop/app.py
+@@ -29,7 +29,8 @@ class Router:
+         return {"status": 404, "body": {"error": "no route"}}
+ 
+ 
+-def build(orders, payments, tokens):
++def build(orders, payments, refunds, tokens):
+     router = Router()
+     router.add("GET", r"/orders/([\w-]+)", lambda req, oid: {"status": 200, "body": orders.get(oid)})
++    router.add("POST", r"/orders/([\w-]+)/refunds", refunds.post)
+     return AuthMiddleware(IdempotencyMiddleware(router), tokens)
+diff --git a/shop/middleware.py b/shop/middleware.py
+index 766d2fd..4b6a3bc 100644
+--- a/shop/middleware.py
++++ b/shop/middleware.py
+@@ -1,4 +1,5 @@
+ """Request middleware: who is calling, and whether this request has been seen before."""
++import hashlib
+ 
+ 
+ class AuthMiddleware:
+@@ -22,7 +23,10 @@ class IdempotencyMiddleware:
+         self._seen = {}
+ 
+     def key(self, request):
+-        return request.headers.get("Idempotency-Key")
++        raw = request.headers.get("Idempotency-Key")
++        if not raw:
++            return None
++        return hashlib.sha256(("%s %s %s" % (request.method, request.path, raw)).encode()).hexdigest()
+ 
+     def __call__(self, request):
+         if request.method != "POST":
+@@ -33,5 +37,6 @@ class IdempotencyMiddleware:
+         if k in self._seen:
+             return self._seen[k]
+         response = self.inner(request)
+-        self._seen[k] = response
++        if response["status"] < 500:
++            self._seen[k] = response
+         return response
+diff --git a/shop/money.py b/shop/money.py
+index 540b2e9..78b17ba 100644
+--- a/shop/money.py
++++ b/shop/money.py
+@@ -13,6 +13,8 @@ class Money:
+ 
+     def minus(self, other):
+         self._same(other)
++        if other.cents > self.cents:
++            raise ValueError("%s minus %s would go below zero" % (self, other))
+         return Money(self.cents - other.cents, self.currency)
+ 
+     def _same(self, other):
+diff --git a/shop/orders.py b/shop/orders.py
+index 8da1b28..6c6995c 100644
+--- a/shop/orders.py
++++ b/shop/orders.py
+@@ -1,5 +1,5 @@
+ """Orders and where they are kept."""
+-from dataclasses import dataclass
++from dataclasses import dataclass, field
+ 
+ from shop.money import Money
+ 
+@@ -11,10 +11,14 @@ class Order:
+     total: Money
+     paid: bool = False
+     charge_id: str = ""
++    refunded: Money = field(default_factory=lambda: Money(0))
+ 
+     def apply_discount(self, amount):
+         self.total = self.total.minus(amount)
+ 
++    def refundable(self):
++        return self.total.minus(self.refunded)
++
+ 
+ class OrderRepository:
+     def __init__(self):
+diff --git a/shop/payments.py b/shop/payments.py
+index c85a26f..650040d 100644
+--- a/shop/payments.py
++++ b/shop/payments.py
+@@ -1,14 +1,27 @@
+ """Calls to the payment provider."""
+ 
+ 
++class ProviderUnavailable(Exception):
++    pass
++
++
+ class HttpTransport:
+-    """Posts JSON to the provider with an Idempotency-Key, which the provider dedupes on."""
++    """Posts JSON to the provider with an Idempotency-Key, which the provider dedupes on.
++    A 503 is the provider shedding load: retried up to twice, with the same key."""
++
++    RETRY_ON = (503,)
+ 
+-    def __init__(self, send):
++    def __init__(self, send, retries=2):
+         self.send = send
++        self.retries = retries
+ 
+     def post(self, path, body, idempotency_key):
+-        return self.send(path, body, {"Idempotency-Key": idempotency_key})
++        headers = {"Idempotency-Key": idempotency_key}
++        for attempt in range(self.retries + 1):
++            status, reply = self.send(path, body, headers)
++            if status not in self.RETRY_ON:
++                return status, reply
++        raise ProviderUnavailable("%s answered 503 %d times" % (path, self.retries + 1))
+ 
+ 
+ class PaymentClient:
+@@ -20,3 +33,9 @@ class PaymentClient:
+         if status != 201:
+             raise RuntimeError("charge refused: %s" % reply.get("error"))
+         return reply["id"]
++
++    def refund(self, order, amount, key):
++        status, reply = self.transport.post("/refunds", {"charge": order.charge_id, "amount": amount.cents}, key)
++        if status != 201:
++            raise RuntimeError("refund refused: %s" % reply.get("error"))
++        return reply["id"]
+diff --git a/shop/refunds/__init__.py b/shop/refunds/__init__.py
+new file mode 100644
+index 0000000..d4d2518
+--- /dev/null
++++ b/shop/refunds/__init__.py
+@@ -0,0 +1 @@
++"""Refunds: part or all of a paid order, back to the card that paid it."""
+diff --git a/shop/refunds/handler.py b/shop/refunds/handler.py
+new file mode 100644
+index 0000000..b01a36b
+--- /dev/null
++++ b/shop/refunds/handler.py
+@@ -0,0 +1,33 @@
++"""POST /orders/{id}/refunds — refund part or all of a paid order."""
++from shop.refunds.policy import Refused
++from shop.refunds.request import BadRequest, RefundRequest
++
++
++class RefundHandler:
++    def __init__(self, orders, policy, payments, store, events):
++        self.orders = orders
++        self.policy = policy
++        self.payments = payments
++        self.store = store
++        self.events = events
++
++    def post(self, request, order_id):
++        key = request.headers.get("Idempotency-Key")
++        if not key:
++            return {"status": 400, "body": {"error": "an Idempotency-Key header is required"}}
++        try:
++            refund = RefundRequest.parse(order_id, request.body)
++        except BadRequest as e:
++            return {"status": 400, "body": {"error": str(e)}}
++        order = self.orders.get(order_id)
++        if order is None:
++            return {"status": 404, "body": {"error": "no order %s" % order_id}}
++        try:
++            self.policy.check(order, refund)
++        except Refused as e:
++            return {"status": 422, "body": {"error": str(e)}}
++        provider_id = self.payments.refund(order, refund.amount, key)
++        row = self.store.save(order, refund, provider_id)
++        self.orders.save(order)
++        self.events.publish("refund.issued", row)
++        return {"status": 201, "body": row}
+diff --git a/shop/refunds/policy.py b/shop/refunds/policy.py
+new file mode 100644
+index 0000000..ae6382f
+--- /dev/null
++++ b/shop/refunds/policy.py
+@@ -0,0 +1,15 @@
++"""Whether an order may be refunded this amount."""
++
++
++class Refused(Exception):
++    pass
++
++
++class RefundPolicy:
++    def check(self, order, request):
++        if not order.paid:
++            raise Refused("order %s was never paid" % order.id)
++        try:
++            order.refundable().minus(request.amount)
++        except ValueError:
++            raise Refused("only %s of order %s is left to refund" % (order.refundable(), order.id))
+diff --git a/shop/refunds/request.py b/shop/refunds/request.py
+new file mode 100644
+index 0000000..afe61c2
+--- /dev/null
++++ b/shop/refunds/request.py
+@@ -0,0 +1,28 @@
++"""What a refund request says, checked before anything is looked up."""
++from dataclasses import dataclass
++
++from shop.money import Money
++
++
++class BadRequest(ValueError):
++    pass
++
++
++@dataclass(frozen=True)
++class RefundRequest:
++    order_id: str
++    amount: Money
++    reason: str
++
++    @classmethod
++    def parse(cls, order_id, body):
++        try:
++            cents = int(body["amount_cents"])
++        except (KeyError, TypeError, ValueError):
++            raise BadRequest("amount_cents must be a whole number of cents")
++        if cents <= 0:
++            raise BadRequest("amount_cents must be above zero")
++        reason = str(body.get("reason", "")).strip()
++        if not reason:
++            raise BadRequest("a reason is required")
++        return cls(order_id, Money(cents), reason[:200])
+diff --git a/shop/refunds/store.py b/shop/refunds/store.py
+new file mode 100644
+index 0000000..23d7531
+--- /dev/null
++++ b/shop/refunds/store.py
+@@ -0,0 +1,15 @@
++"""Refunds that were issued, one row each."""
++import itertools
++
++
++class RefundStore:
++    def __init__(self):
++        self._rows = []
++        self._ids = itertools.count(1)
++
++    def save(self, order, request, provider_id):
++        row = {"id": "rf_%d" % next(self._ids), "order": order.id, "amount_cents": request.amount.cents,
++               "reason": request.reason, "provider_id": provider_id}
++        self._rows.append(row)
++        order.refunded = order.refunded.plus(request.amount)
++        return row
+diff --git a/tests/test_idempotency.py b/tests/test_idempotency.py
+index d5555b4..b11fc9b 100644
+--- a/tests/test_idempotency.py
++++ b/tests/test_idempotency.py
+@@ -21,3 +21,20 @@ class IdempotencyTests(unittest.TestCase):
+         b = mw(Request("POST", "/x", {"Idempotency-Key": "k"}))
+         self.assertEqual(a, b)
+         self.assertEqual(inner.n, 1)
++
++    def test_same_key_on_two_routes_is_two_requests(self):
++        inner = Counter()
++        mw = IdempotencyMiddleware(inner)
++        mw(Request("POST", "/x", {"Idempotency-Key": "k"}))
++        mw(Request("POST", "/y", {"Idempotency-Key": "k"}))
++        self.assertEqual(inner.n, 2)
++
++    def test_a_5xx_is_not_replayed(self):
++        calls = []
++
++        def flaky(request):
++            calls.append(1)
++            return {"status": 503 if len(calls) == 1 else 201, "body": {}}
++        mw = IdempotencyMiddleware(flaky)
++        mw(Request("POST", "/x", {"Idempotency-Key": "k"}))
++        self.assertEqual(mw(Request("POST", "/x", {"Idempotency-Key": "k"}))["status"], 201)
+diff --git a/tests/test_money.py b/tests/test_money.py
+index a7fe7d6..aa8c455 100644
+--- a/tests/test_money.py
++++ b/tests/test_money.py
+@@ -10,3 +10,7 @@ class MoneyTests(unittest.TestCase):
+     def test_currencies_never_mix(self):
+         with self.assertRaises(ValueError):
+             Money(1).plus(Money(1, "EUR"))
++
++    def test_minus_refuses_to_go_below_zero(self):
++        with self.assertRaises(ValueError):
++            Money(100).minus(Money(101))
+diff --git a/tests/test_payments.py b/tests/test_payments.py
+index 4298b1b..cdfc269 100644
+--- a/tests/test_payments.py
++++ b/tests/test_payments.py
+@@ -2,7 +2,7 @@ import unittest
+ 
+ from shop.money import Money
+ from shop.orders import Order
+-from shop.payments import HttpTransport, PaymentClient
++from shop.payments import HttpTransport, PaymentClient, ProviderUnavailable
+ from tests.fakes import FakeProvider
+ 
+ 
+@@ -11,3 +11,14 @@ class PaymentTests(unittest.TestCase):
+         provider = FakeProvider()
+         PaymentClient(HttpTransport(provider)).charge(Order("o-1", "c-9", Money(900)), "k-1")
+         self.assertEqual(provider.calls[0][2], {"Idempotency-Key": "k-1"})
++
++    def test_retry_a_503_with_the_same_key(self):
++        provider = FakeProvider([503, 201])
++        PaymentClient(HttpTransport(provider)).charge(Order("o-1", "c-9", Money(900)), "k-1")
++        self.assertEqual([c[2] for c in provider.calls], [{"Idempotency-Key": "k-1"}] * 2)
++
++    def test_give_up_after_three_503s(self):
++        provider = FakeProvider([503, 503, 503])
++        with self.assertRaises(ProviderUnavailable):
++            HttpTransport(provider).post("/refunds", {}, "k-1")
++        self.assertEqual(len(provider.calls), 3)
+diff --git a/tests/test_refunds.py b/tests/test_refunds.py
+new file mode 100644
+index 0000000..544c53b
+--- /dev/null
++++ b/tests/test_refunds.py
+@@ -0,0 +1,61 @@
++import unittest
++
++from shop.app import Request, build
++from shop.audit import AuditLog
++from shop.events import EventPublisher
++from shop.money import Money
++from shop.orders import Order, OrderRepository
++from shop.payments import HttpTransport, PaymentClient
++from shop.refunds.handler import RefundHandler
++from shop.refunds.policy import RefundPolicy
++from shop.refunds.store import RefundStore
++from tests.fakes import FakeProvider
++
++
++def shop(provider=None):
++    orders = OrderRepository()
++    orders.add(Order("o-1", "c-9", Money(5000), paid=True, charge_id="ch_1"))
++    orders.add(Order("o-2", "c-9", Money(1200)))
++    events = EventPublisher()
++    log = AuditLog(events)
++    payments = PaymentClient(HttpTransport(provider or FakeProvider()))
++    handler = RefundHandler(orders, RefundPolicy(), payments, RefundStore(), events)
++    return build(orders, payments, handler, {"Bearer t": "support"}), orders, log
++
++
++def post(app, path, body, key="k-1"):
++    headers = {"Authorization": "Bearer t"}
++    if key:
++        headers["Idempotency-Key"] = key
++    return app(Request("POST", path, headers, body))
++
++
++class RefundTests(unittest.TestCase):
++    def test_refund_part_of_a_paid_order(self):
++        app, orders, log = shop()
++        r = post(app, "/orders/o-1/refunds", {"amount_cents": 1500, "reason": "arrived late"})
++        self.assertEqual(r["status"], 201)
++        self.assertEqual(orders.get("o-1").refundable(), Money(3500))
++        self.assertEqual(log.rows[-1][0], "refund.issued")
++
++    def test_refuse_more_than_is_left(self):
++        app, _, _ = shop()
++        r = post(app, "/orders/o-1/refunds", {"amount_cents": 6000, "reason": "arrived late"})
++        self.assertEqual(r["status"], 422)
++
++    def test_refuse_an_unpaid_order(self):
++        app, _, _ = shop()
++        r = post(app, "/orders/o-2/refunds", {"amount_cents": 100, "reason": "arrived late"})
++        self.assertEqual(r["status"], 422)
++
++    def test_same_key_refunds_once(self):
++        app, orders, _ = shop()
++        a = post(app, "/orders/o-1/refunds", {"amount_cents": 1500, "reason": "arrived late"})
++        b = post(app, "/orders/o-1/refunds", {"amount_cents": 1500, "reason": "arrived late"})
++        self.assertEqual(a, b)
++        self.assertEqual(orders.get("o-1").refundable(), Money(3500))
++
++    def test_require_an_idempotency_key(self):
++        app, _, _ = shop()
++        r = post(app, "/orders/o-1/refunds", {"amount_cents": 100, "reason": "arrived late"}, key=None)
++        self.assertEqual(r["status"], 400)

@@ -13,6 +13,8 @@ away — never zero, never three.**
 | an answer, a root cause, a plan, commands to run | **report** | a card, the argument, evidence, and a checklist they run and paste output into |
 | a system to explain: what talks to what, in what order, what breaks | **drawing** | boxes on a grid with motion, a peek on hover, depth on click, a step-by-step walkthrough |
 | both | a **report** whose spine diagram is a drawing | the report template already has one in its spine |
+| a system and the code inside it | a **report** with a **detail** drawing under the spine | the spine for the system, the detail for its classes: `new report … --detail` |
+| one pull request to explain to its reviewer | a **PR helper**: a read-only report | `flowviz pr`, below in *Explaining a pull request* |
 
 ## The commands
 
@@ -23,6 +25,8 @@ F=~/Projects/FLOW_VIZ/bin/flowviz
 
 $F new report  "The 500 is partial trust, not a web.config bug" --dir ~/work/sto --rows 5 --steps 7
 $F new drawing "Checkout confirms in 300 ms" --dir ~/work/shop --boxes 8 --flows 2
+$F new report  "Refunds reuse the payment path" --dir ~/work/pr --detail 14   # + the detail slot
+$F pr new "Refunds reuse the payment path" --dir ~/work/pr --pr … --diff … --checkout …   # a PR helper
                                           # 1. scaffold into the folder the work is in
                                           # 2. write every slot (the long part)
 $F build ~/work/sto/STO.src.html          # 3. one self-contained .html (rebuild freely: the previous
@@ -96,13 +100,14 @@ Hard limits, not guidelines. `flowviz audit` measures all of them; screens at re
 | Vitals | ≤5 tiles, each a number + a label |
 | Next | ≤4 items, ≤14 words each, imperative, **each tagged `read-only` or `write`** |
 | Diagram | exactly 1 in the spine: a drawing (≤9 boxes) or a hand-written `div.dia` SVG |
+| Detail | optional: exactly 1 drawing directly under the spine (≤20 boxes, ≤2 flows of ≤20 steps) |
 | Rows | ≤6, each summary a claim with a verb in ≤14 words |
 | Section headers | ≤3, ≤4 words each, saying what the rows below are for; no row before the first |
 | Row kind | every row has `data-kind` (below) |
 | Open at load | ≤1 row. Zero is the norm |
 | Step sentence | ≤20 words, **exactly one sentence** |
 | Words at rest | ≤350 — card text plus row summaries |
-| Screens at rest | ≤3 |
+| Screens at rest | ≤3 — measured unrounded, shown rounded up to two decimals: `3.01` is over |
 
 **If you cannot fit, split the report.** Raising a cap is a major version bump of the standard and is not
 yours to make. Nothing is ever deleted to fit — it moves down a layer:
@@ -110,8 +115,22 @@ yours to make. Nothing is ever deleted to fit — it moves down a layer:
 | Layer | Budget | Holds |
 |---|---|---|
 | 1 · Card | one screen, never scrolls | chip, claim-title, verdict, so-what, vitals, next |
-| 2 · Spine | 1 diagram + ≤6 collapsed rows | the shape, then one row per idea |
+| 2 · Spine | 1 diagram (+ 1 detail) + ≤6 collapsed rows | the shape, then one row per idea |
 | 3 · Evidence | **unlimited** | logs, stack traces, tables, `file:line` citations — only inside rows |
+
+### A second, finer drawing: the detail slot
+
+When the spine draws a system and the human also needs the code inside it — one box per class, one
+connection per method call, the calls in order — that drawing goes in the **detail slot**, directly under
+the spine: `$F new report … --detail [boxes]` scaffolds it (6 classes by default). It has its own cap tier,
+because a class call graph for one request path commonly needs 15–20 boxes and 15–20 steps: **≤20 boxes,
+≤4 zones, ≤2 flows, ≤20 steps per flow**; every other drawing cap is the spine's. The spine stays one
+drawing with its own caps, and further drawings still go inside rows.
+
+The page keeps **≤3 screens at rest**. A report with a detail drawing usually needs a **two-line title
+and a shorter verdict** to fit; if it still does not fit, split it into two reports — never cut the detail
+down to a spine, and never move it into a row to dodge the count. Mark what a change did to each class
+with `"status"` (Drawings, below), not with a symbol typed into its label.
 
 ### Every row says what it is for
 
@@ -238,7 +257,9 @@ syntax errors lines away from the cause.
 - **No blank lines** — some consoles treat one as submit.
 - **Name the interpreter** when it matters; **echo every derived value** and how many matched.
 - **Parse-check every block** before handover: `bash -n`, `python3 -m py_compile`,
-  `[System.Management.Automation.Language.Parser]::ParseFile`.
+  `[System.Management.Automation.Language.Parser]::ParseFile`. SQL has no parse check here: `bash -n` on a
+  `psql -c "…"` line checks the shell quoting, never the statement. **The SQL is yours to verify**, against
+  the real database, read-only, before handover.
 - **A value carried in from an earlier step obeys the same rules.** `{{d1.VER}}` (below) resolves only to
   1–120 printable ASCII characters with no quote, `$`, backslash, backtick, `;` `|` `&` `<` `>` or
   bracket; anything else, or no value yet, and copy refuses. Never write a `PASTE_…` placeholder for the
@@ -353,9 +374,9 @@ walks each flow, one caption per step), plus a Sequence view.
 |---|---|
 | Title | ≤70 chars with a verb: what the system guarantees, not its name |
 | Lede | ≤30 words |
-| Boxes | ≤12 per canvas (≤9 as a report's spine). A 13th box means a segment. |
+| Boxes | ≤12 per canvas (≤9 as a report's spine, ≤20 as its detail). One more means a segment. |
 | Zones | ≤4 |
-| Flows | 0 by default; up to 3 when a walkthrough is asked for, ≤9 steps each |
+| Flows | 0 by default; up to 3 when a walkthrough is asked for, ≤9 steps each (a detail: ≤2, ≤20 steps each) |
 | Step `say` | exactly one sentence, ≤20 words; `msg` ≤24 chars |
 | Box `label` | ≤16 chars; `tech` ≤24 chars |
 | Connection `label` · `ms` | ≤16 chars · ≤20 chars |
@@ -363,7 +384,7 @@ walks each flow, one caption per step), plus a Sequence view.
 | `facts` | ≤3 per box, ≤24 chars each |
 | Zone `label` | ≤28 chars |
 | Words on canvas at rest | ≤60 |
-| Crossings, connections through boxes, labels shrunk to fit, zone labels crossed | 0 (measured by `--browser`) |
+| Crossings, connections through boxes, labels shrunk to fit, zone labels crossed | 0 (measured by `--browser`, which names each one) |
 | Screens at rest | ≤2 for a drawing page |
 
 ### The spec
@@ -403,14 +424,24 @@ walks each flow, one caption per step), plus a Sequence view.
 
 (JSON has no comments; the `//` above is only for this page.)
 
+**Labels shrunk to fit** measures box labels only, because only they can shrink: a box has a fixed width,
+and a label wider than it is shrunk and then cut. A connection's label never shrinks — its chip grows to
+fit its ≤16 characters, and it shows only with **Labels** or **Timings** on — so the audit does not measure
+it. Turn Labels on and look, once, before handover.
+
 - **`kind`** sets the tint — never pick colours: `client` `edge` `service` `data` `stream` `external`,
   and `threat` for an adversary (red, with a broken edge) so an attacker never looks like a partner.
 - **`icon`**: `user devices browser mobile gateway lb cdn cloud globe server service function worker relay
   api check box db table cache storage search queue bell mail card bank lock key alert clock file json
   folder terminal agent chart gear git`.
-- **Optional fields**: `tech`, `facts`, `peek`, `segment` on a box; `label`, `ms`, `peek`, `both`, `route`
-  on a connection; `msg`, `fail` on a step. `ms` feeds the **Timings** layer — leave it out where there is
+- **Optional fields**: `tech`, `facts`, `peek`, `segment`, `status` on a box; `label`, `ms`, `peek`, `both`,
+  `route` on a connection; `msg`, `fail` on a step. `ms` feeds the **Timings** layer — leave it out where there is
   no real latency (a user clicking, a redirect the human follows).
+- **`status`**: `"new"`, `"changed"` or `"removed"` — what the change the drawing explains did to that box.
+  The runtime draws an ink tag on the box's foot (solid NEW, outlined CHANGED, dashed REMOVED with the label
+  struck through), lists it in the Key, the peek, the drawer and Copy HTML, and the audit counts it: *9 of
+  13 boxes: 4 new, 5 changed*. It has no hue, so it never reads as a kind or a result. A label that carries
+  a typed marker (`OrderService ✱`, `(new)`) is noted: remove the marker and set `status` — no id changes.
 - **`mode`**: `sync` draws dashes, `async` draws slower dots. **`"both": true`** draws two lanes for
   traffic both ways — use it for publish + consume; a sync call implies its response and needs no lane.
 - **Zones** are rectangles of cells: `"cols": [first, last], "rows": [first, last]`, **both inclusive**, so
@@ -446,6 +477,7 @@ The grid is the layout; you never write coordinates. `at: [col, row]`, zero-base
 | **Where a real run passed or failed** | No flows: `"result"` on the boxes and connections — see Results above. |
 | **Two options** | Two flows on one canvas, `Today` and `Proposed`. Boxes only one option needs go in a zone named for it. The connections only one flow walks are the difference — the human switches flows and watches them light up. |
 | **A system as part of a report** | The report scaffold's spine already holds a drawing (≤9 boxes, no `data-mode`). Extra drawings go inside rows. |
+| **A system and the code inside it** | Spine for the system, detail for the classes: `--detail`, one box per class, one connection per method call, one call-order flow, `status` on what changed. |
 | **A system too big for 12 boxes** | Split it into segments. A standalone drawing may itself be a segment (`"kind": "segment"`) of one drawn elsewhere. |
 
 ### Copy HTML
@@ -462,6 +494,78 @@ components: tables, `div.cmd` for anything to run (paste rules apply), `div.cmd.
 `div.box`, and `figure.shot` for a picture (Figures, above), shown in the drawer. Keys: the box id,
 `edge:<id>`, `step:<id>`, and `<segment>/<key>` inside a segment. No section is required; the drawer
 always shows the peek, facts, the steps a box takes part in, and a note.
+
+---
+
+## Explaining a pull request
+
+A **PR helper** explains one pull request to the person reviewing it: what is new, what else the change
+runs, and every changed file with its exact diff. It is a report — the same caps — with a fixed shape, and
+it is **read-only**: no playbook steps, and the card says so. They will be made often, so the toolkit does
+the copying: nothing a reviewer reads as code, diff or count is typed by hand.
+
+**1 · Save the inputs, read-only.** `$F pr` prints the commands. Into `<dir>/pr/`: `pr.json` (`gh pr view
+--json …`: GitHub's file order and counts, the commits with dates, the reviews, the CI checks), `pr.diff`
+(`gh pr diff`), `review-comments.json` (the line comments, for you to read). Then a local checkout of the
+PR head, anywhere: every line number in the report is pinned to that commit.
+
+**2 · Scaffold.** `$F pr new "<claim>" --dir <dir> --pr <dir>/pr/pr.json --diff <dir>/pr/pr.diff --checkout
+<path>` writes the report and fills it: the head commit on the card's meta line, the counted vitals, the
+per-file list, the commits, the reviews and the checks.
+
+**3 · Write it.** Two diagrams, always:
+
+- **Spine** — the path through the system, within the spine caps: a zone around what the PR touches, a
+  flow for the happy path and one for the main rejection path.
+- **Detail** — the class call graph for that path: one box per class, one connection per method call, one
+  call-order flow, `"status"` on every class the PR adds or changes. Fold an unchanged helper class into
+  its caller's box when it would only add crossings, and say so in that box's depth section. Each box's
+  depth section holds its code: `<!-- pr:lines shop/refunds/handler.py 6-33 -->`.
+
+Rows, in three groups, under these three headers:
+
+| Header | Row | Holds |
+|---|---|---|
+| What is new | `context` | the new path, hop by hop: one disclosure per hop, a one-line summary visible, the exact excerpt inside |
+| Shared changes | `finding` | every change that also runs outside the PR's stated feature: a table of the change (a disclosure holding its hunk), **who else runs it**, and **risk**. This is the row a reviewer reads before approving: keep it apart from the new feature |
+| Files and review | `record` × 3 | the per-file list; a reviewer table (who asked what, and whether it is **fixed**, **disputed with evidence**, or **open** at the pinned head) above the generated reviews and CI; the commit table |
+
+**The per-file list** follows two rules, and `pr fill` keeps both: **GitHub's order, strictly** — the order
+of the Files changed tab, which `pr.json` carries; never alphabetized, never regrouped by source, config or
+test — and **one sentence visible, the exact diff behind one click**: the name, `+added −removed` and your
+one plain sentence at rest; inside, your few bullets, the new test methods for a test file, then the file's
+hunks verbatim. You write only the sentence and the bullets. **Never paraphrase a diff.**
+
+**Markers.** `pr fill` expands each one after it, up to `<!-- /pr -->`, and replaces that on every re-fill:
+
+| Marker | Becomes |
+|---|---|
+| `<!-- pr:lines PATH A-B -->` | lines A–B of PATH at the pinned head, numbered |
+| `<!-- pr:hunk PATH N -->` | the Nth hunk of PATH's diff, verbatim (`@L`: the hunk holding new line L) |
+| `<!-- pr:diff PATH -->` | every hunk of PATH's diff, verbatim |
+| `<!-- pr:files -->` | the per-file list, in GitHub's order |
+| `<!-- pr:commits -->` · `pr:reviews` · `pr:checks` | one row per commit (sha, date, what it did) · each reviewer's latest review · the CI checks at the head |
+| `data-pr="files\|lines\|commits\|tests"` on a vital's number | the count |
+
+What you write survives a re-fill: a file's sentence, its notes between `<!-- pr:notes -->` and `<!--
+/pr:notes -->`, a commit's *what it did*. Fill writes nothing unless every marker resolves, warns when a
+range cuts a block in two (the off-by-one at a method boundary), and keeps the old source in
+`.flowviz/history/`. Write no marker inside a file's notes.
+
+**Also on the card:** vitals for files changed, lines added and removed, commits, new tests, and the PR's
+own unit of change (*1 new endpoint*, *2 new tables*). If a broader tracker report exists for the feature,
+link each finding to its row id (`TRACKER.html#c`) and name this report in that row, both ways.
+
+**The audit** fails a PR helper whose file rows do not match the diff — a file missing, an extra one, one
+out of GitHub's order, a count that disagrees — and one whose excerpts or hunks no longer match the
+checkout and the diff, whose vitals are not the counts, whose head is not on the card or not the one in
+`pr.json`, that has a step or no detail drawing, or a marker still reading `PATH`. **When the PR moves**,
+save the inputs again, re-read what changed, then `$F pr fill <NAME>.src.html --repin`: every line number
+moves with the head.
+
+**Who does what.** The Lead reads the diff and the comments and decides the claim, the hops, which changes
+are shared and how risky, each file's sentence and every review status. The Builder writes the markers and
+the spec, runs `pr fill`, `build` and `audit --browser`. The worked example is `examples/pr/`.
 
 ---
 
@@ -528,6 +632,7 @@ or to press **Copy captures for agent** and paste the block to you.
 ~/Projects/FLOW_VIZ/PLAN.html                         a report with a drawing spine, a live checklist and two figures
 ~/Projects/FLOW_VIZ/examples/checkout/checkout.html   a drawing: 10 boxes, 3 flows, a failure path, one segment
 ~/Projects/FLOW_VIZ/examples/deploy/DEPLOY.html       a report after its run: Results on top, a value b1 printed used by c1
+~/Projects/FLOW_VIZ/examples/pr/PR-418.html           a PR helper: a spine, a 13-class detail with status tags, every file's diff
 ```
 
 Open each with `?audit=1` to see the caps measured on the page itself.

@@ -11,7 +11,9 @@ It makes two things:
   lettered and steps numbered within them — `b1`, `b2` — so "look at b3" is never ambiguous, and a value
   one step prints can flow into a later step's command without being retyped. A step that ends at a screen
   carries a picture of it — a screenshot the agent took with `flowviz shot`, or a photo that exists —
-  inlined, so the page is still one file.
+  inlined, so the page is still one file. Under the spine, an optional **detail** drawing shows the code
+  inside the system — one box per class, tagged NEW or CHANGED — and a **PR helper** explains one pull request
+  to its reviewer, with every file's diff copied verbatim by `flowviz pr fill`.
 - **Drawings** — a system, or one segment of it, on a grid. The selected flow moves (dashes for calls, dots
   for events) so you see where data goes; hover for a one-line peek, click for everything, press
   **Walk through** to watch a request travel step by step. Boxes can open into their own drawing.
@@ -34,6 +36,7 @@ Three ideas carry it:
 open ~/Projects/FLOW_VIZ/PLAN.html                   # the toolkit's own plan, written to its standard
 open ~/Projects/FLOW_VIZ/examples/checkout/checkout.html   # a drawing: three flows, a failure, a segment
 open ~/Projects/FLOW_VIZ/examples/deploy/DEPLOY.html       # a report after its run: Results on top
+open ~/Projects/FLOW_VIZ/examples/pr/PR-418.html           # a PR helper: spine, detail with status, every diff
 ~/Projects/FLOW_VIZ/bin/flowviz serve ~/Projects/FLOW_VIZ --open PLAN.html   # so your pastes reach disk
 ```
 
@@ -49,10 +52,11 @@ CLAUDE.md       for agents changing the toolkit itself
 VERSION         stamped into every deliverable's footer
 CHANGELOG.md    why each version changed
 PLAN.src.html   the toolkit's plan, as a report  →  PLAN.html
-bin/            flowviz (cheat sheet + dispatcher), new, build, audit, serve, captures, fold, results, relabel, shot
+bin/            flowviz (cheat sheet + dispatcher), new, build, audit, serve, captures, fold, results, relabel, shot, pr
 shots/          the two pictures PLAN.html shows, taken with flowviz shot
-template/       flow.css flow.js (core, reports) · draw.css draw.js icons.svg (drawings) · scaffolds
-examples/       checkout/: the approved drawing, with flows · deploy/: a report closed with Results
+template/       flow.css flow.js (core, reports) · draw.css draw.js icons.svg (drawings) · scaffolds, pr.src.html
+examples/       checkout/: the approved drawing, with flows · deploy/: a report closed with Results ·
+                pr/: a PR helper, with the inputs it was filled from and the head's checkout
 mockups/        approved mockups, kept for reference: the drawing look (checkout-system.html), and
                 to-dos and added steps (todo-steps/: the proposal, and the prototype it was tried on)
 ```
