@@ -221,6 +221,8 @@ every drawing behave the same, and what lets the audit count a drawing's caps wi
 </tbody>
 </table>
 
+<figure class="shot"><img src="shots/checkout-at-rest.png"><figcaption><b>examples/checkout at rest:</b> ten boxes in four zones, the first of three flows moving, nothing open.</figcaption></figure>
+
 <div class="box key"><p><b>Recipes, not rules.</b> <code>AGENTS.md</code> gives an agent seven: a whole
 system, the inside of one box, one request in order, what fails and what then, two options side by side,
 a system inside a report, and a system too big for twelve boxes.</p></div>
@@ -370,6 +372,7 @@ then tell me "look at the plan" and I will read them back.</p>
           <div class="cmd"><button class="copy">copy</button><pre><code>python3 ~/Projects/FLOW_VIZ/bin/flowviz audit --browser ~/Projects/FLOW_VIZ/PLAN.html | tail -n 12</code></pre></div>
           <p class="expect"><b>Pass:</b> <code>result: clean</code> &nbsp;·&nbsp;
             <i>Fail:</i> <code>result: 1 over</code> or any failing check — the plan broke its own rules</p>
+          <figure class="shot"><img src="shots/plan-audit-panel.png"><figcaption><b>The same measures in the page:</b> open PLAN.html?audit=1 and the panel at bottom left reads every cap live.</figcaption></figure>
           <div class="cap">
             <div class="cl">Paste output <span class="kp">captures["e3"]</span></div>
             <textarea data-cap="e3" data-pass="\bresult: clean\b" data-fail="\bresult: \d+ over\b"

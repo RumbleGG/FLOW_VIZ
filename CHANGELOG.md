@@ -3,6 +3,40 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.4.0 — 2026-10-09 · figures: the pictures the author shows
+
+**Why.** A report could draw a system and take the human's screenshots as evidence, but the author had no way
+to show a picture: the wizard page a step ends at, the dialog with one line to read, the photo from last time.
+The human wants to see what they should see before they run the step, and an agent can take that picture.
+
+**Figures** (SPEC §1.3e, AGENTS.md *Show them what they should see*). `<figure class="shot"><img
+src="shots/ready.png"><figcaption>…</figcaption></figure>` inside a row, a step or a drawing's depth section,
+never on the card or the spine, which are read at rest. The caption is one sentence, ≤20 words, saying what
+to look at, and doubles as the alt text. `flowviz build` inlines the file as a data URI and stamps the tag with
+its file, sha256, bytes and pixel size, so the page stays one file; it refuses a missing or remote file, a
+non-image, and anything over 10 MB. At rest the figure is a thumbnail 360 px wide with its caption; click,
+Enter or Space opens it full size in the viewer the evidence images use, with ← → across the figures of the
+same step, row or depth section; on a drawing page it is cloned into the drawer with its section and travels
+with Copy HTML. Print shows every figure full width with its file and hash.
+
+**Caps and checks, only where a figure exists.** Largest figure ≤1 MB, figure bytes ≤6 MB a page, caption ≤20
+words; failing checks for an image the build did not inline, a figure with no caption, an `<img>` outside a
+figure, and a figure on the card or spine (or, on a drawing page, outside a depth section); notes for a file
+outside the folder and for one over 1 MB, with the command that shrinks it. The `?audit=1` panel measures the
+two byte caps too. A page without a figure audits exactly as it did.
+
+**`flowviz shot`.** `shot <url | file.html[?audit=1]> --out <dir>/shots/<name>.png [--size WxH] [--wait ms]
+[--theme dark]` takes the picture with the same headless Chrome the audit finds, of anything with an address — a
+dashboard, an admin page, a built FLOW_VIZ page with its audit panel — and stops Chrome as soon as the PNG is
+complete, because Chrome often never exits on its own. A picture that already exists (a photo, a prior run's
+`<doc>.assets/<sha256>.png`, whose path `captures` prints) is copied into `shots/` instead. A window on the
+human's own screen is theirs to capture, with them at the keyboard.
+
+**Reference.** `PLAN.html` carries two: the checkout drawing at rest in row b, and its own audit panel in step
+e3, both taken with `shot`. The cheat sheet, the scaffold's row comment and CLAUDE.md describe the shape.
+
+Minor: new component with its own caps; no existing cap changed, and the audit fails nothing it passed before.
+
 ## 3.3.0 — 2026-10-08 · playbooks in run order, and which agent does which step
 
 **Why.** In an MSI deploy playbook, the step *take a snapshot of the current version before deployment* came

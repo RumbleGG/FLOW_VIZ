@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 3.2.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 3.4.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -101,6 +101,7 @@ A playbook step is **a checkbox, its id, and one sentence.** That is all that is
 | Prereqs | `data-after="<id>"` dims the step until that one is done or captured. It names a step above (§1.3d). |
 | Carried value | `data-emit` on the producer's textarea, `{{<step>.<NAME>}}` in a later command (§1.3a). |
 | Capture | Every step has a textarea, an exit-code field, a one-line note, and its sidecar key shown beside it. The textarea also takes images (§1.3c); only its text is matched against the rules. |
+| Figure | A picture of what the human should see — a screenshot, a photo that exists — is a `figure.shot` inside the step (§1.3e), inlined by the build. |
 | Verdict | `data-pass` / `data-fail` regexes flip the chip on paste. Every literal is **word-anchored** (`\bFull\b`, never `Full`). |
 | Re-run | Files the current capture into `runs[]` and clears the box. A second attempt never destroys the first. |
 | Injected, never written | The `Done ☐` button at the foot of every step, the second verdict chip beside it, the status pill, and every displayed time. `flow.js` adds them, so a rebuild gives old reports new affordances. |
@@ -185,6 +186,26 @@ already made, or go on without a way back. Steps are written in the order the wo
 The audit reports, without blocking, what it can read from the sentences (§3): a step that takes a restore
 point, or says *before X*, below a write that already does X, and a `data-after` that points down. It reads
 words, not intent, so a clean audit is not a correct order — the read-through is the author's.
+
+### 1.3e Figures — what the human should see
+
+Some steps end at a screen, not a console: a wizard page, a dashboard, a dialog with one line to read. A
+picture of it says what no sentence can — *this* page, *that* line — and a photo that already exists (last
+run's evidence, the rack as it was) belongs beside the row or step that argues from it. A figure is the
+author's picture; the human's pictures are evidence (§1.3c), and the two never share a strip.
+
+| Part | Rule |
+|---|---|
+| Markup | `<figure class="shot"><img src="shots/ready.png"><figcaption>…</figcaption></figure>`. The `src` is a file beside the source — by convention `<dir>/shots/` — never a URL (§4). |
+| Where | Inside a row's body, a step, or a drawing's depth section: layer 3. Never on the card or the spine, and on a drawing page only in a depth section. A figure is read one gesture down, not at rest. |
+| Caption | Required: one sentence, ≤20 words, saying what to look at. It is the `alt` when none is written. |
+| Build | `flowviz build` inlines the file as a data URI and stamps the `img` with `data-file`, `data-sha256`, `data-bytes`, `width` and `height`, so the page stays one file. It refuses a missing file, a remote image, anything that is not PNG, JPEG, GIF or WebP, and anything over 10 MB. |
+| At rest | A thumbnail 360 px wide with its caption; two sit side by side. Click, Enter or Space opens it full size in the evidence viewer with its file, pixels, size and hash; ← → walk the figures of the same step, row or depth section. On a drawing page the figure is cloned into the drawer with its depth section. Print shows every figure full width, with its file and sha256. |
+| Caps | Each figure ≤1 MB; a page's figures ≤6 MB together; caption ≤20 words. A larger picture is shrunk first (`sips -Z 1200`, or a smaller `--size`); more pictures than fit are a second report. |
+| Where it comes from | `flowviz shot <url \| file> --out <dir>/shots/<name>.png`: headless Chrome on anything with an address, a built page included (`?audit=1`, `--theme dark`). A picture that exists — a photo, a prior run's `<doc>.assets/<sha256>.png`, whose path `flowviz captures` prints — is copied into `shots/`. A window on the human's own screen is theirs to capture, with them at the keyboard. |
+
+Words and screens at rest are unchanged: a figure sits below the layer they measure. The audit measures the
+three caps and the four checks in §3 only where a figure exists, so a page without one audits as before.
 
 ### 1.4 The verdict vocabulary
 
@@ -387,9 +408,9 @@ the gutter between cells. Straight connections own the centre of a side; bent on
 ### 2.5 Depth
 
 `div.fv-depth > section[data-for="<key>"]` holds layer 3 for one element, as plain HTML (tables, code
-blocks with `data-copy` buttons, lists). Keys: `<nodeId>`, `edge:<edgeId>`, `step:<stepId>`, and inside a
-segment `<segmentId>/<key>`. A missing section is fine; the drawer still shows the peek, facts, steps and
-the note box.
+blocks with `data-copy` buttons, lists, a `figure.shot` — §1.3e — for a picture). Keys: `<nodeId>`,
+`edge:<edgeId>`, `step:<stepId>`, and inside a segment `<segmentId>/<key>`. A missing section is fine; the
+drawer still shows the peek, facts, steps and the note box.
 
 ### 2.6 Segments
 
@@ -443,8 +464,14 @@ Not caps — they measure the author, not the layout — and they block handover
 | section letters and step ids | a row not lettered in order or not showing its letter, a step not `<row letter><n>` in order (or, folded in from the page, the step before it plus the next letter), a Results step not `r<n>`, or a step outside every row and the Results section (§1.2b) |
 | emit: regex | a `data-emit` pair that is not `NAME=<regex>`, declares a name twice, does not compile, or has other than one capture group |
 | emit: dangling reference | a `{{<step>.<NAME>}}` whose step does not exist, or does not emit that name |
+| figure: inlined | a built page holds an `<img>` whose `src` is not an inlined PNG, JPEG, GIF or WebP |
+| figure: captioned | a `figure.shot` with no caption (§1.3e) |
+| figure: image in a figure | an `<img>` outside `figure.shot`, or a `figure.shot` with no `img` |
+| figure: placement | a figure on the card or the spine; on a drawing page, outside a depth section |
 
-`flowviz build` refuses the two emit failures too, so a token that can never resolve never ships.
+The figure caps — largest figure ≤1 MB, figure bytes ≤6 MB, caption ≤20 words — are measured beside these,
+only where a figure exists. `flowviz build` refuses the two emit failures too, so a token that can never
+resolve never ships, and refuses a missing, remote, oversize or non-image figure file.
 
 Reported, not blocking: **unused connection** — an edge no flow walks (it is still drawn; walk it in a flow
 or delete it); **emit: ordering** — a token whose producer is neither the step itself nor on its
@@ -452,7 +479,9 @@ or delete it); **emit: ordering** — a token whose producer is neither the step
 to overwrite: use an emit from the producing step instead; **order: prepares after a write** — outside a rollback row, a
 step below a write that takes a restore point (snapshot, backup, checkpoint, the current state saved), or
 says *before X* where a write above already does X (§1.3d); **order: data-after points down** — a step
-that waits on one below it; **steps added in the page** and **open to-dos**
+that waits on one below it; **figure: file outside the folder** — a figure named by an absolute, `~` or
+`..` path, which a rebuild elsewhere will not find (copy it into `shots/`); **figure: over 1 MB** — with
+the command that shrinks it; **steps added in the page** and **open to-dos**
 — read from the sidecar beside the page, when there is one: fold, reword or carry them (§1.3b).
 
 ---
@@ -463,7 +492,8 @@ that waits on one below it; **steps added in the page** and **open to-dos**
 - More than one `<details open>` in a report; any drawer or layer open at load in a drawing.
 - Prose above the verdict. The card is always the first thing on a report.
 - A command the reader must edit before running, unless its one sentence says so.
-- CDN `<script src>`, web fonts, remote images. Deliverables render offline, locked down, and in print.
+- CDN `<script src>`, web fonts, remote images. Deliverables render offline, locked down, and in print. A
+  picture is a file beside the source that the build inlines (§1.3e).
 - A colour, font stack or radius written anywhere outside the token layer.
 - Hand-written layout coordinates in a drawing. Boxes go on the grid; the runtime draws.
 
@@ -567,7 +597,7 @@ server answers `409` to a tab still carrying the old ids instead of letting it w
 | Bump | Means |
 |---|---|
 | patch | CSS, wording, bug fix |
-| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand; 3.3.0 put playbooks in run order) |
+| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand; 3.3.0 put playbooks in run order; 3.4.0 added figures the author shows, with their own caps, and `flowviz shot`) |
 | major | a cap changes, or the card or spine shape changes, or the audit starts failing reports it passed (1.0.0 labelled every row; 2.0.0 made flows optional; 3.0.0 named rows and steps by letter and number) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then
@@ -593,7 +623,8 @@ $F captures ~/work/sto/STO.html         # read back captures, notes, added steps
 $F fold ~/work/sto/STO.src.html         # steps the human added, into the source under the same ids
 $F results ~/work/sto/STO.src.html      # once it has run: start the Results section
 $F relabel ~/work/sto/STO.src.html      # an older report onto a, b, c and b1, b2, state included
+$F shot https://grafana.example.test/d/x --out ~/work/sto/shots/latency.png   # a figure's picture, by headless Chrome
 ```
 
-Authors edit `.src.html`. The built `.html` is one file: no asset paths, no network. Deliverables are
-generated into the folder the work is in; this repository is the toolkit they are cut from.
+Authors edit `.src.html`. The built `.html` is one file: no asset paths, no network, every figure inlined.
+Deliverables are generated into the folder the work is in; this repository is the toolkit they are cut from.

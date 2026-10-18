@@ -5,18 +5,24 @@
 
 Inlines template/flow.css + draw.css at <!-- flowviz:head --> (after a boot script that sets
 the theme before first paint), the icon sprite + flow.js + draw.js at <!-- flowviz:js -->, and a
-provenance footer at <!-- flowviz:foot -->. Every drawing spec is parsed first, so a broken spec
-fails here rather than in the human's browser. The previous output, if any, is copied to
-<dir>/.flowviz/history/<doc>/<UTC>.html before it is overwritten.
+provenance footer at <!-- flowviz:foot -->. Every <img src> — a figure the author shows — is read from
+beside the source and inlined as a data URI, so the page stays one file. Every drawing spec is parsed
+first, so a broken spec fails here rather than in the human's browser. The previous output, if any, is
+copied to <dir>/.flowviz/history/<doc>/<UTC>.html before it is overwritten.
 """
 import argparse
+import base64
 import datetime
+import hashlib
+import html
 import json
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
+import urllib.parse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE = os.path.join(ROOT, 'template')
@@ -100,7 +106,7 @@ def check_specs(src):
 TOKEN_MAP = {':root': '.fvx', '[data-theme="dark"]': '.fvx[data-theme="dark"]',
              '[data-kind="drawing"]': '.fvx', '[data-kind="drawing"][data-theme="dark"]': '.fvx[data-theme="dark"]'}
 CORE_OK = re.compile(r'^(p|ul|ol|li|b|strong|a|em|code|pre|table|thead|tbody|tr|th|td|h3|\.box|\.cmd|\.copy'
-                     r'|\.expect|details\.more|\.c|\.k|\.badge)(?![\w-])')
+                     r'|\.expect|details\.more|\.c|\.k|\.badge|figure\.shot)(?![\w-])')
 
 
 def split_css(css):
@@ -169,6 +175,130 @@ def check_emits(src):
         die('emits do not resolve — nothing was written:\n  ' + '\n  '.join(bad + dangling))
 
 
+# ── figures: every <img src> becomes a data URI, so the page stays one file ──
+# A figure (SPEC §1.3e) is <figure class="shot"><img src="shots/x.png"><figcaption>…</figcaption></figure>.
+# The file is read here, relative to the source, and inlined with its type, size, sha256 and pixel
+# size on the tag, so the page opens from Finder, prints and travels with nothing beside it. A remote
+# image never ships (SPEC §4), and nothing over 10 MB is inlined: the audit fails a figure over 1 MB.
+IMG_TAG = re.compile(r'<img\b[^>]*>', re.I)
+ATTR = re.compile(r'''\s+([^\s"'=<>/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'<>`]+)))?''')
+FIGURE = re.compile(r'<figure\b[^>]*\bclass="[^"]*\bshot\b[^"]*"[^>]*>(.*?)</figure>', re.S | re.I)
+CAPTION = re.compile(r'<figcaption\b[^>]*>(.*?)</figcaption>', re.S | re.I)
+IMG_MAX = 10 * 1024 * 1024
+SOF = {0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf}
+
+
+def image_info(data):
+    """(mime, width, height) read from the first bytes of a PNG, JPEG, GIF or WebP; None for anything else."""
+    if data[:8] == b'\x89PNG\r\n\x1a\n' and data[12:16] == b'IHDR':
+        w, h = struct.unpack('>II', data[16:24])
+        return 'image/png', w, h
+    if data[:6] in (b'GIF87a', b'GIF89a'):
+        w, h = struct.unpack('<HH', data[6:10])
+        return 'image/gif', w, h
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        chunk = data[12:16]
+        if chunk == b'VP8 ' and len(data) >= 30:
+            w, h = struct.unpack('<HH', data[26:30])
+            return 'image/webp', w & 0x3fff, h & 0x3fff
+        if chunk == b'VP8L' and len(data) >= 25:
+            n = data[21] | data[22] << 8 | data[23] << 16 | data[24] << 24
+            return 'image/webp', (n & 0x3fff) + 1, ((n >> 14) & 0x3fff) + 1
+        if chunk == b'VP8X' and len(data) >= 30:
+            return ('image/webp', 1 + (data[24] | data[25] << 8 | data[26] << 16),
+                    1 + (data[27] | data[28] << 8 | data[29] << 16))
+        return 'image/webp', 0, 0
+    if data[:3] == b'\xff\xd8\xff':
+        i = 2
+        while i + 9 < len(data):
+            if data[i] != 0xff:
+                i += 1
+                continue
+            marker = data[i + 1]
+            if marker == 0xff:
+                i += 1
+                continue
+            if marker in (0x01, 0xd8) or 0xd0 <= marker <= 0xd7:
+                i += 2
+                continue
+            if marker in SOF:
+                h, w = struct.unpack('>HH', data[i + 5:i + 9])
+                return 'image/jpeg', w, h
+            i += 2 + struct.unpack('>H', data[i + 2:i + 4])[0]
+        return 'image/jpeg', 0, 0
+    return None
+
+
+def inline_images(src, base):
+    """Every <img> whose src is a file: read it, inline it, and stamp the tag with what it was.
+    Returns the new source, the count and the total bytes inlined."""
+    figs = [(m.start(), m.end(), CAPTION.search(m.group(1))) for m in FIGURE.finditer(src)]
+    # the scaffold's own comments show the shape, <img src="shots/ready.png"> included: not a figure
+    comments = [(m.start(), m.end()) for m in re.finditer(r'<!--.*?-->', src, re.S)]
+
+    def caption_at(pos):
+        for s, e, c in figs:
+            if s <= pos < e:
+                return re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', '', c.group(1)))).strip() if c else ''
+        return None
+
+    out, last, count, total = [], 0, 0, 0
+    for m in IMG_TAG.finditer(src):
+        if any(s <= m.start() < e for s, e in comments):
+            continue
+        tag = m.group(0)
+        attrs = [[am.group(1), next((v for v in am.group(2, 3, 4) if v is not None), None)]
+                 for am in ATTR.finditer(tag[4:].rstrip('>').rstrip('/'))]
+        d = {k.lower(): v for k, v in attrs}
+        ref = html.unescape(d.get('src') or '')
+        line = src.count('\n', 0, m.start()) + 1
+        if ref.startswith('data:'):
+            continue
+        if not ref:
+            die('the <img> at line %d has no src' % line)
+        if re.match(r'^[a-z][a-z0-9+.-]*:', ref, re.I):
+            die('the image at line %d is remote (%s): a page renders offline, so a figure is a file beside '
+                'the source, inlined here' % (line, ref[:70]))
+        path = os.path.expanduser(urllib.parse.unquote(ref))
+        if not os.path.isabs(path):
+            path = os.path.join(base, path)
+        if not os.path.isfile(path):
+            die('the image at line %d is missing: %s (looked for %s)' % (line, ref, path))
+        with open(path, 'rb') as f:
+            data = f.read()
+        info = image_info(data)
+        if not info:
+            die('the image at line %d is not a PNG, JPEG, GIF or WebP: %s' % (line, ref))
+        if len(data) > IMG_MAX:
+            die('the image at line %d is %.1f MB and is not inlined; a figure may be 1 MB. Shrink it first: '
+                'sips -Z 1600 %s --out %s' % (line, len(data) / 1048576, ref, ref))
+        mime, w, h = info
+
+        def put(name, val):
+            for kv in attrs:
+                if kv[0].lower() == name:
+                    kv[1] = val
+                    return
+            attrs.append([name, val])
+        caption = caption_at(m.start())
+        if not (d.get('alt') or '').strip() and caption:
+            put('alt', html.escape(caption, quote=True))
+        put('src', 'data:%s;base64,%s' % (mime, base64.b64encode(data).decode('ascii')))
+        if w and h and 'width' not in d and 'height' not in d:
+            put('width', str(w))
+            put('height', str(h))
+        put('data-file', d['src'])
+        put('data-sha256', hashlib.sha256(data).hexdigest())
+        put('data-bytes', str(len(data)))
+        out.append(src[last:m.start()])
+        out.append('<img' + ''.join(' %s="%s"' % (k, v) if v is not None else ' ' + k for k, v in attrs) + '>')
+        last = m.end()
+        count += 1
+        total += len(data)
+    out.append(src[last:])
+    return ''.join(out), count, total
+
+
 def boot(doc, version, kind, built):
     flow = json.dumps({'doc': doc, 'version': version, 'kind': kind, 'built': built})
     return ('<script>window.FLOW=%s;\n'
@@ -227,6 +357,7 @@ def main():
         die('the doc id "%s" must match [A-Za-z0-9][A-Za-z0-9._-]*' % doc)
     drawings = check_specs(src)
     check_emits(src)
+    src, figures, fig_bytes = inline_images(src, os.path.dirname(src_path))
 
     built = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     sha = git_sha()
@@ -254,8 +385,11 @@ def main():
     if shown.startswith('..'):
         shown = out_path.replace(os.path.expanduser('~'), '~', 1)
     note = ' · snapshot %s' % os.path.relpath(snapshot, os.path.dirname(out_path)) if snapshot else ''
-    print('built %s  (%s · %d drawing%s · %.0f KB%s)' % (shown, kind, drawings,
-          '' if drawings == 1 else 's', size, note))
+    figs = (' · %d figure%s, %s inlined' % (figures, '' if figures == 1 else 's',
+            '%.1f MB' % (fig_bytes / 1048576) if fig_bytes >= 1048576 else '%d KB' % round(fig_bytes / 1024))
+            if figures else '')
+    print('built %s  (%s · %d drawing%s%s · %.0f KB%s)' % (shown, kind, drawings,
+          '' if drawings == 1 else 's', figs, size, note))
 
 
 if __name__ == '__main__':

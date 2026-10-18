@@ -1967,15 +1967,8 @@
     if (!imgs.length) return;
     k = (k + imgs.length) % imgs.length;
     viewAt = { id: id, k: k };
-    if (!viewer) {
-      viewer = document.createElement('div');
-      viewer.className = 'ci-view';
-      viewer.setAttribute('role', 'dialog');
-      viewer.setAttribute('aria-modal', 'true');
-      document.body.appendChild(viewer);
-    }
     var rec = imgs[k];
-    viewer.innerHTML = '<div class="ci-box"><img alt="' + escHtml(rec.caption || '') + '">' +
+    viewerBox().innerHTML = '<div class="ci-box"><img alt="' + escHtml(rec.caption || '') + '">' +
       '<div class="ci-bar"><b>' + id + '·' + (k + 1) + '</b><span>' + escHtml(rec.caption || '') + '</span>' +
       '<code title="' + rec.sha256 + '">sha256 ' + rec.sha256.slice(0, 6) + '…' + rec.sha256.slice(-4) + '</code>' +
       '<span>' + rec.w + '×' + rec.h + ' · ' + kb(rec.bytes) + (rec.src ? ', compressed from ' + kb(rec.src.bytes) : '') + ' · ' + ptTime(rec.at) + '</span>' +
@@ -1984,6 +1977,16 @@
     viewer.hidden = false;
   }
   function closeViewer() { if (viewer) viewer.hidden = true; viewAt = null; }
+  function viewerBox() {
+    if (!viewer) {
+      viewer = document.createElement('div');
+      viewer.className = 'ci-view';
+      viewer.setAttribute('role', 'dialog');
+      viewer.setAttribute('aria-modal', 'true');
+      document.body.appendChild(viewer);
+    }
+    return viewer;
+  }
 
   /* ── the verdict, set by hand: the chip at a step's foot is a button ─────── */
   function openOverride(id) {
@@ -2078,6 +2081,81 @@
     });
   }
 
+  /* ── figures: pictures the author shows (SPEC §1.3e) ───────────────────────
+     <figure class="shot"><img …><figcaption>…</figcaption></figure>, inlined by
+     the build with data-file, data-sha256, data-bytes, width and height on the
+     img. At rest: a thumbnail and its caption. Click, Enter or Space opens it
+     full size in the viewer the evidence images use; ← → walk the figures of the
+     same step, row or depth section. Delegated, and on every page kind: on a
+     drawing page a figure sits in a depth section and is cloned into the drawer,
+     and the viewer's keys must win over the drawing's while it is open.        */
+  function shotMeta(img) {
+    var w = img.getAttribute('width'), h = img.getAttribute('height'), b = +img.dataset.bytes || 0;
+    return [img.dataset.file || '', w && h ? w + '×' + h : '', b ? kb(b) : ''].filter(Boolean).join(' · ');
+  }
+  function shotCaption(img) {
+    var fig = img.closest('figure.shot'), fc = fig && $('figcaption', fig), t = '';
+    if (fc) Array.prototype.forEach.call(fc.childNodes, function (n) {
+      if (!(n.classList && n.classList.contains('shot-mt'))) t += n.textContent || '';
+    });
+    return t.replace(/\s+/g, ' ').trim() || img.alt || '';
+  }
+  function renderShots() {
+    $$('figure.shot img').forEach(function (img) {
+      if (img.hasAttribute('tabindex')) return;
+      img.setAttribute('tabindex', '0'); img.setAttribute('role', 'button'); img.title = 'Open full size';
+      var fig = img.closest('figure.shot'), fc = fig && $('figcaption', fig);
+      if (fc && !$('.shot-mt', fc)) {
+        var m = document.createElement('span');
+        m.className = 'shot-mt'; m.setAttribute('data-sha', img.dataset.sha256 || ''); m.textContent = shotMeta(img);
+        fc.appendChild(m);
+      }
+    });
+  }
+  function shotGroup(img) {
+    var scope = img.closest('li.step') || img.closest('details.row') || img.closest('.fv-drawer') ||
+                img.closest('section') || document.body;
+    return $$('figure.shot img', scope);
+  }
+  function openShot(list, k) {
+    if (!list || !list.length) return;
+    k = (k + list.length) % list.length;
+    var img = list[k], sha = img.dataset.sha256 || '';
+    viewAt = { shots: list, k: k };
+    viewerBox().innerHTML = '<div class="ci-box"><img alt="' + escHtml(img.alt || '') + '">' +
+      '<div class="ci-bar"><b class="au">figure' + (list.length > 1 ? ' ' + (k + 1) + ' of ' + list.length : '') + '</b>' +
+      '<span>' + escHtml(shotCaption(img)) + '</span>' +
+      (sha ? '<code title="' + sha + '">sha256 ' + sha.slice(0, 6) + '…' + sha.slice(-4) + '</code>' : '') +
+      '<span>' + escHtml(shotMeta(img)) + '</span>' +
+      '<span class="ci-keys">' + (list.length > 1 ? '← → · ' : '') + 'esc</span></div></div>';
+    $('img', viewer).src = img.currentSrc || img.src;
+    viewer.hidden = false;
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (viewer && !viewer.hidden && (t === viewer || t.closest('.ci-box'))) { closeViewer(); return; }
+    var img = t.closest('figure.shot img');
+    if (img) { e.preventDefault(); openShot(shotGroup(img), shotGroup(img).indexOf(img)); }
+  });
+  document.addEventListener('keydown', function (e) {
+    var t = e.target || {};
+    if (viewer && !viewer.hidden) {
+      if (e.key === 'Escape') closeViewer();
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        var d = e.key === 'ArrowRight' ? 1 : -1;
+        if (viewAt && viewAt.shots) openShot(viewAt.shots, viewAt.k + d);
+        else if (viewAt) openViewer(viewAt.id, viewAt.k + d);
+      }
+      else return;
+      e.preventDefault(); e.stopImmediatePropagation();      // the viewer, not a drawing, owns the keys while open
+      return;
+    }
+    if ((e.key === 'Enter' || e.key === ' ') && t.matches && t.matches('figure.shot img')) {
+      e.preventDefault(); openShot(shotGroup(t), shotGroup(t).indexOf(t));
+    }
+  }, true);
+
   /* ── events ─────────────────────────────────────────────────────────────── */
   if (KIND !== 'drawing') {
     // a picture pasted into a paste box; text on the clipboard still pastes as text
@@ -2127,7 +2205,6 @@
     document.addEventListener('click', function (e) {
       var t = e.target;
       if (!t || !t.closest) return;
-      if (viewer && !viewer.hidden && (t === viewer || t.closest('.ci-box'))) { closeViewer(); return; }
       var chip = t.closest('.vd[data-vd]');
       if (chip && !chip.closest('section.results')) { openOverride(chip.dataset.vd); return; }
       var b = t.closest('[data-ev]');
@@ -2172,13 +2249,7 @@
     });
     document.addEventListener('keydown', function (e) {
       var t = e.target || {};
-      if (viewer && !viewer.hidden) {
-        if (e.key === 'Escape') closeViewer();
-        else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') openViewer(viewAt.id, viewAt.k + (e.key === 'ArrowRight' ? 1 : -1));
-        else return;
-        e.preventDefault(); e.stopImmediatePropagation();      // the viewer, not a drawing, owns the keys while open
-        return;
-      }
+      if (viewer && !viewer.hidden) return;                    // the viewer's own handler, above, has the keys
       if ((e.key === 'Enter' || e.key === ' ') && t.matches && t.matches('.vd[data-vd]')) { e.preventDefault(); openOverride(t.dataset.vd); return; }
       var p = t.closest && t.closest('.ovr');
       if (p && e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); p.remove(); return; }
@@ -2223,6 +2294,7 @@
     applyTheme(); save();
   });
   renderAdditions();
+  renderShots();
   hydrate();
   sendKept();
   live = true;          // from here on, a verdict changing means the human did it
@@ -2308,6 +2380,15 @@
     if (resEl) {
       var rs = resH / window.innerHeight;
       rows.push(['results screens', rs.toFixed(1), '≤ 1.5', rs <= 1.5]);
+    }
+    /* figures the author shows: bytes, because the page is one file (SPEC §1.3e);
+       the same two caps as bin/flowviz-audit.py */
+    var shots = $$('figure.shot img');
+    if (shots.length) {
+      var fb = shots.map(function (i) { return +i.dataset.bytes || 0; });
+      var tot = fb.reduce(function (x, y) { return x + y; }, 0), big = Math.max.apply(null, fb);
+      rows.push(['largest figure', kb(big), '≤ 1 MB', big <= 1048576]);
+      rows.push(['figure bytes', kb(tot) + ' (' + shots.length + ')', '≤ 6 MB', tot <= 6291456]);
     }
 
     // drawings (and anything else that registered) add their own rows

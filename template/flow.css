@@ -658,8 +658,9 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
   border-radius:var(--r2);background:var(--magbg);color:var(--mag);font:600 13px var(--f-ui);pointer-events:none}
 .cap-drop small{font:11px var(--f-ui);color:var(--dim);font-weight:400}
 .cap-drop .cd-g{font:700 18px/1 var(--f-ui)}
-/* one image, open: the picture, then what it is and where it lives */
-.ci-view{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:28px;
+/* one image, open: the picture, then what it is and where it lives. Above the drawing's drawer (70),
+   because a figure in a depth section opens from inside it; below its toast (80). */
+.ci-view{position:fixed;inset:0;z-index:75;display:flex;align-items:center;justify-content:center;padding:28px;
   background:rgba(10,12,16,.62);cursor:zoom-out}
 .ci-view[hidden]{display:none}
 .ci-box{max-width:min(1200px,100%);max-height:100%;display:flex;flex-direction:column;background:var(--paper);
@@ -667,8 +668,32 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 .ci-box img{display:block;max-width:100%;max-height:calc(100vh - 120px);object-fit:contain;background:var(--sunk)}
 .ci-bar{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:8px 12px;font:12px var(--f-ui);color:var(--dim)}
 .ci-bar b{color:var(--mag)}
+.ci-bar b.au{color:var(--acc)}     /* the author's figure, not the human's evidence: ink, not violet */
 .ci-bar code{font-size:11px}
 .ci-keys{margin-left:auto;color:var(--mag)}
+
+/* ── figure: a picture the author shows ───────────────────────────────────────
+   <figure class="shot"><img><figcaption>: a screenshot of what the human should
+   see, or a photo that exists, inlined by the build with data-file, data-sha256,
+   data-bytes, width and height on the img. At rest it is a thumbnail 360px wide
+   with its caption, left-aligned so two sit side by side; it opens full size in
+   the evidence viewer above. The meta line (file · pixels · size · sha256) is
+   written by flow.js into the caption and shows only on paper.               */
+figure.shot{display:inline-block;vertical-align:top;width:min(100%,360px);margin:12px 10px 2px 0;
+  border:1px solid var(--line);border-radius:var(--r2);background:var(--panel);overflow:hidden}
+figure.shot img{display:block;width:100%;height:auto;max-height:360px;object-fit:cover;object-position:left top;
+  background:var(--sunk);cursor:zoom-in}
+figure.shot img:focus-visible{outline:2px solid var(--acc);outline-offset:-3px}
+figure.shot figcaption{padding:7px 11px 8px;border-top:1px solid var(--line);font:12.5px/1.5 var(--f-ui);color:var(--dim)}
+figure.shot figcaption b{color:var(--fg)}
+figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);margin-top:3px;word-break:break-all}
+@media print{
+  /* paper: every figure full width under its caption, with the file it came from and its hash */
+  figure.shot{display:block;width:auto;margin:8px 0;break-inside:avoid}
+  figure.shot img{max-height:none;object-fit:contain;cursor:auto}
+  figure.shot .shot-mt{display:block}
+  figure.shot .shot-mt::after{content:" · sha256 " attr(data-sha)}
+}
 
 /* the verdict is a button: click it to set it by hand */
 .vd[data-vd][role="button"]{cursor:pointer}

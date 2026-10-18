@@ -33,6 +33,7 @@ $F captures ~/work/sto/STO.html           # later: what they pasted (text and im
 $F fold ~/work/sto/STO.src.html           # the steps they added in the page, into the source, same ids
 $F results ~/work/sto/STO.src.html        # once they have run it all: start the Results section
 $F relabel ~/work/sto/STO.src.html        # an older report onto a, b, c and b1, b2: what was pasted moves too
+$F shot https://host/admin --out ~/work/sto/shots/ready.png   # a screenshot for a figure, by headless Chrome
 ```
 
 The deliverable lives in **the folder the work is in**; this repository is only the toolkit. Nothing is
@@ -47,9 +48,9 @@ Claude's; a model of the same class serves the same role.
 
 | Tier | Role | Does | Never |
 |---|---|---|---|
-| **Opus agent, or equivalent** | **Lead** | decides what to make and what it claims: title, verdict, so-what, vitals, next; the rows, their kinds and their order; every step's sentence, blast radius, pass and fail conditions and run order; a drawing's boxes, zones, segments, and whether it has flows. Reads what the human pasted, opens every image, judges a verdict set by hand, decides the Results | lets the audit decide for it: a split, a dropped row, a reworded claim is the Lead's call |
-| **Sonnet agent, or equivalent** | **Builder** | turns the brief into a deliverable that audits clean: `flowviz new`, every slot written in the template's shape, regexes anchored, emits declared, boxes placed until nothing crosses, depth sections, `fold`, `relabel`; fixes every OVER and FAIL **whose fix leaves the meaning unchanged** | changes a claim, drops a row, splits a report, moves a step after handover, renames an id, or works around the runtime |
-| **Haiku agent, or equivalent** | **Runner** | runs what it is given, exactly as written, and returns the output word for word: `build`, `audit --browser` (`--json` when asked), the parse checks, `serve`, `captures`, screenshots in light, dark and print, counts | decides, summarises, retries with a variation, edits a file, or runs a step of the human's playbook |
+| **Opus agent, or equivalent** | **Lead** | decides what to make and what it claims: title, verdict, so-what, vitals, next; the rows, their kinds and their order; every step's sentence, blast radius, pass and fail conditions and run order; which screens get a figure and what each caption says to look at; a drawing's boxes, zones, segments, and whether it has flows. Reads what the human pasted, opens every image, judges a verdict set by hand, decides the Results | lets the audit decide for it: a split, a dropped row, a reworded claim is the Lead's call |
+| **Sonnet agent, or equivalent** | **Builder** | turns the brief into a deliverable that audits clean: `flowviz new`, every slot written in the template's shape, regexes anchored, emits declared, figures placed and captioned, boxes placed until nothing crosses, depth sections, `fold`, `relabel`; fixes every OVER and FAIL **whose fix leaves the meaning unchanged** | changes a claim, drops a row, splits a report, moves a step after handover, renames an id, or works around the runtime |
+| **Haiku agent, or equivalent** | **Runner** | runs what it is given, exactly as written, and returns the output word for word: `build`, `audit --browser` (`--json` when asked), the parse checks, `serve`, `captures`, `shot` of a named address into a named file, screenshots in light, dark and print, counts | decides, summarises, retries with a variation, edits a file, or runs a step of the human's playbook |
 
 A brief going down carries the file paths, the exact commands and what to return. The Builder's brief
 carries the Lead's decisions in the slots they belong in; the Builder returns the audit's result line and
@@ -248,6 +249,34 @@ which the toolkit refuses to install: **they are yours**, and so is a pass condi
 real output can actually falsify. Something **shown, not run** — a JSON sample, a tree, a log — is
 `<div class="cmd fig">`: dashed, no copy button, exempt. Never use it to smuggle a command past the audit.
 
+### Show them what they should see: figures
+
+A step that ends at a screen — a wizard page, a dashboard, a dialog with one line to read — gets a picture
+of that screen beside it. So does a row that argues from a photo that already exists. The picture is yours
+(the human's pictures are evidence, pasted into a step); it is a **figure**:
+
+```html
+<figure class="shot"><img src="shots/ready-page.png"><figcaption><b>The Ready page:</b> the version line must read 12.149 before you click Install.</figcaption></figure>
+```
+
+- **Where**: in a row's body, in a step's `div.in` (after the `expect` line reads best), or in a drawing's
+  depth section — never on the card or the spine, which are read at rest. The audit fails it there.
+- **The file** sits beside the source in `<dir>/shots/`, and `build` inlines it, so the page stays one file.
+  The `src` is never a URL: `build` refuses one, as it refuses a missing file and anything over 10 MB. The
+  audit notes a path outside the folder, which a rebuild elsewhere would not find.
+- **The caption** is one sentence, ≤20 words, saying what to look at — not what the picture is of. It is
+  also the alt text.
+- **Caps**: ≤1 MB per figure, ≤6 MB per page. Shrink first (`sips -Z 1200 in.png --out in.png`), or shoot
+  smaller. A page that needs more pictures than that is two reports.
+- **Where the picture comes from.** `$F shot <url | file.html[?audit=1]> --out <dir>/shots/<name>.png`
+  (`--size 1440x900`, `--theme dark`) takes one by headless Chrome, of anything with an address: a dashboard,
+  an admin page, a built FLOW_VIZ page. A picture that already exists — a photo in the project, a prior run's
+  evidence (`captures` prints each image's absolute path under `<doc>.assets/`) — is copied into `shots/`.
+  A window on the human's own screen is theirs: ask them for the screenshot, or for `screencapture -i`
+  with them at the keyboard. Never a stock image, never a mock-up of a screen you have not seen.
+- **At rest** it is a thumbnail with its caption; a click opens it full size, ← → walk the step's figures,
+  and it prints full width with its file and hash. You write none of that.
+
 ### A value one step prints, used by a later command
 
 When a later command needs something an earlier step printed — a version, an id, a path — don't make the
@@ -298,6 +327,7 @@ All exist in the stylesheet. Use the class; never write CSS.
 | Callout | `<div class="box key\|ok\|warn\|bad"><p>…</p></div>` |
 | Command | `<div class="cmd"><button class="copy">copy</button><pre><code>…</code></pre></div>` |
 | Figure, not a command | `<div class="cmd fig"><pre><code>…</code></pre></div>` |
+| Picture they should see | `<figure class="shot"><img src="shots/x.png"><figcaption>…</figcaption></figure>` — inlined by `build` |
 | Nested disclosure | `<details class="more"><summary>label</summary><div class="in">…</div></details>` |
 | Table | plain `<table><thead><tr><th>` |
 | Plain checkbox | `<label class="chk"><input type="checkbox" data-ck="id"><span>…</span></label>` |
@@ -429,8 +459,9 @@ not. Write depth sections knowing they may be read there too.
 
 `div.fv-depth > section[data-for="<key>"]` is layer 3 for one element, plain HTML with the report
 components: tables, `div.cmd` for anything to run (paste rules apply), `div.cmd.fig` for code to read,
-`div.box`. Keys: the box id, `edge:<id>`, `step:<id>`, and `<segment>/<key>` inside a segment. No
-section is required; the drawer always shows the peek, facts, the steps a box takes part in, and a note.
+`div.box`, and `figure.shot` for a picture (Figures, above), shown in the drawer. Keys: the box id,
+`edge:<id>`, `step:<id>`, and `<segment>/<key>` inside a segment. No section is required; the drawer
+always shows the peek, facts, the steps a box takes part in, and a note.
 
 ---
 
@@ -484,7 +515,8 @@ or to press **Copy captures for agent** and paste the block to you.
 5. **Don't rename an id** after handover — doc, row, step, drawing, box, connection or flow step. It
    orphans what the human typed. (`flowviz relabel` is the one safe move: it takes the state with it.)
 6. **Don't write a second sentence** into a step, a `say` or a peek. It goes one layer down.
-7. **Don't use a CDN, web font or remote image.** Deliverables render offline and in print.
+7. **Don't use a CDN, web font or remote image.** Deliverables render offline and in print; a picture is a
+   file beside the source that `build` inlines.
 8. **Don't skip the audit**, and don't raise a cap to pass it. Split the report; make a segment.
 9. **Don't overwrite a document your deliverable replaces** — an older write-up, a verbose page. Give yours
    another name beside it, so the two can be read together. Rebuilding your own deliverable in place is
@@ -493,7 +525,7 @@ or to press **Copy captures for agent** and paste the block to you.
 ## Worked examples
 
 ```
-~/Projects/FLOW_VIZ/PLAN.html                         a report with a drawing spine and a live checklist
+~/Projects/FLOW_VIZ/PLAN.html                         a report with a drawing spine, a live checklist and two figures
 ~/Projects/FLOW_VIZ/examples/checkout/checkout.html   a drawing: 10 boxes, 3 flows, a failure path, one segment
 ~/Projects/FLOW_VIZ/examples/deploy/DEPLOY.html       a report after its run: Results on top, a value b1 printed used by c1
 ```

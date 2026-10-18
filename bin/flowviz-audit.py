@@ -1003,6 +1003,104 @@ def order_checks(doc):
     return late, down
 
 
+# ── figures: pictures the author shows (SPEC §1.3e) ────────────────────────────
+FIG_MAX, PAGE_MAX, CAPTION_MAX = 1 << 20, 6 << 20, 20
+DATA_URI = re.compile(r'^data:(image/(?:png|jpeg|gif|webp));base64,(.*)$', re.S)
+
+
+def kb(n):
+    return '%.1f MB' % (n / 1048576) if n >= 1048576 else '%d KB' % max(1, round(n / 1024))
+
+
+def place_of(e):
+    """Where an element sits, in the words the author uses: step b3, row b, depth order, the card…"""
+    p = e.parent
+    while p is not None:
+        if p.tag == 'li' and p.has('step'):
+            return 'step %s' % p.attrs.get('data-step')
+        if p.tag == 'details' and p.has('row'):
+            return 'row %s' % p.attrs.get('data-row')
+        if p.tag == 'section' and 'data-for' in p.attrs:
+            return 'depth %s' % p.attrs['data-for']
+        if p.tag == 'section' and p.has('results'):
+            return 'the Results section'
+        if p.has('card'):
+            return 'the card'
+        if p.has('spine'):
+            return 'the spine'
+        p = p.parent
+    return 'the page'
+
+
+def figure_checks(a, doc, kind, path):
+    """A figure is <figure class="shot"><img><figcaption>: inlined by the build, captioned, and never on
+    the card or the spine (or, on a drawing page, outside a depth section), where it would be read at
+    rest. Bytes are measured because the page is one file; the caps are new in 3.4.0 and apply only
+    where a figure exists, so an older page audits as it did."""
+    S = 'figures'
+    imgs = doc.find(lambda e: e.tag == 'img')
+    figs = doc.find(lambda e: e.tag == 'figure' and e.has('shot'))
+    if not imgs and not figs:
+        return
+    built = not path.endswith('.src.html')
+    not_inlined, uncaptioned, stray, placed, outside, sizes, caps = [], [], [], [], [], [], []
+    for im in imgs:
+        fig = im.parent
+        while fig is not None and not (fig.tag == 'figure' and fig.has('shot')):
+            fig = fig.parent
+        name = ('figure in %s' if fig is not None else 'an <img> in %s') % place_of(fig if fig is not None else im)
+        src = im.attrs.get('src') or ''
+        m = DATA_URI.match(src)
+        if built and not m:
+            not_inlined.append('%s: src is "%s" — flowviz build inlines a file beside the source; a URL never ships'
+                               % (name, src[:60] or 'empty'))
+        elif m:
+            b64 = re.sub(r'\s+', '', m.group(2))
+            sizes.append((name, len(b64) * 3 // 4 - b64.count('=', -2)))
+        if fig is None:
+            stray.append('%s: not inside <figure class="shot"> — it has no caption and does not open full size' % name)
+        f = im.attrs.get('data-file') or ('' if built else src)
+        if f.startswith(('/', '~', '..')):
+            outside.append('%s: "%s" is outside the folder; a rebuild elsewhere will not find it — copy it into shots/'
+                           % (name, f[:60]))
+    for fig in figs:
+        name = 'figure in %s' % place_of(fig)
+        fc = fig.first(lambda e: e.tag == 'figcaption')
+        text = fc.text() if fc else ''
+        if not text:
+            uncaptioned.append('%s: no figcaption — one sentence saying what to look at' % name)
+        else:
+            caps.append((name, words(text)))
+        if not fig.first(lambda e: e.tag == 'img'):
+            stray.append('%s: holds no <img>' % name)
+        in_depth = fig.inside(cls('fv-depth'))
+        if kind == 'drawing' and not in_depth:
+            placed.append('%s: on a drawing page a figure lives in a depth section, where it is one click away' % name)
+        elif kind != 'drawing' and not in_depth and (fig.inside(cls('card')) or fig.inside(cls('spine'))):
+            placed.append('%s: a figure goes in a row, a step or a depth section — never on the card or the spine' % name)
+    if sizes:
+        big = max(sizes, key=lambda x: x[1])
+        total = sum(b for _, b in sizes)
+        a.cap(S, 'largest figure', kb(big[1]), '≤ 1 MB', big[1] <= FIG_MAX)
+        a.cap(S, 'figure bytes', '%s (%d figure%s)' % (kb(total), len(sizes), '' if len(sizes) == 1 else 's'),
+              '≤ 6 MB', total <= PAGE_MAX)
+        for name, b in sizes:
+            if b > FIG_MAX:
+                a.note(S, 'figure: over 1 MB', '%s (%s): shoot a smaller --size, or sips -Z 1200 <file> --out <file>'
+                       % (name, kb(b)))
+    elif not built:
+        a.unmeasured(S, 'figure bytes', 'measured on the built page')
+    if caps:
+        longest = max(caps, key=lambda x: x[1])
+        a.cap(S, 'longest caption (words)', longest[1], '≤ 20', longest[1] <= CAPTION_MAX)
+    a.check(S, 'figure: inlined', not_inlined)
+    a.check(S, 'figure: captioned', uncaptioned)
+    a.check(S, 'figure: image in a figure', stray)
+    a.check(S, 'figure: placement', placed)
+    for x in outside:
+        a.note(S, 'figure: file outside the folder', x)
+
+
 def additions_notes(a, doc, path):
     """What the human added in the page and the source does not hold yet. Reported, never blocking:
     the agent decides what each becomes, and `flowviz fold` writes steps in under their own ids."""
@@ -1118,6 +1216,7 @@ def main():
     if kind == 'drawing':
         a.unmeasured('page', 'screens at rest', 'needs layout: --browser')
     page_checks(a, doc, tpl_pages, unfilled)
+    figure_checks(a, doc, kind, o.file)
     if kind == 'report':
         additions_notes(a, doc, o.file)
     if o.browser:

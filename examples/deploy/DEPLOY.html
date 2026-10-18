@@ -7,7 +7,7 @@
 <meta name="flowviz-relabel" content='[{"at":"2026-09-29T17:36:34.236Z","rows":{"chg":"a","ship":"b","back":"c"},"steps":{"pre":"b1","push":"b2","health":"b3","smoke":"b4","rb":"c1","archive":"r1"}}]'>
 <meta name="flowviz-kind" content="report">
 <title>Notify v2.3 is ready for staging behind a one-command rollback</title>
-<script>window.FLOW={"doc": "deploy", "version": "3.3.0", "kind": "report", "built": "2026-10-08T19:57:13Z"};
+<script>window.FLOW={"doc": "deploy", "version": "3.4.0", "kind": "report", "built": "2026-10-10T05:46:33Z"};
 (function(){var h=document.documentElement;h.setAttribute("data-kind",FLOW.kind);try{var q=(location.search.match(/[?&]theme=(light|dark)/)||[])[1];var s=JSON.parse(localStorage.getItem("flowviz:"+FLOW.doc)||"{}"),u=s.ui||{};var t=q||u.theme||"auto";var d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);h.setAttribute("data-theme",d?"dark":"light");if(u.motion===false)h.classList.add("still");}catch(e){h.setAttribute("data-theme","light");}})();</script>
 <style>
 /* ===========================================================================
@@ -670,8 +670,9 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
   border-radius:var(--r2);background:var(--magbg);color:var(--mag);font:600 13px var(--f-ui);pointer-events:none}
 .cap-drop small{font:11px var(--f-ui);color:var(--dim);font-weight:400}
 .cap-drop .cd-g{font:700 18px/1 var(--f-ui)}
-/* one image, open: the picture, then what it is and where it lives */
-.ci-view{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:28px;
+/* one image, open: the picture, then what it is and where it lives. Above the drawing's drawer (70),
+   because a figure in a depth section opens from inside it; below its toast (80). */
+.ci-view{position:fixed;inset:0;z-index:75;display:flex;align-items:center;justify-content:center;padding:28px;
   background:rgba(10,12,16,.62);cursor:zoom-out}
 .ci-view[hidden]{display:none}
 .ci-box{max-width:min(1200px,100%);max-height:100%;display:flex;flex-direction:column;background:var(--paper);
@@ -679,8 +680,32 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 .ci-box img{display:block;max-width:100%;max-height:calc(100vh - 120px);object-fit:contain;background:var(--sunk)}
 .ci-bar{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:8px 12px;font:12px var(--f-ui);color:var(--dim)}
 .ci-bar b{color:var(--mag)}
+.ci-bar b.au{color:var(--acc)}     /* the author's figure, not the human's evidence: ink, not violet */
 .ci-bar code{font-size:11px}
 .ci-keys{margin-left:auto;color:var(--mag)}
+
+/* ── figure: a picture the author shows ───────────────────────────────────────
+   <figure class="shot"><img><figcaption>: a screenshot of what the human should
+   see, or a photo that exists, inlined by the build with data-file, data-sha256,
+   data-bytes, width and height on the img. At rest it is a thumbnail 360px wide
+   with its caption, left-aligned so two sit side by side; it opens full size in
+   the evidence viewer above. The meta line (file · pixels · size · sha256) is
+   written by flow.js into the caption and shows only on paper.               */
+figure.shot{display:inline-block;vertical-align:top;width:min(100%,360px);margin:12px 10px 2px 0;
+  border:1px solid var(--line);border-radius:var(--r2);background:var(--panel);overflow:hidden}
+figure.shot img{display:block;width:100%;height:auto;max-height:360px;object-fit:cover;object-position:left top;
+  background:var(--sunk);cursor:zoom-in}
+figure.shot img:focus-visible{outline:2px solid var(--acc);outline-offset:-3px}
+figure.shot figcaption{padding:7px 11px 8px;border-top:1px solid var(--line);font:12.5px/1.5 var(--f-ui);color:var(--dim)}
+figure.shot figcaption b{color:var(--fg)}
+figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);margin-top:3px;word-break:break-all}
+@media print{
+  /* paper: every figure full width under its caption, with the file it came from and its hash */
+  figure.shot{display:block;width:auto;margin:8px 0;break-inside:avoid}
+  figure.shot img{max-height:none;object-fit:contain;cursor:auto}
+  figure.shot .shot-mt{display:block}
+  figure.shot .shot-mt::after{content:" · sha256 " attr(data-sha)}
+}
 
 /* the verdict is a button: click it to set it by hand */
 .vd[data-vd][role="button"]{cursor:pointer}
@@ -1739,8 +1764,8 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 </details>
 
 <div class="foot">
-<span class="v">FLOW-VIZ v3.3.0</span> · doc <code>deploy</code> · template <code>report@3.3.0</code> · built 2026-10-08 · sha <code>5f4966b</code> · state <code>deploy.flow.json</code>
-<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.3.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
+<span class="v">FLOW-VIZ v3.4.0</span> · doc <code>deploy</code> · template <code>report@3.4.0</code> · built 2026-10-10 · sha <code>cd77785+dirty</code> · state <code>deploy.flow.json</code>
+<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.4.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
 </div>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
 <!-- FLOW_VIZ icon sprite. Stroke icons on a 24 grid; draw.js references them as #i-<name>.
@@ -1981,6 +2006,18 @@ li.todo-item:hover .todo-acts,li.todo-item:focus-within .todo-acts{opacity:1}
 @media (prefers-reduced-motion:reduce){.fvx li.step .in .fin .vd.vdf,.fvx li.step .in .fin.forked .vd.vdf{filter:none;transition:opacity .15s ease}}
 @media (max-width:700px){.fvx li.todo-item{grid-template-columns:18px 30px 1fr}
 .fvx li.todo-item .todo-meta{grid-column:3;flex-wrap:wrap;white-space:normal}}
+.fvx figure.shot{display:inline-block;vertical-align:top;width:min(100%,360px);margin:12px 10px 2px 0;
+  border:1px solid var(--line);border-radius:var(--r2);background:var(--panel);overflow:hidden}
+.fvx figure.shot img{display:block;width:100%;height:auto;max-height:360px;object-fit:cover;object-position:left top;
+  background:var(--sunk);cursor:zoom-in}
+.fvx figure.shot img:focus-visible{outline:2px solid var(--acc);outline-offset:-3px}
+.fvx figure.shot figcaption{padding:7px 11px 8px;border-top:1px solid var(--line);font:12.5px/1.5 var(--f-ui);color:var(--dim)}
+.fvx figure.shot figcaption b{color:var(--fg)}
+.fvx figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);margin-top:3px;word-break:break-all}
+@media print{.fvx figure.shot{display:block;width:auto;margin:8px 0;break-inside:avoid}
+.fvx figure.shot img{max-height:none;object-fit:contain;cursor:auto}
+.fvx figure.shot .shot-mt{display:block}
+.fvx figure.shot .shot-mt::after{content:" · sha256 " attr(data-sha)}}
 @media print{.fvx thead{display:table-header-group}
 .fvx li.step[data-risk="w"]:not(.acked) .cmd pre{filter:none;user-select:auto}
 .fvx a{color:inherit;text-decoration:none}}
@@ -4424,15 +4461,8 @@ figure.fv-drawing{break-inside:avoid}
     if (!imgs.length) return;
     k = (k + imgs.length) % imgs.length;
     viewAt = { id: id, k: k };
-    if (!viewer) {
-      viewer = document.createElement('div');
-      viewer.className = 'ci-view';
-      viewer.setAttribute('role', 'dialog');
-      viewer.setAttribute('aria-modal', 'true');
-      document.body.appendChild(viewer);
-    }
     var rec = imgs[k];
-    viewer.innerHTML = '<div class="ci-box"><img alt="' + escHtml(rec.caption || '') + '">' +
+    viewerBox().innerHTML = '<div class="ci-box"><img alt="' + escHtml(rec.caption || '') + '">' +
       '<div class="ci-bar"><b>' + id + '·' + (k + 1) + '</b><span>' + escHtml(rec.caption || '') + '</span>' +
       '<code title="' + rec.sha256 + '">sha256 ' + rec.sha256.slice(0, 6) + '…' + rec.sha256.slice(-4) + '</code>' +
       '<span>' + rec.w + '×' + rec.h + ' · ' + kb(rec.bytes) + (rec.src ? ', compressed from ' + kb(rec.src.bytes) : '') + ' · ' + ptTime(rec.at) + '</span>' +
@@ -4441,6 +4471,16 @@ figure.fv-drawing{break-inside:avoid}
     viewer.hidden = false;
   }
   function closeViewer() { if (viewer) viewer.hidden = true; viewAt = null; }
+  function viewerBox() {
+    if (!viewer) {
+      viewer = document.createElement('div');
+      viewer.className = 'ci-view';
+      viewer.setAttribute('role', 'dialog');
+      viewer.setAttribute('aria-modal', 'true');
+      document.body.appendChild(viewer);
+    }
+    return viewer;
+  }
 
   /* ── the verdict, set by hand: the chip at a step's foot is a button ─────── */
   function openOverride(id) {
@@ -4535,6 +4575,81 @@ figure.fv-drawing{break-inside:avoid}
     });
   }
 
+  /* ── figures: pictures the author shows (SPEC §1.3e) ───────────────────────
+     <figure class="shot"><img …><figcaption>…</figcaption></figure>, inlined by
+     the build with data-file, data-sha256, data-bytes, width and height on the
+     img. At rest: a thumbnail and its caption. Click, Enter or Space opens it
+     full size in the viewer the evidence images use; ← → walk the figures of the
+     same step, row or depth section. Delegated, and on every page kind: on a
+     drawing page a figure sits in a depth section and is cloned into the drawer,
+     and the viewer's keys must win over the drawing's while it is open.        */
+  function shotMeta(img) {
+    var w = img.getAttribute('width'), h = img.getAttribute('height'), b = +img.dataset.bytes || 0;
+    return [img.dataset.file || '', w && h ? w + '×' + h : '', b ? kb(b) : ''].filter(Boolean).join(' · ');
+  }
+  function shotCaption(img) {
+    var fig = img.closest('figure.shot'), fc = fig && $('figcaption', fig), t = '';
+    if (fc) Array.prototype.forEach.call(fc.childNodes, function (n) {
+      if (!(n.classList && n.classList.contains('shot-mt'))) t += n.textContent || '';
+    });
+    return t.replace(/\s+/g, ' ').trim() || img.alt || '';
+  }
+  function renderShots() {
+    $$('figure.shot img').forEach(function (img) {
+      if (img.hasAttribute('tabindex')) return;
+      img.setAttribute('tabindex', '0'); img.setAttribute('role', 'button'); img.title = 'Open full size';
+      var fig = img.closest('figure.shot'), fc = fig && $('figcaption', fig);
+      if (fc && !$('.shot-mt', fc)) {
+        var m = document.createElement('span');
+        m.className = 'shot-mt'; m.setAttribute('data-sha', img.dataset.sha256 || ''); m.textContent = shotMeta(img);
+        fc.appendChild(m);
+      }
+    });
+  }
+  function shotGroup(img) {
+    var scope = img.closest('li.step') || img.closest('details.row') || img.closest('.fv-drawer') ||
+                img.closest('section') || document.body;
+    return $$('figure.shot img', scope);
+  }
+  function openShot(list, k) {
+    if (!list || !list.length) return;
+    k = (k + list.length) % list.length;
+    var img = list[k], sha = img.dataset.sha256 || '';
+    viewAt = { shots: list, k: k };
+    viewerBox().innerHTML = '<div class="ci-box"><img alt="' + escHtml(img.alt || '') + '">' +
+      '<div class="ci-bar"><b class="au">figure' + (list.length > 1 ? ' ' + (k + 1) + ' of ' + list.length : '') + '</b>' +
+      '<span>' + escHtml(shotCaption(img)) + '</span>' +
+      (sha ? '<code title="' + sha + '">sha256 ' + sha.slice(0, 6) + '…' + sha.slice(-4) + '</code>' : '') +
+      '<span>' + escHtml(shotMeta(img)) + '</span>' +
+      '<span class="ci-keys">' + (list.length > 1 ? '← → · ' : '') + 'esc</span></div></div>';
+    $('img', viewer).src = img.currentSrc || img.src;
+    viewer.hidden = false;
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (viewer && !viewer.hidden && (t === viewer || t.closest('.ci-box'))) { closeViewer(); return; }
+    var img = t.closest('figure.shot img');
+    if (img) { e.preventDefault(); openShot(shotGroup(img), shotGroup(img).indexOf(img)); }
+  });
+  document.addEventListener('keydown', function (e) {
+    var t = e.target || {};
+    if (viewer && !viewer.hidden) {
+      if (e.key === 'Escape') closeViewer();
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        var d = e.key === 'ArrowRight' ? 1 : -1;
+        if (viewAt && viewAt.shots) openShot(viewAt.shots, viewAt.k + d);
+        else if (viewAt) openViewer(viewAt.id, viewAt.k + d);
+      }
+      else return;
+      e.preventDefault(); e.stopImmediatePropagation();      // the viewer, not a drawing, owns the keys while open
+      return;
+    }
+    if ((e.key === 'Enter' || e.key === ' ') && t.matches && t.matches('figure.shot img')) {
+      e.preventDefault(); openShot(shotGroup(t), shotGroup(t).indexOf(t));
+    }
+  }, true);
+
   /* ── events ─────────────────────────────────────────────────────────────── */
   if (KIND !== 'drawing') {
     // a picture pasted into a paste box; text on the clipboard still pastes as text
@@ -4584,7 +4699,6 @@ figure.fv-drawing{break-inside:avoid}
     document.addEventListener('click', function (e) {
       var t = e.target;
       if (!t || !t.closest) return;
-      if (viewer && !viewer.hidden && (t === viewer || t.closest('.ci-box'))) { closeViewer(); return; }
       var chip = t.closest('.vd[data-vd]');
       if (chip && !chip.closest('section.results')) { openOverride(chip.dataset.vd); return; }
       var b = t.closest('[data-ev]');
@@ -4629,13 +4743,7 @@ figure.fv-drawing{break-inside:avoid}
     });
     document.addEventListener('keydown', function (e) {
       var t = e.target || {};
-      if (viewer && !viewer.hidden) {
-        if (e.key === 'Escape') closeViewer();
-        else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') openViewer(viewAt.id, viewAt.k + (e.key === 'ArrowRight' ? 1 : -1));
-        else return;
-        e.preventDefault(); e.stopImmediatePropagation();      // the viewer, not a drawing, owns the keys while open
-        return;
-      }
+      if (viewer && !viewer.hidden) return;                    // the viewer's own handler, above, has the keys
       if ((e.key === 'Enter' || e.key === ' ') && t.matches && t.matches('.vd[data-vd]')) { e.preventDefault(); openOverride(t.dataset.vd); return; }
       var p = t.closest && t.closest('.ovr');
       if (p && e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); p.remove(); return; }
@@ -4680,6 +4788,7 @@ figure.fv-drawing{break-inside:avoid}
     applyTheme(); save();
   });
   renderAdditions();
+  renderShots();
   hydrate();
   sendKept();
   live = true;          // from here on, a verdict changing means the human did it
@@ -4765,6 +4874,15 @@ figure.fv-drawing{break-inside:avoid}
     if (resEl) {
       var rs = resH / window.innerHeight;
       rows.push(['results screens', rs.toFixed(1), '≤ 1.5', rs <= 1.5]);
+    }
+    /* figures the author shows: bytes, because the page is one file (SPEC §1.3e);
+       the same two caps as bin/flowviz-audit.py */
+    var shots = $$('figure.shot img');
+    if (shots.length) {
+      var fb = shots.map(function (i) { return +i.dataset.bytes || 0; });
+      var tot = fb.reduce(function (x, y) { return x + y; }, 0), big = Math.max.apply(null, fb);
+      rows.push(['largest figure', kb(big), '≤ 1 MB', big <= 1048576]);
+      rows.push(['figure bytes', kb(tot) + ' (' + shots.length + ')', '≤ 6 MB', tot <= 6291456]);
     }
 
     // drawings (and anything else that registered) add their own rows

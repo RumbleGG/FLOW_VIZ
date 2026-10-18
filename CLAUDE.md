@@ -28,7 +28,7 @@ equivalent, may run the test block at the end and relay it word for word.
 | `template/report.src.html` | report skeleton with scaffold markers | `flowviz new report` expands it |
 | `template/drawing.src.html` | drawing skeleton | `flowviz new drawing` fills it |
 | `bin/flowviz` | the one entry point; bare = cheat sheet | pure passthroughs |
-| `bin/flowviz-*.py` | new, build, audit, serve, captures, fold, results, relabel | stdlib Python 3 only |
+| `bin/flowviz-*.py` | new, build, audit, serve, captures, fold, results, relabel, shot | stdlib Python 3 only; `shot` and `audit --browser` drive the Chrome on this Mac |
 | `PLAN.src.html` → `PLAN.html` | the toolkit's own plan, written to the standard | must audit clean |
 | `examples/` | reference deliverables | rebuilt and audited with every change |
 
@@ -49,6 +49,11 @@ The build also writes `<script type="text/plain" id="fvEmbedCss">`: flow.css and
 one stylesheet scoped to `.fvx` (token blocks moved from `:root`, page-level rules dropped, core components
 prefixed), which `draw.js` puts into every **Copy HTML** snippet. Keep draw.css's own rules namespaced
 `fv-`: anything else is prefixed with `.fvx` by the transform, and a host page's classes must never collide.
+
+The build also inlines **every `<img>` outside a comment** (`inline_images()`): the file is read relative to
+the source, becomes a data URI, and the tag is stamped with `data-file`, `data-sha256`, `data-bytes`, `width`
+and `height`; a `figure.shot`'s caption becomes its `alt` when none is written. A missing or remote file, a
+non-image, or anything over 10 MB fails the build. The source keeps the path, so a rebuild re-reads the file.
 
 The boot script build writes is, in order: `window.FLOW={doc,version,kind,built}`; then, from
 `localStorage['flowviz:'+doc]`, set `data-theme` (`light`/`dark`, resolving `auto` with
@@ -126,6 +131,18 @@ instance variable `--flow`, set on the figure — never `--acc`, which is the pa
   `flowviz new` and `flowviz results`, and displayed by `flow.js` only for ids of that shape, so an older
   report keeps its counters until it is relabelled.
 - **The error tier exists twice** — `CMD_ERR` in `flow.js` and in `bin/flowviz-captures.py`. Change both.
+- **The figure caps exist twice** — `figure_checks()` in the audit and `buildAudit()` in `flow.js` (1 MB a
+  figure, 6 MB a page). Change both. The audit's other figure checks read the built page, so an `<img>` the
+  build did not inline is a failure there, never a broken picture in the human's browser.
+- **`CORE_OK` in the build decides which core components reach a wiki page** through Copy HTML. A report
+  component that may sit inside a depth section (`figure.shot` is one) must be in it, or it arrives unstyled.
+- **One viewer for two kinds of picture.** Evidence images (`openViewer`, `viewAt = {id, k}`) and figures
+  (`openShot`, `viewAt = {shots, k}`) share `.ci-view`; its click and key handlers are bound on every page
+  kind, in capture phase before the drawing's, because a figure in a depth section opens from inside the
+  drawer and the viewer must own ← → and Esc while it is up.
+- **Chrome often does not exit** after `--screenshot`, `--print-to-pdf` or `--dump-dom`. `shot` stops it once
+  the PNG ends in its IEND chunk and has stopped growing; the audit stops it once `</html>` has arrived. A new
+  Chrome call needs the same treatment, or it waits for a process that never ends.
 - **An added step's id (`b3a`) is read in four places** — `flow.js` (where it is drawn, and the label),
   `naming_checks()` in the audit, `plan()` in relabel, and `flowviz fold` (with `place_added()` in
   captures). Change them together. Fold cuts its markup from the template's `step-ro`/`step-w` blocks and
@@ -156,7 +173,12 @@ bin/flowviz build examples/checkout/checkout.src.html && bin/flowviz audit --bro
 bin/flowviz build PLAN.src.html && bin/flowviz audit --browser PLAN.html
 bin/flowviz new report "The toolkit scaffolds a report" --dir /tmp/fvt --rows 3 --steps 3
 bin/flowviz build /tmp/fvt/FVT.src.html; bin/flowviz audit /tmp/fvt/FVT.html   # must fail on unfilled slots only
+bin/flowviz shot "PLAN.html?audit=1" --out /tmp/fvt/shots/panel.png             # a PNG in seconds, Chrome stopped
 ```
+
+`PLAN.html` carries two figures (`shots/`): a build that drops one, or an audit that fails or stops measuring
+them, is a regression. The scaffold's row comment names `shots/ready.png`; a build that tries to inline it is
+reading comments.
 
 Look at every change in light, dark and print before calling it done. Headless Chrome reaches all three:
 `--screenshot --window-size=1440,1000` on `…html?theme=dark` (the boot script and `flow.js` honour a

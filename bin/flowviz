@@ -5,7 +5,7 @@ import sys
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(BIN)
-COMMANDS = ('new', 'build', 'audit', 'serve', 'captures', 'fold', 'results', 'relabel')
+COMMANDS = ('new', 'build', 'audit', 'serve', 'captures', 'fold', 'results', 'relabel', 'shot')
 
 
 def version():
@@ -25,7 +25,9 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
     2  write every slot. Keep the scaffold's ids: rows a, b, c...; a step is its row's letter + number
        (b1, b2 ... bn), never a word, never two letters. Order steps as the work must run: a snapshot,
        backup or other prerequisite goes above the write it serves, never after it.
-    3  $F build <dir>/<NAME>.src.html
+       A picture they should see goes in the row or step it belongs to, never on the card or spine:
+       <figure class="shot"><img src="shots/ready.png"><figcaption>one sentence</figcaption></figure>
+    3  $F build <dir>/<NAME>.src.html          inlines css, js, icons and every figure: one file
     4  $F audit --browser <dir>/<NAME>.html     fix every OVER and FAIL; split, never raise a cap
     5  parse-check every command yourself: bash -n · python3 -m py_compile · Parser::ParseFile
     6  $F serve <dir> --open                    hand over served; from Finder nothing reaches disk
@@ -55,6 +57,10 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
              · label <=16 chars · peek <=25 words
              · facts <=3 · connection label <=16 · words on canvas <=60 · crossings 0 · screens <=2
 
+  FIGURES  $F shot <url | file.html[?audit=1]> --out <dir>/shots/<name>.png [--size 1440x900] [--theme dark]
+           a screenshot by headless Chrome, of anything with an address: a dashboard, a built page. A picture
+           that exists (a photo, a prior run's <doc>.assets/<sha>.png) needs no shot: copy it into <dir>/shots/.
+           Each figure <=1 MB, a page <=6 MB, caption <=20 words saying what to look at; a URL never ships.
   PASTE-SAFE COMMANDS   no leading comment · ASCII only · nothing spans a line break · no blank lines
                         anchor every verdict literal: \bFull\b, never Full
                         a value an earlier step printed: data-emit="VER=VERSION ([0-9.]+)" on its textarea,
