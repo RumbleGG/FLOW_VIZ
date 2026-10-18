@@ -93,7 +93,7 @@ that adds `status`).
 
 Keep both entries. Rename this branch's heading
 
-`## Unreleased — branch \`visual-components\` · one outlined, illustrated look for every drawing`
+``## Unreleased — branch `visual-components` · one outlined, illustrated look for every drawing``
 
 to `## 3.6.0 — <date> · one outlined, illustrated look for every drawing` and put it **above** your 3.5.0 entry.
 
