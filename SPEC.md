@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 3.6.1** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 3.6.2** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -378,12 +378,14 @@ drawer, which also carries the peek.
 | Zone labels crossed by a connection | 0 — needs layout |
 | Peeks cut off | 0 — needs layout. Every box's and connection's peek must land whole inside the window, cut off by no ancestor |
 | Clicks that open no drawer | 0 — needs layout. A click at a box's middle must reach the box and open its drawer, with nothing covering either |
+| Labels covered or covering | 0 — needs layout. With Labels, Timings or both on, in every flow, every connection's chip must sit whole on the canvas with nothing drawn over it, and on no box, step, result mark, zone tag or other chip |
 | Screens at rest (drawing page) | ≤2 — needs layout |
 
-The last six are measured by `?audit=1` or `flowviz audit --browser`, which names each offender — the
+The last seven are measured by `?audit=1` or `flowviz audit --browser`, which names each offender — the
 pair that crosses, the box and its label that shrank, the peek and what cut it off, the box and what
-covered it; everything else is read from the spec without a browser. Peeks and clicks are the runtime's
-own behaviour: a failure there is the toolkit's fault, never the author's, and goes to the toolkit. The tiers — every canvas, a report's spine (and Results drawing), a report's detail — live in
+covered it, the chip and what it is under or on; everything else is read from the spec without a browser.
+Peeks, clicks and chips are the runtime's own behaviour: a failure there is the toolkit's fault, never the
+author's, and goes to the toolkit. The tiers — every canvas, a report's spine (and Results drawing), a report's detail — live in
 `TIER` in `draw.js` and `TIERS` in the audit.
 
 ### 2.3 Motion grammar

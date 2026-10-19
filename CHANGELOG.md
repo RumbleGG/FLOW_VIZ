@@ -3,6 +3,32 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.6.2 — 2026-10-19 · every connection label shows whole with Labels on
+
+**Why.** With Labels or Timings on, a drawing with a flow hid most of its connection labels: each chip sat in
+the connections' layer, under the boxes, the step discs and every later line, at the middle of its line,
+which is exactly where a step disc sits. On `checkout` with both layers on, 6 of its 9 chips were cut: five
+by the boxes either side and a step disc, one by a later line. The toggle showed labels nobody could read,
+and no check caught it.
+
+**The chips** (`template/draw.js`, `template/draw.css`). They move to their own layer, over the boxes, steps
+and marks, so nothing is drawn over them. `updateChips()` then places each one where it covers nothing,
+from `chipSpots()`: beside its line near the middle (above a run, right of a drop), the other side, on the
+line, or up to 56px off it with a thin leader back to its line, the leader slid along the chip until it
+clears every step and arrow. It never lands on a box, its corner marks or status tag, a step disc, a result
+mark, a zone's tag, an arrowhead, another chip or the canvas edge; hiding another line costs, so it is
+avoided where it can be. The hardest chips go first. A new flow places them again, since its steps move.
+The chip takes its connection's hover, selection, focus and walkthrough state through `edgeOn()`.
+
+**The audit reads every chip** (`chipsCovered()` in `draw.js`, `browser_rows()` in the audit). Each drawing
+gains **labels covered or covering**, measured on its root canvas with Labels, with Timings and with both
+on, in every flow: a chip something is drawn over (`elementFromPoint` across it), or one on a box, step,
+mark, zone tag or other chip, is named with what it is under or on. It is 0, the runtime's fault, and
+`flowviz audit --browser` relays it. It fails on three breakages: the chips back in the connections' layer
+(1 on `checkout`), placement blind to boxes and steps (9), and chips not placed again for a new flow (4).
+
+Patch: no cap, state or spec field changed. A page built before 3.6.2 keeps its old chips until it is rebuilt.
+
 ## 3.6.1 — 2026-10-19 · the peek is never cut off, and the audit tries both gestures
 
 **Why.** On a report's spine drawing, hovering a box showed a peek with its last lines missing: the peek

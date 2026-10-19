@@ -297,12 +297,15 @@
 @keyframes fv-march-a{to{stroke-dashoffset:-7.1}}
 .fv-drawing .edgeset.hov .edge .line,.fv-drawing .edgeset.sel .edge .line{stroke-width:3}
 
+/* a chip sits in its own layer over the boxes and steps, placed where it covers none of
+   them; it carries its connection's hov, sel, near and hot itself (edgeOn in draw.js) */
 .fv-drawing .chiplbl{opacity:0;transition:opacity .18s;pointer-events:none}
 .fv-drawing .chiplbl rect{fill:var(--paper);stroke:var(--line2);stroke-width:1.4}
+.fv-drawing .chiplbl .lead{fill:none;stroke:var(--line2);stroke-width:1.4;stroke-linecap:round}
 .fv-drawing .chiplbl text{fill:var(--fg);font:650 10.5px var(--f-mono)}
 .fv-drawing svg.show-labels .chiplbl,.fv-drawing svg.show-times .chiplbl{opacity:1}
-.fv-drawing .edgeset.hov .chiplbl,.fv-drawing .edgeset.sel .chiplbl,.fv-drawing svg.focus .edgeset.near .chiplbl{opacity:1}
-.fv-drawing svg.focus .edgeset:not(.near) .chiplbl,.fv-drawing svg.stepping .edgeset:not(.hot) .chiplbl{opacity:0}
+.fv-drawing .chiplbl.hov,.fv-drawing .chiplbl.sel,.fv-drawing svg.focus .chiplbl.near{opacity:1}
+.fv-drawing svg.focus .chiplbl:not(.near),.fv-drawing svg.stepping .chiplbl:not(.hot){opacity:0}
 
 /* a step number: a filled disc in the flow's colour, ringed in ink */
 .fv-drawing .stepno{cursor:pointer}

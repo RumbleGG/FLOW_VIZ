@@ -105,8 +105,10 @@ crossings, connections through boxes, and labels shrunk to fit — crossings and
 root canvas **and every segment** from the routing itself, labels measured in a hidden scratch SVG. Then
 `gestures()` tries the two gestures for real on the root canvas: every peek shown and placed by the
 runtime's own code (**peeks cut off**: by the window or a clipping ancestor), every box clicked at its
-middle through `elementFromPoint` (**clicks that open no drawer**). It puts back the scroll, view, Key and
-any `<details>` it opened.
+middle through `elementFromPoint` (**clicks that open no drawer**). Then `chipsCovered()` turns on Labels,
+Timings and both, in every flow, and reads every connection's chip the same way (**labels covered or
+covering**: something drawn over it, or it on a box, step, mark, zone tag or chip). It puts back the scroll,
+view, layers, flow, Key and any `<details>` it opened.
 
 ## Tokens
 
@@ -170,8 +172,15 @@ instance variable `--flow`, set on the figure — never `--acc`, which is the pa
   replaces only the placeholders it can fill, so the unfilled-slot check still catches the rest.
 - **The peek lives on `<body>`, fixed to the window**, one per drawing, placed by `placePeek()`. Never put it
   back inside the stage: the stage's `overflow:hidden` cut off 8 of 9 peeks on a three-row spine. The
-  audit's **peeks cut off** row catches exactly that. `browser_rows()` relays it and **clicks that open no
-  drawer** only because its regex names `peek|click`; a new gesture row needs its word there too.
+  audit's **peeks cut off** row catches exactly that. `browser_rows()` relays it, **clicks that open no
+  drawer** and **labels covered or covering** only because its regex names `peek|click|covered`; a new
+  gesture row needs its word there too.
+- **A connection's chip lives in `S.layer.chips`, over everything but the packets in flight**, and
+  `updateChips()` places it where it covers nothing, from `chipSpots()`. What it may never cover is collected
+  as it is drawn: `S.obs` (boxes, their corner marks and status tags, zone tags, arrowheads), `S.bobs` (step
+  discs) and `S.mobs` (result marks). Anything new drawn on the canvas must join one of them, and a new flow
+  must place the chips again (`applyFlow()` does). The chip carries its connection's `hov sel near hot`
+  through `edgeOn()`, never through the edge set it used to sit in.
 - **What the human adds is never the agent's budget.** `buildAudit()` in `flow.js` leaves out
   `li.step.added`, `.row-mark` and `section.todo`; anything new the page draws from state must be left
   out the same way, or a busy run pushes a clean report over its caps.
@@ -207,7 +216,9 @@ bin/flowviz audit --browser examples/pr/PR-418.html                             
 
 Every drawing's audit tries both gestures. To check that the check still bites, break a copy of a built
 page beside it and audit the copy: put the peek back in `R.stage`, drop `openDrawer` from `activate()`, lay a
-transparent `::after` over `.fv-stage`, or hide `.fv-drawer`. Each must fail with its boxes named.
+transparent `::after` over `.fv-stage`, or hide `.fv-drawer`. Each must fail with its boxes named. For the
+chips: put them back in the edge set, pass `chipSpots()` an empty `fixed`, or drop `updateChips()` from
+`applyFlow()`; each must fail **labels covered or covering** with the chips named.
 
 `PLAN.html` carries two figures (`shots/`): a build that drops one, or an audit that fails or stops measuring
 them, is a regression. `examples/pr/` is the PR helper: a fill that changes its source, or an audit that stops

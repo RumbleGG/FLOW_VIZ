@@ -269,6 +269,81 @@
     }
     return { x: pts[0].x, y: pts[0].y, horiz: true, len: total };
   }
+  /* ── where a connection's chip goes ──────────────────────────────────────
+     Chips are drawn over everything else, so a chip must never land on a box, a step,
+     a mark, a zone's tag or another chip. These list every place it may go and what
+     each costs; updateChips() takes the cheapest place that covers nothing. */
+  var CHIP_H = 18;
+  function disc(x, y, r) { return { x: x - r, y: y - r, w: 2 * r, h: 2 * r }; }
+  /* how much of a lands on b, with b grown by m on every side */
+  function area(a, b, m) {
+    var w = Math.min(a.x + a.w, b.x + b.w + m) - Math.max(a.x, b.x - m);
+    var h = Math.min(a.y + a.h, b.y + b.h + m) - Math.max(a.y, b.y - m);
+    return w > 0 && h > 0 ? w * h : 0;
+  }
+  /* an orthogonal stretch of line that runs under a chip */
+  function cuts(l, r) {
+    if (Math.abs(l.a.y - l.b.y) < 0.5) {
+      return l.a.y > r.y - l.pad && l.a.y < r.y + r.h + l.pad && Math.max(l.a.x, l.b.x) > r.x && Math.min(l.a.x, l.b.x) < r.x + r.w;
+    }
+    return l.a.x > r.x - l.pad && l.a.x < r.x + r.w + l.pad && Math.max(l.a.y, l.b.y) > r.y && Math.min(l.a.y, l.b.y) < r.y + r.h;
+  }
+  /* Every 4px along the connection: beside it (above a run, right of a drop), the other
+     side, on the line, and up to 56px further off with a leader back to it, the leader
+     slid along the chip until it clears every step and mark. The cost grows with distance
+     from the connection's middle, the less-liked side, every px off the line, and every
+     other line the chip would hide; `hard` is how much of the chip lands on what it may
+     never cover (`fixed`, grown by 3px) or off the canvas, or a leader with no clear way. */
+  function chipSpots(id, pts, both, w, W, H, lines, fixed) {
+    var half = (both ? G.lane : 0) + 1.5, total = 0, run = 0, out = [], i;
+    for (i = 0; i < pts.length - 1; i++) total += Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+    function onFixed(r, m) { return fixed.reduce(function (s, o) { return s + area(r, o, m); }, 0); }
+    /* a leader from the line to the chip's near edge, as near the chip's middle as it can
+       run without touching a step, a mark or an arrow; null when there is no such run */
+    function leader(seg, horiz, x, y, r, side) {
+      var ax = horiz ? 'x' : 'y', ext = horiz ? 'w' : 'h';
+      var lo = Math.max(r[ax], Math.min(seg.a[ax], seg.b[ax])) + 5, hi = Math.min(r[ax] + r[ext], Math.max(seg.a[ax], seg.b[ax])) - 5;
+      var from = (horiz ? y : x) + side * half, to = horiz ? (side < 0 ? r.y + r.h : r.y) : (side < 0 ? r.x + r.w : r.x);
+      var band = horiz ? { x: lo, y: Math.min(from, to), w: hi - lo, h: Math.abs(to - from) }
+                       : { x: Math.min(from, to), y: lo, w: Math.abs(to - from), h: hi - lo };
+      if (hi < lo) return null;
+      var near = fixed.filter(function (o) { return area(band, o, 1.5) > 0; }), mid = Math.max(lo, Math.min(hi, horiz ? x : y));
+      for (var k = 0; mid - k >= lo || mid + k <= hi; k += 2) {
+        for (var sg = -1; sg <= 1; sg += 2) {
+          var at = mid + sg * k;
+          if (at < lo || at > hi) continue;
+          var bar = horiz ? { x: at - 1, y: band.y, w: 2, h: band.h } : { x: band.x, y: at - 1, w: band.w, h: 2 };
+          if (!near.some(function (o) { return area(bar, o, 1.5) > 0; })) {
+            return horiz ? 'M' + f(at) + ' ' + f(from) + 'V' + f(to) : 'M' + f(from) + ' ' + f(at) + 'H' + f(to);
+          }
+        }
+      }
+      return null;
+    }
+    function spot(host, seg, x, y, horiz, along, side, d) {
+      var cx = x, cy = y, lead = '', liked = horiz ? -1 : 1;
+      if (side && horiz) cy = y + side * (half + 4 + CHIP_H / 2 + d);
+      if (side && !horiz) cx = x + side * (half + 7 + w / 2 + d);
+      var r = { x: cx - w / 2, y: cy - CHIP_H / 2, w: w, h: CHIP_H };
+      var hard = onFixed(r, 3) + Math.max(0, w * CHIP_H - area(r, { x: 2, y: 2, w: W - 4, h: H - 4 }, 0));
+      if (hard < 0.5 && side && d) { lead = leader(seg, horiz, x, y, r, side); if (lead === null) { lead = ''; hard = 500; } }
+      var cost = along + (!side ? 3 : side === liked ? 0 : 1.5) + d;
+      lines.forEach(function (l) { if (!(l.id === id && l.i === host) && cuts(l, r)) cost += 20; });
+      out.push({ r: r, lead: lead, cost: cost, hard: hard > 0.5 ? hard : 0 });
+    }
+    for (i = 0; i < pts.length - 1; i++) {
+      var a = pts[i], b = pts[i + 1], len = Math.hypot(b.x - a.x, b.y - a.y), horiz = Math.abs(b.y - a.y) < 0.5;
+      var n = Math.max(1, Math.round(len / 4)), seg = { a: a, b: b };
+      for (var j = 0; j <= n; j++) {
+        var k = j / n, x = a.x + (b.x - a.x) * k, y = a.y + (b.y - a.y) * k;
+        var along = Math.abs(run + len * k - total / 2) / (total || 1) * 12;
+        spot(i, seg, x, y, horiz, along, 0, 0);
+        for (var d = 0; d <= 56; d += 4) { spot(i, seg, x, y, horiz, along, -1, d); spot(i, seg, x, y, horiz, along, 1, d); }
+      }
+      run += len;
+    }
+    return out;
+  }
   function segments(L) {
     var out = [];
     L.plans.forEach(function (p) {
@@ -741,8 +816,10 @@
       S.layer = {
         zones: el('g', { class: 'zones' }, svg), edges: el('g', { class: 'edges' }, svg),
         nodes: el('g', { class: 'nodes' }, svg), badges: el('g', { class: 'badges' }, svg),
-        marks: el('g', { class: 'marks' }, svg), fx: el('g', { class: 'fx' }, svg), seqfx: S.layer.seqfx
+        marks: el('g', { class: 'marks' }, svg), chips: el('g', { class: 'chips' }, svg),
+        fx: el('g', { class: 'fx' }, svg), seqfx: S.layer.seqfx
       };
+      S.obs = [];                       // what a chip may never sit on: boxes, their corner marks, zone tags
       L.zones.forEach(drawZone);
       L.plans.forEach(drawEdge);
       (sp.nodes || []).forEach(function (n) { if (L.boxes[n.id]) drawNode(n, L.boxes[n.id]); });
@@ -758,6 +835,7 @@
       var w = t.getComputedTextLength() || z.label.length * 6.4, x0 = p.right ? p.edge - w - 2 * ZPAD : p.edge;
       pill.setAttribute('x', f(x0)); pill.setAttribute('width', f(w + 2 * ZPAD));
       t.setAttribute('x', f(x0 + ZPAD + w / 2));
+      S.obs.push({ x: x0, y: p.y0, w: w + 2 * ZPAD, h: p.y1 - p.y0 });
     }
     /* an open chevron, drawn in the line's own ink */
     function head(pts, g) {
@@ -775,14 +853,19 @@
         var pts = trimEnd(ln.pts, 2.5);
         var path = el('path', { class: 'line', d: roundPath(pts, G.r) }, g);
         head(ln.pts, g);
+        S.obs.push(disc(ln.pts[ln.pts.length - 1].x, ln.pts[ln.pts.length - 1].y, 6));   // a chip never hides an arrow
         S.lanes.push({ edge: e, dir: ln.dir, g: g, path: path, pts: pts });
       });
       var hit = el('path', { class: 'hit', d: roundPath(p.pts, G.r) }, set);
-      var cg = el('g', { class: 'chiplbl' }, set);
+      /* the chip lives in its own layer over the boxes and steps, so nothing ever hides it;
+         updateChips() puts it where it hides nothing either */
+      var cg = el('g', { class: 'chiplbl', 'data-edge': e.id }, S.layer.chips);
       S.eref[e.id] = { set: set, hit: hit, pts: p.pts, both: !!e.both,
-        chip: { g: cg, rect: el('rect', { rx: 6, height: 18 }, cg), text: el('text', {}, cg) } };
+        chip: { g: cg, lead: el('path', { class: 'lead' }, cg), rect: el('rect', { rx: 6, height: CHIP_H }, cg), text: el('text', {}, cg) } };
       wireHover(hit, 'edge', e.id, set);
     }
+    /* a connection's state goes on its lines and on its chip, which sit in different layers */
+    function edgeOn(id, cls) { var r = S.eref[id]; r.set.classList.add(cls); r.chip.g.classList.add(cls); }
     function zoomGlyph(cx, cy) {
       return 'M' + f(cx - 2.2) + ' ' + f(cy - 2.2) + 'h4.4v4.4M' + f(cx + 2.2) + ' ' + f(cy - 2.2) + 'l-4.6 4.6';
     }
@@ -828,7 +911,9 @@
         var tx0 = x0 + ICON + IGAP, sx = t.getComputedTextLength() || lw;
         el('line', { class: 'strike', x1: f(tx0), y1: f(b.cy + 0.5), x2: f(tx0 + sx), y2: f(b.cy + 0.5) }, lg);
       }
+      S.obs.push({ x: b.x, y: b.y, w: b.w, h: b.h });
       if (n.segment && !n.ghost) {
+        S.obs.push(disc(b.x + b.w - 3, b.y + 3, 9.5));
         var sg = el('g', { class: 'seg', role: 'button', 'aria-label': 'Open the inside of ' + (n.label || n.id) }, g);
         el('circle', { cx: b.x + b.w - 3, cy: b.y + 3, r: 9.5 }, sg);
         el('path', { d: zoomGlyph(b.x + b.w - 3, b.y + 3) }, sg);
@@ -836,6 +921,7 @@
         sg.addEventListener('click', function (ev) { ev.stopPropagation(); hoverOff(); openSegment(n.segment, n.id); });
       }
       if (nr) {
+        S.obs.push(disc(b.x + 3, b.y + 3, 9.5));
         var rb = el('g', { class: 'nres r-' + nr, transform: 'translate(' + f(b.x + 3) + ' ' + f(b.y + 3) + ')' }, g);
         resGlyph(rb, nr, 9.5);
         var rt = el('title', {}, rb); rt.textContent = RES[nr].word;
@@ -849,6 +935,7 @@
         var sw = (stx.getComputedTextLength() || STATUS[ns].tag.length * 6.8) + 13, sx1 = b.x + b.w - 12;
         sr.setAttribute('x', f(sx1 - sw)); sr.setAttribute('width', f(sw));
         stx.setAttribute('x', f(sx1 - sw / 2));
+        S.obs.push({ x: sx1 - sw, y: b.y + b.h - 8, w: sw, h: 16 });
         var st0 = el('title', {}, sg2); st0.textContent = STATUS[ns].word;
       }
       S.nref[n.id] = { g: g, b: b };
@@ -911,7 +998,7 @@
         });
       });
       restLanes();
-      renderBadges(); renderMarks(); renderDots(); caption(-1); renderSeq(); printSteps(); renderKey();
+      renderBadges(); renderMarks(); updateChips(); renderDots(); caption(-1); renderSeq(); printSteps(); renderKey();
     }
     /* at rest a lane moves the way the flow mostly uses it; with no flows at all,
        every connection drifts in its own direction, in ink */
@@ -930,10 +1017,12 @@
     function markAt(pts, r) { return pointAt(pts, r === 'fail' ? 0.62 : 0.15); }
     function renderMarks() {
       var gm = S.layer.marks; gm.innerHTML = '';
+      S.mobs = [];
       S.spec.edges.forEach(function (e) {
         var r = resultOf(e);
         if ((r !== 'fail' && r !== 'error') || !S.eref[e.id]) return;
         var pt = markAt(S.eref[e.id].pts, r);
+        S.mobs.push(disc(pt.x, pt.y, 10));
         resGlyph(el('g', { class: 'rmark r-' + r, 'data-edge': e.id, transform: 'translate(' + f(pt.x) + ' ' + f(pt.y) + ')' }, gm), r, 8.5);
       });
       flow().steps.forEach(function (st, si) {
@@ -942,6 +1031,7 @@
         var hs = hops(st), hp = r === 'fail' ? hs[hs.length - 1] : hs[0];
         if (!hp || !hp.lane) return;
         var pts = hp.back ? hp.lane.pts.slice().reverse() : hp.lane.pts, pt = markAt(pts, r);
+        S.mobs.push(disc(pt.x, pt.y, 10));
         resGlyph(el('g', { class: 'rmark r-' + r, 'data-si': si, 'data-edge': hp.edge.id,
           transform: 'translate(' + f(pt.x) + ' ' + f(pt.y) + ')' }, gm), r, 8.5);
       });
@@ -975,6 +1065,7 @@
     function renderBadges() {
       var gb = S.layer.badges; gb.innerHTML = '';
       var perLane = [];
+      S.bobs = [];
       flow().steps.forEach(function (st, si) {
         var hp = hops(st)[0];
         if (!hp || !hp.lane) return;
@@ -996,6 +1087,7 @@
             'data-edge': slot.lane.edge.id, tabindex: 0, role: 'button',
             'aria-label': 'Step ' + (it.si + 1) + (it.res ? ', ' + RES[it.res].step : '') + ': ' + (it.st.say || '') }, gb);
           el('circle', { cx: f(pt.x), cy: f(pt.y), r: 10.5 }, g);
+          S.bobs.push(disc(pt.x, pt.y, 11.5));                         // its ink ring included
           var tx = el('text', { x: f(pt.x), y: f(pt.y) + 0.5 }, g);
           tx.textContent = it.si + 1;
           g.addEventListener('click', function (ev) { ev.stopPropagation(); goStep(it.si); });
@@ -1007,9 +1099,18 @@
         });
       });
     }
-    /* the chip on a connection: its protocol, its timing, or both */
+    /* the chip on a connection: its protocol, its timing, or both. The steps and marks of
+       the current flow are in the way too, so a new flow places the chips again. The chips
+       with the fewest free places go first; each takes its cheapest place that covers
+       nothing (chipSpots), and the cheapest of all when nothing is free. */
     function updateChips() {
-      var u = ui();
+      if (!S.obs) return;
+      var u = ui(), todo = [], lines = [];
+      Object.keys(S.eref).forEach(function (id) {
+        var ref = S.eref[id], pad = (ref.both ? G.lane : 0) + 1;
+        for (var i = 0; i < ref.pts.length - 1; i++) lines.push({ id: id, i: i, a: ref.pts[i], b: ref.pts[i + 1], pad: pad });
+      });
+      var fixed = S.obs.concat(S.bobs || [], S.mobs || []), taken = [];
       Object.keys(S.eref).forEach(function (id) {
         var e = S.edges[id], ref = S.eref[id], parts = [];
         if (u.labels || !u.times) parts.push(e.label);
@@ -1019,11 +1120,23 @@
         if (!text) { c.g.setAttribute('visibility', 'hidden'); return; }
         c.g.removeAttribute('visibility');
         var w = (c.text.getComputedTextLength() || text.length * 6.3) + 14;
-        var m = pointAt(ref.pts, 0.5), lift = ref.both ? G.lane + 13 : 14, cx, cy;
-        if (m.horiz) { cx = m.x; cy = m.y - lift; } else { cx = m.x + (ref.both ? G.lane : 0) + 10 + w / 2; cy = m.y; }
-        c.rect.setAttribute('x', f(cx - w / 2)); c.rect.setAttribute('y', f(cy - 9)); c.rect.setAttribute('width', f(w));
-        c.text.setAttribute('x', f(cx)); c.text.setAttribute('y', f(cy + 0.5));
+        var spots = chipSpots(id, ref.pts, ref.both, w, S.L.W, S.L.H, lines, fixed);
+        todo.push({ c: c, spots: spots, free: spots.filter(function (s) { return !s.hard; }).length });
+      });
+      todo.sort(function (a, b) { return a.free - b.free; });
+      todo.forEach(function (t) {
+        var best = null, bk = Infinity;
+        t.spots.forEach(function (s) {
+          var hard = s.hard + taken.reduce(function (a, o) { return a + area(s.r, o, 2); }, 0);
+          var k = s.cost + (hard ? 1000 + hard : 0);
+          if (k < bk) { bk = k; best = s; }
+        });
+        var r = best.r, c = t.c;
+        taken.push(r);
+        c.rect.setAttribute('x', f(r.x)); c.rect.setAttribute('y', f(r.y)); c.rect.setAttribute('width', f(r.w));
+        c.text.setAttribute('x', f(r.x + r.w / 2)); c.text.setAttribute('y', f(r.y + CHIP_H / 2 + 0.5));
         c.text.setAttribute('text-anchor', 'middle'); c.text.setAttribute('dominant-baseline', 'central');
+        c.lead.setAttribute('d', best.lead);
       });
     }
 
@@ -1211,7 +1324,7 @@
           if (hp.result) hp.lane.g.classList.add('r-' + hp.result);
         }
         if (hp.mode === 'fail') hp.lane.g.classList.add('failing');
-        S.eref[hp.edge.id].set.classList.add('hot');
+        edgeOn(hp.edge.id, 'hot');
         [hp.a, hp.b].forEach(function (id) { if (S.nref[id]) S.nref[id].g.classList.add('hot'); });
       });
       $$('.stepno', R.map).forEach(function (b) {
@@ -1392,11 +1505,11 @@
         } else {
           var e = S.edges[id];
           ids.push(id); near[e.from] = near[e.to] = 1;
-          S.eref[id].set.classList.add('hov');
+          edgeOn(id, 'hov');
         }
         Object.keys(near).forEach(function (n) { if (S.nref[n]) S.nref[n].g.classList.add('near'); });
         ids.forEach(function (eid) {
-          S.eref[eid].set.classList.add('near');
+          edgeOn(eid, 'near');
           $$('.edge[data-edge="' + eid + '"], .stepno[data-edge="' + eid + '"], .rmark[data-edge="' + eid + '"]', svg)
             .forEach(function (x) { x.classList.add('near'); });
         });
@@ -1516,7 +1629,7 @@
     function select(type, id) {
       $$('.sel', R.map).forEach(function (x) { x.classList.remove('sel'); });
       if (type === 'node' && S.nref[id]) S.nref[id].g.classList.add('sel');
-      if (type === 'edge' && S.eref[id]) S.eref[id].set.classList.add('sel');
+      if (type === 'edge' && S.eref[id]) edgeOn(id, 'sel');
     }
     function stepsTouching(pred, body) {
       var fl = flow(), items = [];
@@ -1728,7 +1841,9 @@
     /* The two gestures, tried for real on the root canvas: every box and connection is
        peeked, and every box is clicked at its middle through elementFromPoint, so a peek
        something cuts off, a box something covers, or a click that opens no drawer fails
-       the audit instead of reaching the human. Everything is put back as it was. */
+       the audit instead of reaching the human. Then the Labels and Timings layers are
+       turned on for every flow and every chip is read the same way (chipsCovered).
+       Everything is put back as it was. */
     function what(x) { return !x ? 'nothing' : x.tagName.toLowerCase() + (x.classList && x.classList[0] ? '.' + x.classList[0] : ''); }
     function cutBy(node) {
       var r = node.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
@@ -1751,8 +1866,57 @@
       pk.hidden = true; pk.classList.remove('on', 'below'); peekAt = null;
       return why;
     }
+    /* what a point on the canvas belongs to, in the words of the drawing */
+    function part(x) {
+      var g = x && x.closest && x.closest('.chiplbl, .stepno, .rmark, .node, .ztag, .edgeset, .zone');
+      if (!g) return what(x);
+      if (g.classList.contains('chiplbl')) return 'the chip of ' + g.getAttribute('data-edge');
+      if (g.classList.contains('stepno')) return 'step ' + (+g.getAttribute('data-si') + 1);
+      if (g.classList.contains('rmark')) return 'a result mark';
+      if (g.classList.contains('node')) return 'box ' + g.getAttribute('data-node');
+      if (g.classList.contains('ztag')) return 'a zone tag';
+      if (g.classList.contains('edgeset')) return 'the line of ' + g.getAttribute('data-edge');
+      return 'a zone';
+    }
+    /* Every chip, in every flow, with Labels, with Timings and with both on: a chip that
+       anything is drawn over, that lands on a box, a step, a mark, a zone's tag or another
+       chip, or that the canvas cuts, is a label the human turned on and cannot read. */
+    function chipsCovered() {
+      var u = ui(), l0 = u.labels, t0 = u.times, f0 = S.flow, out = {}, flows = Math.max(1, S.spec.flows.length);
+      var solid = '.node .shape, .node .seg, .node .nres, .node .nstat, .stepno, .rmark, .ztag, .chiplbl:not([visibility]) rect';
+      hoverOff();
+      [[true, false], [false, true], [true, true]].forEach(function (lt) {
+        u.labels = lt[0]; u.times = lt[1]; applyLayers();
+        for (var fi = 0; fi < flows; fi++) {
+          if (S.spec.flows.length) { S.flow = fi; applyFlow(); }
+          Object.keys(S.eref).forEach(function (id) {
+            var c = S.eref[id].chip, why = null;
+            if (c.g.hasAttribute('visibility')) return;
+            c.g.scrollIntoView({ block: 'center', inline: 'center' });
+            var r = c.rect.getBoundingClientRect(), m = R.map.getBoundingClientRect();
+            if (r.left < m.left - 0.5 || r.right > m.right + 0.5 || r.top < m.top - 0.5 || r.bottom > m.bottom + 0.5) why = 'cut by the canvas';
+            c.g.style.pointerEvents = 'all';
+            for (var a = 0.1; !why && a < 0.95; a += 0.2) {
+              for (var b = 0.25; !why && b < 0.8; b += 0.25) {
+                var hit = document.elementFromPoint(r.left + r.width * a, r.top + r.height * b);
+                if (!hit || !c.g.contains(hit)) why = 'under ' + part(hit);
+              }
+            }
+            c.g.style.pointerEvents = '';
+            $$(solid, R.map).forEach(function (o) {
+              if (why || c.g.contains(o)) return;
+              var q = o.getBoundingClientRect();
+              if (Math.min(r.right, q.right) - Math.max(r.left, q.left) > 1 && Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 1) why = 'on ' + part(o);
+            });
+            if (why) (out[id] = out[id] || {})[why] = 1;
+          });
+        }
+      });
+      u.labels = l0; u.times = t0; S.flow = f0; applyFlow(); applyLayers();
+      return Object.keys(out).map(function (id) { return id + ' ' + Object.keys(out[id]).join(', '); });
+    }
     function gestures(add, pre) {
-      var D = drawer(), pk = R.peek, sc = $('.fv-scroll', R.viewMap), cut = [], dead = [], shut = [];
+      var D = drawer(), pk = R.peek, sc = $('.fv-scroll', R.viewMap), cut = [], dead = [], shut = [], hid = [];
       var v0 = S.view, k0 = R.key.hidden, a0 = active, x0 = window.scrollX, y0 = window.scrollY, sl0 = sc ? sc.scrollLeft : 0;
       for (var p = fig.parentElement; p; p = p.parentElement) {     // a drawing in a closed row is opened to be tried
         if (p.tagName === 'DETAILS' && !p.open) { p.open = true; shut.push(p); }
@@ -1781,6 +1945,7 @@
           var why = peekCut('edge', id);
           if (why) cut.push(id + ' by ' + why);
         });
+        hid = chipsCovered();
       }
       void D.el.offsetWidth;                                        // the closes land before the slides come back
       pk.style.transition = D.el.style.transition = '';
@@ -1792,6 +1957,7 @@
       active = a0;
       add(pre + 'peeks cut off', !shown ? 'not on screen' : cut.length ? cut.length + ' (' + cut.join('; ') + ')' : 0, '0', !cut.length);
       add(pre + 'clicks that open no drawer', !shown ? 'not on screen' : dead.length ? dead.length + ' (' + dead.join('; ') + ')' : 0, '0', !dead.length);
+      add(pre + 'labels covered or covering', !shown ? 'not on screen' : hid.length ? hid.length + ' (' + hid.join('; ') + ')' : 0, '0', !hid.length);
     }
 
     /* ── Copy HTML: this drawing as one paste-able, self-contained snippet ── */

@@ -385,7 +385,7 @@ walks each flow, one caption per step), plus a Sequence view.
 | Zone `label` | ≤28 chars |
 | Words on canvas at rest | ≤60 |
 | Crossings, connections through boxes, labels shrunk to fit, zone labels crossed | 0 (measured by `--browser`, which names each one) |
-| Peeks cut off, clicks that open no drawer | 0 (measured by `--browser`; a failure is the toolkit's, not yours: report it) |
+| Peeks cut off, clicks that open no drawer, labels covered or covering | 0 (measured by `--browser`; a failure is the toolkit's, not yours: report it) |
 | Screens at rest | ≤2 for a drawing page |
 
 ### The spec

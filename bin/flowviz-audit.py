@@ -7,8 +7,9 @@ Every cap that can be read from the file is measured here, with no browser: the 
 markup, the drawing caps from each spec. Then the author checks — unfilled slots (compared against the
 templates' own words), paste safety of every command block, fragile verdict regexes, and the drawing
 spec's ids, references, vocabulary and grid. Layout caps (screens at rest, crossings, labels shrunk to
-fit) and the two gestures (every peek whole, every box's click opening its drawer) need a browser:
---browser runs headless Chrome on ?audit=1 and reads the panel back.
+fit), the two gestures (every peek whole, every box's click opening its drawer) and every connection
+label readable with Labels or Timings on need a browser: --browser runs headless Chrome on ?audit=1
+and reads the panel back.
 """
 import argparse
 import html
@@ -611,7 +612,7 @@ def canvas_checks(a, S, spec, root, tier, icons, unfilled, exact, fams):
     a.check(S, 'spec: vocabulary', vocab)
     a.check(S, 'spec: grid', gridp)
     a.check(S, 'spec: through a box', through)
-    a.unmeasured(S, 'crossings, boxes hit, labels shrunk or crossed, peeks, clicks', 'needs layout: --browser')
+    a.unmeasured(S, 'crossings, boxes hit, labels shrunk, crossed or covered, peeks, clicks', 'needs layout: --browser')
     unused = [e.get('id') for e in edges if (e.get('from'), e.get('to')) not in walked] if flows else []
     if unused:
         a.note(S, 'unused connection', ', '.join(unused) + ' — no flow walks it')
@@ -1382,7 +1383,7 @@ def browser_rows(a, path):
     if not panel:
         a.check(S, 'the ?audit=1 panel rendered', ['Chrome loaded the page but no #flowAudit panel appeared'])
         return
-    layout = re.compile(r'screens|cross|through box|shrunk|peek|click', re.I)
+    layout = re.compile(r'screens|cross|through box|shrunk|covered|peek|click', re.I)
     for tr in panel.find(lambda e: e.tag == 'tr' and 'data-k' in e.attrs):
         label = tr.attrs['data-k']
         if not layout.search(label):
