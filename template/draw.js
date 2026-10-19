@@ -679,7 +679,12 @@
       $('.fv-btn', R.viewSpec).addEventListener('click', function (ev) {
         copyText(JSON.stringify(specSource(), null, 2), ev.currentTarget, 'Spec copied');
       });
-      R.peek = h('div', 'fv-peek', null, R.stage); R.peek.hidden = true;
+      /* the peek goes on <body>, fixed to the window: inside the stage, its overflow cut
+         off every peek taller than the room above or below its box */
+      R.peek = h('div', 'fv-peek', null, document.body); R.peek.hidden = true;
+      if (!window.FLOW) R.peek.classList.add('fvx');
+      window.addEventListener('scroll', followPeek, { capture: true, passive: true });
+      window.addEventListener('resize', followPeek);
       R.key = h('div', 'fv-key', null, R.stage);
       R.key.hidden = true;
       R.rail = h('div', 'fv-rail', null, R.stage);
@@ -1412,45 +1417,67 @@
       var m = svg.getScreenCTM();
       return { x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f };
     }
+    var peekAt = null;                       // what the peek is about: {type, id, anchor}
     function showPeek(type, id, anchor) {
       clearTimeout(peekT); clearTimeout(warmT);
       peekT = setTimeout(function () {
-        var pk = R.peek, html, k, r;
-        if (type === 'node') {
-          var n = S.nodes[id]; if (!n) return;
-          k = n.ghost ? 'var(--dim2)' : kindVar(n.kind);
-          html = '<div class="pk">' + esc(n.ghost ? 'In the whole system' : (KIND_NAME[n.kind] || 'Box')) +
-            (n.tech ? ' · ' + esc(n.tech) : '') + '</div><h4>' + esc(n.label || id) + statusTag(n) + '</h4>' +
-            (resultOf(n) ? '<div class="res r-' + resultOf(n) + '">' + RES[resultOf(n)].glyph + ' ' + esc(RES[resultOf(n)].word) + '</div>' : '') +
-            '<p>' + esc(n.peek || '') + '</p>' +
-            factsHtml(n.facts) + '<div class="hint">' + (n.ghost && S.seg ? '<span>Click to go back to it</span>'
-              : '<span>Click for everything</span>' + (n.segment && !n.ghost ? '<span>⤢ opens its inside</span>' : '')) + '</div>';
-          r = anchor.getBoundingClientRect();
-        } else {
-          var e = S.edges[id]; if (!e) return;
-          k = e.mode === 'async' ? 'var(--stream)' : 'var(--f1)';
-          html = '<div class="pk">' + (e.mode === 'async' ? 'Message' : 'Call') + (e.both ? ' · both ways' : '') +
-            (e.label ? ' · ' + esc(e.label) : '') + '</div><h4>' + esc((S.nodes[e.from] || {}).label || e.from) +
-            (e.both ? ' ⇄ ' : ' → ') + esc((S.nodes[e.to] || {}).label || e.to) + '</h4>' +
-            (resultOf(e) ? '<div class="res r-' + resultOf(e) + '">' + RES[resultOf(e)].glyph + ' ' + esc(RES[resultOf(e)].word) + '</div>' : '') +
-            '<p>' + esc(e.peek || '') + '</p>' +
-            factsHtml(e.ms ? [e.ms] : []) + '<div class="hint"><span>Click for everything</span></div>';
-          var m = pointAt(S.eref[id].pts, 0.5), s = svgToScreen(R.map, m.x, m.y);
-          r = { left: s.x, top: s.y, bottom: s.y, width: 0, height: 0 };
-        }
-        pk.innerHTML = html;
-        pk.style.setProperty('--k', k);
+        if (!fillPeek(type, id)) return;
+        peekAt = { type: type, id: id, anchor: anchor };
+        var pk = R.peek;
         pk.hidden = false;
         pk.classList.remove('on', 'below');
-        var stage = R.stage.getBoundingClientRect(), w = pk.offsetWidth, hh = pk.offsetHeight;
-        var left = Math.min(Math.max(8, r.left + r.width / 2 - stage.left - w / 2), stage.width - w - 8);
-        var top = r.top - stage.top - hh - 12;
-        if (top < 8) { top = r.bottom - stage.top + 12; pk.classList.add('below'); }
-        pk.style.left = left + 'px'; pk.style.top = top + 'px';
+        placePeek();
         requestAnimationFrame(function () { pk.classList.add('on'); });
         warm = true;
       }, warm ? 0 : 150);
     }
+    function fillPeek(type, id) {
+      var pk = R.peek, html, k;
+      if (type === 'node') {
+        var n = S.nodes[id]; if (!n) return false;
+        k = n.ghost ? 'var(--dim2)' : kindVar(n.kind);
+        html = '<div class="pk">' + esc(n.ghost ? 'In the whole system' : (KIND_NAME[n.kind] || 'Box')) +
+          (n.tech ? ' · ' + esc(n.tech) : '') + '</div><h4>' + esc(n.label || id) + statusTag(n) + '</h4>' +
+          (resultOf(n) ? '<div class="res r-' + resultOf(n) + '">' + RES[resultOf(n)].glyph + ' ' + esc(RES[resultOf(n)].word) + '</div>' : '') +
+          '<p>' + esc(n.peek || '') + '</p>' +
+          factsHtml(n.facts) + '<div class="hint">' + (n.ghost && S.seg ? '<span>Click to go back to it</span>'
+            : '<span>Click for everything</span>' + (n.segment && !n.ghost ? '<span>⤢ opens its inside</span>' : '')) + '</div>';
+      } else {
+        var e = S.edges[id]; if (!e || !S.eref[id]) return false;
+        k = e.mode === 'async' ? 'var(--stream)' : 'var(--f1)';
+        html = '<div class="pk">' + (e.mode === 'async' ? 'Message' : 'Call') + (e.both ? ' · both ways' : '') +
+          (e.label ? ' · ' + esc(e.label) : '') + '</div><h4>' + esc((S.nodes[e.from] || {}).label || e.from) +
+          (e.both ? ' ⇄ ' : ' → ') + esc((S.nodes[e.to] || {}).label || e.to) + '</h4>' +
+          (resultOf(e) ? '<div class="res r-' + resultOf(e) + '">' + RES[resultOf(e)].glyph + ' ' + esc(RES[resultOf(e)].word) + '</div>' : '') +
+          '<p>' + esc(e.peek || '') + '</p>' +
+          factsHtml(e.ms ? [e.ms] : []) + '<div class="hint"><span>Click for everything</span></div>';
+      }
+      pk.innerHTML = html;
+      pk.style.setProperty('--k', k);
+      return true;
+    }
+    function peekRect(p) {
+      if (!p) return null;
+      if (p.type === 'node') return p.anchor.isConnected ? p.anchor.getBoundingClientRect() : null;
+      if (!S.eref[p.id]) return null;
+      var m = pointAt(S.eref[p.id].pts, 0.5), s = svgToScreen(R.map, m.x, m.y);
+      return { left: s.x, top: s.y, bottom: s.y, width: 0, height: 0 };
+    }
+    /* Above the box when that fits in the window, else below it when that fits, else
+       on the roomier side; always inside the window, the one thing that can cut it. */
+    function placePeek() {
+      var pk = R.peek, r = peekRect(peekAt), M = 8, GAP = 12;
+      var vw = document.documentElement.clientWidth, vh = window.innerHeight;
+      if (!r || r.bottom < 0 || r.top > vh) { hidePeek(); return; }    // its box is gone or scrolled away
+      var w = pk.offsetWidth, hh = pk.offsetHeight;
+      var up = r.top - GAP - M, down = vh - r.bottom - GAP - M, below = up < hh && down > up;
+      var top = below ? r.bottom + GAP : r.top - GAP - hh;
+      pk.classList.toggle('below', below);
+      pk.style.left = Math.max(M, Math.min(r.left + r.width / 2 - w / 2, vw - w - M)) + 'px';
+      pk.style.top = Math.max(M, Math.min(top, vh - hh - M)) + 'px';
+    }
+    /* fixed to the window, it follows its box when the page or the canvas scrolls */
+    function followPeek() { if (peekAt && !R.peek.hidden && R.peek.classList.contains('on')) placePeek(); }
     function hidePeek() {
       clearTimeout(peekT);
       var pk = R.peek;
@@ -1696,6 +1723,75 @@
         add(pre + 'boxes with a status', marked + ' of ' + real.length + ' (' + Object.keys(STATUS).filter(function (k) { return byS[k]; })
           .map(function (k) { return byS[k] + ' ' + k; }).join(' · ') + ')', 'reported', true);
       }
+      gestures(add, pre);
+    }
+    /* The two gestures, tried for real on the root canvas: every box and connection is
+       peeked, and every box is clicked at its middle through elementFromPoint, so a peek
+       something cuts off, a box something covers, or a click that opens no drawer fails
+       the audit instead of reaching the human. Everything is put back as it was. */
+    function what(x) { return !x ? 'nothing' : x.tagName.toLowerCase() + (x.classList && x.classList[0] ? '.' + x.classList[0] : ''); }
+    function cutBy(node) {
+      var r = node.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
+      if (r.left < -0.5 || r.top < -0.5 || r.right > vw + 0.5 || r.bottom > vh + 0.5) return 'the window';
+      for (var a = node.parentElement; a && a !== document.body; a = a.parentElement) {
+        var cs = window.getComputedStyle(a);
+        if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+        var b = a.getBoundingClientRect();
+        if (r.left < b.left - 0.5 || r.top < b.top - 0.5 || r.right > b.right + 0.5 || r.bottom > b.bottom + 0.5) return what(a);
+      }
+      return null;
+    }
+    function peekCut(type, id, anchor) {
+      if (!fillPeek(type, id)) return null;
+      var pk = R.peek;
+      peekAt = { type: type, id: id, anchor: anchor };
+      pk.hidden = false; pk.classList.add('on');
+      placePeek();
+      var why = pk.classList.contains('on') ? cutBy(pk) : 'its box being off screen';
+      pk.hidden = true; pk.classList.remove('on', 'below'); peekAt = null;
+      return why;
+    }
+    function gestures(add, pre) {
+      var D = drawer(), pk = R.peek, sc = $('.fv-scroll', R.viewMap), cut = [], dead = [], shut = [];
+      var v0 = S.view, k0 = R.key.hidden, a0 = active, x0 = window.scrollX, y0 = window.scrollY, sl0 = sc ? sc.scrollLeft : 0;
+      for (var p = fig.parentElement; p; p = p.parentElement) {     // a drawing in a closed row is opened to be tried
+        if (p.tagName === 'DETAILS' && !p.open) { p.open = true; shut.push(p); }
+      }
+      if (v0 !== 'map') setView('map', true);
+      R.key.hidden = true;                                          // at rest: the Key is a layer the human turns on
+      pk.style.transition = D.el.style.transition = 'none';         // measured where they land, not mid-slide
+      var shown = !!R.map.getBoundingClientRect().width;
+      if (shown) {
+        Object.keys(S.nref).forEach(function (id) {
+          var g = S.nref[id].g, b = S.nref[id].b;
+          g.scrollIntoView({ block: 'center', inline: 'center' });
+          var why = peekCut('node', id, g);
+          if (why) cut.push(id + ' by ' + why);
+          if (S.nodes[id].ghost) return;
+          var s = svgToScreen(R.map, b.cx, b.cy), hit = document.elementFromPoint(s.x, s.y);
+          if (!hit || !g.contains(hit) || hit.closest('.seg')) { dead.push(id + ' (under ' + what(hit) + ')'); return; }
+          hit.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: s.x, clientY: s.y }));
+          var dr = D.el.getBoundingClientRect(), top = document.elementFromPoint(dr.left + dr.width / 2, dr.top + Math.min(dr.height / 2, 80));
+          if (!(D.owner === self && D.what && D.what.type === 'node' && D.what.id === id && D.el.classList.contains('on'))) dead.push(id + ' (no drawer)');
+          else if (!top || !D.el.contains(top)) dead.push(id + ' (drawer under ' + what(top) + ')');
+          closeDrawer();
+        });
+        Object.keys(S.eref).forEach(function (id) {
+          S.eref[id].set.scrollIntoView({ block: 'center', inline: 'center' });
+          var why = peekCut('edge', id);
+          if (why) cut.push(id + ' by ' + why);
+        });
+      }
+      void D.el.offsetWidth;                                        // the closes land before the slides come back
+      pk.style.transition = D.el.style.transition = '';
+      R.key.hidden = k0;
+      if (v0 !== 'map') setView(v0, true);
+      shut.forEach(function (d) { d.open = false; });
+      if (sc) sc.scrollLeft = sl0;
+      window.scrollTo(x0, y0);
+      active = a0;
+      add(pre + 'peeks cut off', !shown ? 'not on screen' : cut.length ? cut.length + ' (' + cut.join('; ') + ')' : 0, '0', !cut.length);
+      add(pre + 'clicks that open no drawer', !shown ? 'not on screen' : dead.length ? dead.length + ' (' + dead.join('; ') + ')' : 0, '0', !dead.length);
     }
 
     /* ── Copy HTML: this drawing as one paste-able, self-contained snippet ── */

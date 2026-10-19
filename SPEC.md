@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 3.6.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 3.6.1** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -376,11 +376,14 @@ drawer, which also carries the peek.
 | Crossings | 0 — needs layout |
 | Labels shrunk to fit | 0 — needs layout. Box labels: a box is a fixed width. A connection's label chip grows to fit and shows only with Labels or Timings on, so it is never shrunk and not measured |
 | Zone labels crossed by a connection | 0 — needs layout |
+| Peeks cut off | 0 — needs layout. Every box's and connection's peek must land whole inside the window, cut off by no ancestor |
+| Clicks that open no drawer | 0 — needs layout. A click at a box's middle must reach the box and open its drawer, with nothing covering either |
 | Screens at rest (drawing page) | ≤2 — needs layout |
 
-The last four are measured by `?audit=1` or `flowviz audit --browser`, which names each offender — the
-pair that crosses, the box and its label that shrank; everything else is read from the spec without a
-browser. The tiers — every canvas, a report's spine (and Results drawing), a report's detail — live in
+The last six are measured by `?audit=1` or `flowviz audit --browser`, which names each offender — the
+pair that crosses, the box and its label that shrank, the peek and what cut it off, the box and what
+covered it; everything else is read from the spec without a browser. Peeks and clicks are the runtime's
+own behaviour: a failure there is the toolkit's fault, never the author's, and goes to the toolkit. The tiers — every canvas, a report's spine (and Results drawing), a report's detail — live in
 `TIER` in `draw.js` and `TIERS` in the audit.
 
 ### 2.3 Motion grammar

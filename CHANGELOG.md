@@ -3,6 +3,32 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.6.1 — 2026-10-19 · the peek is never cut off, and the audit tries both gestures
+
+**Why.** On a report's spine drawing, hovering a box showed a peek with its last lines missing: the peek
+lived inside the canvas card, whose `overflow:hidden` cut off everything below its edge. A spine canvas
+three rows tall has about 340px, and a peek with three facts is about 220px, so it fit neither above nor
+below its box. On the human's report, 8 of 9 boxes lost their text this way. No check caught it.
+
+**The peek** (`template/draw.js`, `template/draw.css`). It moves to `<body>`, fixed to the window, so neither
+the canvas card nor a row or wiki page around the drawing can cut it off. It goes above its box when that
+fits in the window, otherwise below, otherwise on the roomier side, always clamped inside the window. It
+follows its box when the page or the canvas scrolls and hides when the box leaves the screen. It sits over
+the drawer (z 72, drawer 70) and under the image viewer (75). In a pasted drawing it carries `.fvx` for its
+tokens, as the drawer does.
+
+**The audit tries both gestures** (`audit()` in `draw.js`, `browser_rows()` in the audit). Each drawing gains
+two rows, measured on its root canvas. **Peeks cut off** shows every box's and connection's peek, places it
+with the runtime's own code, and names whatever cuts it off: the window or a clipping ancestor. **Clicks that
+open no drawer** clicks every box at its middle through `elementFromPoint`, and names the box when something
+covers it, when no drawer opens, or when something covers the drawer. Both are 0, both are the runtime's
+fault, never the author's, and `flowviz audit --browser` relays them. They fail on four breakages: the peek
+put back in the stage (8 of 9 cut off, the bug above), a click that opens nothing, a transparent layer over
+the canvas, and a hidden drawer.
+
+Patch: no cap, state or spec field changed. A page built before 3.6.1 keeps its old runtime, and its audit,
+until it is rebuilt.
+
 ## 3.6.0 — 2026-10-18 · one outlined, illustrated look for every drawing
 
 **Why.** The human shared ten ByteByteGo infographics and asked for drawing components in that style, the
