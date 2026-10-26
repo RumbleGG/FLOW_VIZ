@@ -1466,7 +1466,7 @@
       R.cap.innerHTML = '<b>' + (si + 1) + '.</b> ' +
         (rr ? '<span class="fv-res r-' + rr + '">' + RES[rr].glyph + ' ' + esc(RES[rr].step) + '</span> — ' : '') +
         esc(st.say || '') + ' <button class="fv-more" type="button">Details</button>';
-      $('.fv-more', R.cap).addEventListener('click', function () { openDrawer('step', si); });
+      $('.fv-more', R.cap).addEventListener('click', function () { toggleDrawer('step', si); });
     }
 
     /* ── hover: dim what a box does not touch, and peek ──────────────────── */
@@ -1487,8 +1487,13 @@
       active = self;
       var n = type === 'node' && S.nodes[id];
       if (n && n.ghost && S.seg) { leaveSegment(n.ghost); return; }
-      openDrawer(type, id);
+      toggleDrawer(type, id);
     }
+    /* the drawer already shows this element: a second click closes it, so nobody hunts for the ✕ */
+    function shows(type, id) {
+      return !!(DR && DR.owner === self && DR.what && DR.what.type === type && DR.what.id === id && DR.el.classList.contains('on'));
+    }
+    function toggleDrawer(type, id) { if (shows(type, id)) closeDrawer(); else openDrawer(type, id); }
     function hoverOn(type, id, g) {
       clearTimeout(hovT);
       var svg = g.ownerSVGElement;
@@ -1554,7 +1559,7 @@
           (resultOf(n) ? '<div class="res r-' + resultOf(n) + '">' + RES[resultOf(n)].glyph + ' ' + esc(RES[resultOf(n)].word) + '</div>' : '') +
           '<p>' + esc(n.peek || '') + '</p>' +
           factsHtml(n.facts) + '<div class="hint">' + (n.ghost && S.seg ? '<span>Click to go back to it</span>'
-            : '<span>Click for everything</span>' + (n.segment && !n.ghost ? '<span>⤢ opens its inside</span>' : '')) + '</div>';
+            : '<span>' + clickHint('node', id) + '</span>' + (n.segment && !n.ghost ? '<span>⤢ opens its inside</span>' : '')) + '</div>';
       } else {
         var e = S.edges[id]; if (!e || !S.eref[id]) return false;
         k = e.mode === 'async' ? 'var(--stream)' : 'var(--f1)';
@@ -1563,12 +1568,13 @@
           (e.both ? ' ⇄ ' : ' → ') + esc((S.nodes[e.to] || {}).label || e.to) + '</h4>' +
           (resultOf(e) ? '<div class="res r-' + resultOf(e) + '">' + RES[resultOf(e)].glyph + ' ' + esc(RES[resultOf(e)].word) + '</div>' : '') +
           '<p>' + esc(e.peek || '') + '</p>' +
-          factsHtml(e.ms ? [e.ms] : []) + '<div class="hint"><span>Click for everything</span></div>';
+          factsHtml(e.ms ? [e.ms] : []) + '<div class="hint"><span>' + clickHint('edge', id) + '</span></div>';
       }
       pk.innerHTML = html;
       pk.style.setProperty('--k', k);
       return true;
     }
+    function clickHint(type, id) { return shows(type, id) ? 'Click again to close' : 'Click for everything'; }
     function peekRect(p) {
       if (!p) return null;
       if (p.type === 'node') return p.anchor.isConnected ? p.anchor.getBoundingClientRect() : null;
@@ -1916,7 +1922,7 @@
       return Object.keys(out).map(function (id) { return id + ' ' + Object.keys(out[id]).join(', '); });
     }
     function gestures(add, pre) {
-      var D = drawer(), pk = R.peek, sc = $('.fv-scroll', R.viewMap), cut = [], dead = [], shut = [], hid = [];
+      var D = drawer(), pk = R.peek, sc = $('.fv-scroll', R.viewMap), cut = [], dead = [], stay = [], tried = 0, shut = [], hid = [];
       var v0 = S.view, k0 = R.key.hidden, a0 = active, x0 = window.scrollX, y0 = window.scrollY, sl0 = sc ? sc.scrollLeft : 0;
       for (var p = fig.parentElement; p; p = p.parentElement) {     // a drawing in a closed row is opened to be tried
         if (p.tagName === 'DETAILS' && !p.open) { p.open = true; shut.push(p); }
@@ -1936,8 +1942,17 @@
           if (!hit || !g.contains(hit) || hit.closest('.seg')) { dead.push(id + ' (under ' + what(hit) + ')'); return; }
           hit.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: s.x, clientY: s.y }));
           var dr = D.el.getBoundingClientRect(), top = document.elementFromPoint(dr.left + dr.width / 2, dr.top + Math.min(dr.height / 2, 80));
-          if (!(D.owner === self && D.what && D.what.type === 'node' && D.what.id === id && D.el.classList.contains('on'))) dead.push(id + ' (no drawer)');
+          if (!shows('node', id)) dead.push(id + ' (no drawer)');
           else if (!top || !D.el.contains(top)) dead.push(id + ' (drawer under ' + what(top) + ')');
+          else {
+            // the same box again closes it; a box the drawer now covers is closed by the canvas or Esc instead
+            var again = document.elementFromPoint(s.x, s.y);
+            if (again && g.contains(again) && !again.closest('.seg')) {
+              tried++;
+              again.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: s.x, clientY: s.y }));
+              if (D.owner || D.el.classList.contains('on')) stay.push(id);
+            }
+          }
           closeDrawer();
         });
         Object.keys(S.eref).forEach(function (id) {
@@ -1957,6 +1972,8 @@
       active = a0;
       add(pre + 'peeks cut off', !shown ? 'not on screen' : cut.length ? cut.length + ' (' + cut.join('; ') + ')' : 0, '0', !cut.length);
       add(pre + 'clicks that open no drawer', !shown ? 'not on screen' : dead.length ? dead.length + ' (' + dead.join('; ') + ')' : 0, '0', !dead.length);
+      add(pre + 'second clicks that keep it open', !shown ? 'not on screen' : stay.length ? stay.length + ' (' + stay.join('; ') + ')'
+        : tried ? 0 : 'none tried', '0', !stay.length);
       add(pre + 'labels covered or covering', !shown ? 'not on screen' : hid.length ? hid.length + ' (' + hid.join('; ') + ')' : 0, '0', !hid.length);
     }
 

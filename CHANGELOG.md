@@ -3,6 +3,37 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.7.0 — 2026-10-26 · a second click closes the drawer, and reports start lean
+
+**Why.** Two things the human kept meeting. A click on a box opened its drawer, and a second click on the
+same box opened it again, so closing it meant finding the ✕ in the drawer's corner. And deliverables came
+back fuller than the ask: rows lettered a to f and a playbook of actions when the human had asked only for
+a diagram or an answer. The scaffold invited it, with four rows and three steps by default, and every
+example in the docs asked for five rows and seven steps.
+
+**The second click** (`template/draw.js`). Clicking the box or connection whose drawer is open closes it, as
+the canvas, ✕ and Esc already did; a different box still switches the drawer to it. A step's **Details**
+button does the same. While a box's drawer is open, its peek says *Click again to close*. `activate()` now
+calls `toggleDrawer()`, which closes the drawer when `shows()` says it already holds that element.
+
+**The audit tries it** (`gestures()` in `draw.js`). Each drawing gains **second clicks that keep it open**,
+measured on its root canvas: after the first click opens a box's drawer, the box is clicked again at its
+middle, and must close it. A box the open drawer now covers is not tried, since the canvas and Esc close it.
+It is 0, the runtime's fault, and `flowviz audit --browser` relays it. With `toggleDrawer()` made to always
+open, it fails 6 of `checkout`'s boxes, by name. The audit's label column widens to 50 characters to fit it.
+
+**Reports start lean** (`bin/flowviz-new.py`, `AGENTS.md`, `SPEC.md` §1.2d, the cheat sheet, the template).
+A new rule beside the first: make only what was asked for, and every cap is a ceiling, never a target.
+Asked for a diagram, the deliverable is a drawing page, with no card, rows or steps. Asked for an answer, it
+is a report with one row and no playbook. Asked to do or run something, one `context` row and one action
+row. More rows come only one per idea the human needs. `flowviz new report` now scaffolds exactly that:
+`--steps` defaults to 0 and `--rows` to 1, or 2 with steps, and the playbook gets its own section header
+only when two or more rows sit above it. `--rows` on a drawing is refused, as `--detail` was. `AGENTS.md`
+gains *As few rows as it takes* and a tenth thing not to do: don't pad.
+
+Minor: no cap, state or spec field changed, and the audit passes every report it passed before. A page built
+before 3.7.0 keeps its old drawer until it is rebuilt. Pass `--rows` and `--steps` to get the old scaffold.
+
 ## 3.6.2 — 2026-10-19 · every connection label shows whole with Labels on
 
 **Why.** With Labels or Timings on, a drawing with a flow hid most of its connection labels: each chip sat in

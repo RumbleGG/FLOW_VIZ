@@ -105,10 +105,12 @@ crossings, connections through boxes, and labels shrunk to fit — crossings and
 root canvas **and every segment** from the routing itself, labels measured in a hidden scratch SVG. Then
 `gestures()` tries the two gestures for real on the root canvas: every peek shown and placed by the
 runtime's own code (**peeks cut off**: by the window or a clipping ancestor), every box clicked at its
-middle through `elementFromPoint` (**clicks that open no drawer**). Then `chipsCovered()` turns on Labels,
-Timings and both, in every flow, and reads every connection's chip the same way (**labels covered or
-covering**: something drawn over it, or it on a box, step, mark, zone tag or chip). It puts back the scroll,
-view, layers, flow, Key and any `<details>` it opened.
+middle through `elementFromPoint` (**clicks that open no drawer**), then again wherever the open drawer
+leaves it reachable (**second clicks that keep it open**: `toggleDrawer()` closes the drawer when `shows()`
+says it already holds that element). Then `chipsCovered()` turns on Labels, Timings and both, in every flow,
+and reads every connection's chip the same way (**labels covered or covering**: something drawn over it, or
+it on a box, step, mark, zone tag or chip). It puts back the scroll, view, layers, flow, Key and any
+`<details>` it opened.
 
 ## Tokens
 
@@ -215,8 +217,9 @@ bin/flowviz audit --browser examples/pr/PR-418.html                             
 ```
 
 Every drawing's audit tries both gestures. To check that the check still bites, break a copy of a built
-page beside it and audit the copy: put the peek back in `R.stage`, drop `openDrawer` from `activate()`, lay a
+page beside it and audit the copy: put the peek back in `R.stage`, drop `openDrawer` from `toggleDrawer()`, lay a
 transparent `::after` over `.fv-stage`, or hide `.fv-drawer`. Each must fail with its boxes named. For the
+second click: make `toggleDrawer()` always open; it must fail **second clicks that keep it open**. For the
 chips: put them back in the edge set, pass `chipSpots()` an empty `fixed`, or drop `updateChips()` from
 `applyFlow()`; each must fail **labels covered or covering** with the chips named.
 

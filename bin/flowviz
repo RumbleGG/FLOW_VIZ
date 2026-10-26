@@ -20,8 +20,13 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
 
   F={R}/bin/flowviz
 
-  REPORT   a claim, the shape of the argument, evidence, a checklist the human runs and pastes into
-    1  $F new report "<claim with a verb>" --dir <work folder> --rows 4 --steps 5
+  ONLY WHAT WAS ASKED FOR   caps are ceilings, never targets
+           asked for a diagram -> a DRAWING page, no card, no rows, no steps
+           asked for an answer -> a report, 1 row, no playbook (the default)
+           asked to do or run something -> 1 context row + 1 action row (--steps N); more only per idea
+
+  REPORT   a claim, the shape of the argument, evidence and, when they will run something, a checklist
+    1  $F new report "<claim with a verb>" --dir <work folder> [--steps 4]   1 row, or 2 with steps
     2  write every slot. Keep the scaffold's ids: rows a, b, c...; a step is its row's letter + number
        (b1, b2 ... bn), never a word, never two letters. Order steps as the work must run: a snapshot,
        backup or other prerequisite goes above the write it serves, never after it.
@@ -58,8 +63,8 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
 
   CAPS
     report   title <=70 chars with a verb · verdict <=50 words · so what <=30 · vitals <=5 · next <=4
-             (<=14 words, tagged read-only|write) · exactly 1 spine diagram · rows <=6 (summary <=14)
-             under <=3 section headers (<=4 words) · every row has a data-kind · open at load <=1
+             (<=14 words, tagged read-only|write) · exactly 1 spine diagram · rows <=6, one per idea
+             (summary <=14) under <=3 section headers (<=4 words) · every row has a data-kind · open at load <=1
              · step = one sentence <=20 words · words at rest <=350 · screens <=3 (unrounded: 3.01 is over)
     kinds    context finding record (read) · investigation test change rollback (action) · decision
     results  above the card · outcome pass|fail|blocked|inconclusive · claim <=70 with a verb · summary

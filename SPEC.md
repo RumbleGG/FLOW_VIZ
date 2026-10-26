@@ -1,6 +1,6 @@
 # FLOW_VIZ — the standard
 
-**Version 3.6.2** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
+**Version 3.7.0** · normative. Where this document and a deliverable disagree, the deliverable is wrong.
 
 Producing something? `AGENTS.md` is the self-contained short road and is enough on its own. Read this
 file when you need the reasoning, the full schemas, or you are changing the standard.
@@ -9,7 +9,7 @@ FLOW_VIZ has **two deliverables and one toolkit**:
 
 | Kind | What it is | The budget that defines it |
 |---|---|---|
-| **report** | a claim, the shape of the argument, evidence, and a checklist playbook the human runs and pastes into | the main idea lands in **two minutes** |
+| **report** | a claim, the shape of the argument, evidence and, when the human will run something, a checklist playbook they run and paste into | the main idea lands in **two minutes** |
 | **drawing** | a whole system, or one segment of it, with motion that shows where data goes | the system reads in **ten seconds**; the walkthrough takes one minute |
 
 Both are one self-contained HTML file. Both put depth **exactly one gesture away** — never zero, never
@@ -43,7 +43,7 @@ Hard limits. An agent that cannot fit splits the report — it does not grow the
 | Next | ≤4 items, ≤14 words each | Each tagged `read-only` or `write`. No exceptions. |
 | Diagram | exactly 1 in the spine | A drawing (`figure.fv-drawing`, ≤9 boxes), a hand-written `.dia` SVG, or `.mermaid`. Extra diagrams go inside rows. |
 | Detail | optional; exactly 1 drawing when present | Directly under the spine, on its own cap tier (§1.2c). |
-| Rows | ≤6 | Seven ideas is two reports. |
+| Rows | ≤6 | Seven ideas is two reports. A ceiling, not a target: most reports need one or two (§1.2d). |
 | Row summary | a claim with a verb, ≤14 words | The collapsed spine reads as a six-line argument. |
 | Open at load | ≤1 row | The cap most often broken; it is what makes a file feel like a wall. |
 | Section headers | ≤3, ≤4 words each; no row before the first | They say what the rows below are for, so six claims are not six mysteries. |
@@ -104,6 +104,23 @@ boxes and longer walkthroughs than a spine may have. It gets a place of its own 
 | Budget | The page keeps ≤3 screens at rest and ≤350 words. A report with a detail usually needs a two-line title and a shorter verdict; when it still does not fit, it is two reports. |
 
 The spine stays one drawing with its own caps, and further drawings still live inside rows.
+
+### 1.2d Only what was asked for
+
+The caps are ceilings. A deliverable holds what the human asked for and what they need to act on it,
+and nothing that exists only because the budget had room for it.
+
+| They asked for | The deliverable |
+|---|---|
+| a diagram | a drawing page (§2): no card, no rows, no steps |
+| an answer, an explanation, a root cause | a report with one row (`context` or `finding`) and no playbook |
+| something to do, run or check | a report with one `context` row and one action row holding the playbook |
+| more | one more row per idea the human needs |
+
+`flowviz new report` scaffolds one `context` row and no playbook; `--steps N` adds the playbook in a
+second, action row. Rows are added for ideas, never to fill letters: no `finding` that restates the
+verdict, no `record` when nothing was done, no `decision` with nothing to choose, no `rollback` without a
+write. A playbook exists only when the human will run something.
 
 ### 1.3 Checklist steps
 
@@ -345,7 +362,7 @@ diffs are layer 3.
 |---|---|---|
 | **Look** | boxes, zones, the selected flow in motion, step numbers | ≤12 boxes, ≤60 words on the canvas |
 | **Hover** | a peek: one sentence and up to three facts | ≤25 words |
-| **Click** | the drawer: depth sections, the steps a box takes part in, a note for the agent | unlimited |
+| **Click** | the drawer: depth sections, the steps a box takes part in, a note for the agent. The same click again closes it, as do the canvas, ✕ and Esc | unlimited |
 | **Play** | the flow step by step: a labelled packet and a one-sentence caption | ≤9 steps, ≤20 words each |
 
 **Flows are off by default.** A drawing without flows is boxes and connections, with no flow chips, no
@@ -378,12 +395,13 @@ drawer, which also carries the peek.
 | Zone labels crossed by a connection | 0 — needs layout |
 | Peeks cut off | 0 — needs layout. Every box's and connection's peek must land whole inside the window, cut off by no ancestor |
 | Clicks that open no drawer | 0 — needs layout. A click at a box's middle must reach the box and open its drawer, with nothing covering either |
+| Second clicks that keep it open | 0 — needs layout. With its drawer open, a second click at the box's middle must close it. A box the open drawer covers is not tried: the canvas and Esc close it |
 | Labels covered or covering | 0 — needs layout. With Labels, Timings or both on, in every flow, every connection's chip must sit whole on the canvas with nothing drawn over it, and on no box, step, result mark, zone tag or other chip |
 | Screens at rest (drawing page) | ≤2 — needs layout |
 
-The last seven are measured by `?audit=1` or `flowviz audit --browser`, which names each offender — the
+The last eight are measured by `?audit=1` or `flowviz audit --browser`, which names each offender — the
 pair that crosses, the box and its label that shrank, the peek and what cut it off, the box and what
-covered it, the chip and what it is under or on; everything else is read from the spec without a browser.
+covered it or kept its drawer open, the chip and what it is under or on; everything else is read from the spec without a browser.
 Peeks, clicks and chips are the runtime's own behaviour: a failure there is the toolkit's fault, never the
 author's, and goes to the toolkit. The tiers — every canvas, a report's spine (and Results drawing), a report's detail — live in
 `TIER` in `draw.js` and `TIERS` in the audit.
@@ -668,7 +686,7 @@ server answers `409` to a tab still carrying the old ids instead of letting it w
 | Bump | Means |
 |---|---|
 | patch | CSS, wording, bug fix |
-| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand; 3.3.0 put playbooks in run order; 3.4.0 added figures the author shows, with their own caps, and `flowviz shot`; 3.5.0 added the detail slot with its own cap tier, a box's `status`, and PR helpers with `flowviz pr`; 3.6.0 gave every drawing one outlined, illustrated look) |
+| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand; 3.3.0 put playbooks in run order; 3.4.0 added figures the author shows, with their own caps, and `flowviz shot`; 3.5.0 added the detail slot with its own cap tier, a box's `status`, and PR helpers with `flowviz pr`; 3.6.0 gave every drawing one outlined, illustrated look; 3.7.0 closed the drawer on a second click and scaffolded reports lean, with no playbook unless asked) |
 | major | a cap changes, or the card or spine shape changes, or the audit starts failing reports it passed (1.0.0 labelled every row; 2.0.0 made flows optional; 3.0.0 named rows and steps by letter and number) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then
@@ -684,7 +702,7 @@ survives both.
 
 ```sh
 F=~/Projects/FLOW_VIZ/bin/flowviz
-$F new report  "The 500 is partial trust" --dir ~/work/sto --rows 5 --steps 7
+$F new report  "The 500 is partial trust" --dir ~/work/sto --steps 4   # 2 rows: context + playbook
 $F new drawing "Checkout confirms in 300 ms" --dir ~/work/shop --boxes 8
 $F build ~/work/sto/STO.src.html        # inline css + js + icons, stamp, snapshot
 $F audit ~/work/sto/STO.html            # every static cap + author checks; exit 1 on any OVER/FAIL

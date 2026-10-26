@@ -1442,11 +1442,11 @@ def main():
         if status == 'why':
             print('        %s' % label)
         elif status == 'note':
-            print('  note  %-44s %s' % (label, actual))
+            print('  note  %-50s %s' % (label, actual))
         elif status == '--':
-            print('  --    %-44s %s' % (label, capt))
+            print('  --    %-50s %s' % (label, capt))
         else:
-            print('  %-5s %-44s %8s  %s' % (status, label, actual, capt))
+            print('  %-5s %-50s %8s  %s' % (status, label, actual, capt))
     over = sum(1 for r in a.rows if r[4] == 'OVER')
     fail = sum(1 for r in a.rows if r[4] == 'FAIL')
     todo = sum(1 for r in a.rows if r[4] == '--')

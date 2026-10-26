@@ -6,12 +6,14 @@ is self-contained. `SPEC.md` is the normative long form, needed only to change t
 `CLAUDE.md` is for agents maintaining this toolkit.
 
 One rule underneath everything: **the main idea lands at a glance, and depth is exactly one gesture
-away — never zero, never three.**
+away — never zero, never three.** And one beside it: **make only what was asked for.** Every cap below is a
+ceiling, never a target. Asked for a diagram, hand back the diagram; asked for an answer, hand back the
+answer with no playbook; steps only when the human will run something.
 
 | You have… | Make | It gives the human |
 |---|---|---|
-| an answer, a root cause, a plan, commands to run | **report** | a card, the argument, evidence, and a checklist they run and paste output into |
-| a system to explain: what talks to what, in what order, what breaks | **drawing** | boxes on a grid with motion, a peek on hover, depth on click, a step-by-step walkthrough |
+| an answer, a root cause, a plan, commands to run | **report** | a card, the argument, evidence and, only when they will run something, a checklist they run and paste output into |
+| a diagram to show, and nothing else; a system to explain: what talks to what, in what order, what breaks | **drawing** | boxes on a grid with motion, a peek on hover, depth on click — and no card, rows or steps around it |
 | both | a **report** whose spine diagram is a drawing | the report template already has one in its spine |
 | a system and the code inside it | a **report** with a **detail** drawing under the spine | the spine for the system, the detail for its classes: `new report … --detail` |
 | one pull request to explain to its reviewer | a **PR helper**: a read-only report | `flowviz pr`, below in *Explaining a pull request* |
@@ -23,8 +25,9 @@ away — never zero, never three.**
 ```sh
 F=~/Projects/FLOW_VIZ/bin/flowviz
 
-$F new report  "The 500 is partial trust, not a web.config bug" --dir ~/work/sto --rows 5 --steps 7
-$F new drawing "Checkout confirms in 300 ms" --dir ~/work/shop --boxes 8 --flows 2
+$F new report  "Sessions expire early because the clock drifts" --dir ~/work/why   # an answer: 1 row, no playbook
+$F new report  "The 500 is partial trust, not a web.config bug" --dir ~/work/sto --steps 4   # they run it: 2 rows
+$F new drawing "Checkout confirms in 300 ms" --dir ~/work/shop --boxes 8   # only a diagram: a drawing page
 $F new report  "Refunds reuse the payment path" --dir ~/work/pr --detail 14   # + the detail slot
 $F pr new "Refunds reuse the payment path" --dir ~/work/pr --pr … --diff … --checkout …   # a PR helper
                                           # 1. scaffold into the folder the work is in
@@ -52,7 +55,7 @@ Claude's; a model of the same class serves the same role.
 
 | Tier | Role | Does | Never |
 |---|---|---|---|
-| **Opus agent, or equivalent** | **Lead** | decides what to make and what it claims: title, verdict, so-what, vitals, next; the rows, their kinds and their order; every step's sentence, blast radius, pass and fail conditions and run order; which screens get a figure and what each caption says to look at; a drawing's boxes, zones, segments, and whether it has flows. Reads what the human pasted, opens every image, judges a verdict set by hand, decides the Results | lets the audit decide for it: a split, a dropped row, a reworded claim is the Lead's call |
+| **Opus agent, or equivalent** | **Lead** | decides what to make and what it claims: title, verdict, so-what, vitals, next; how few rows the argument needs, their kinds and their order, and whether there is a playbook at all; every step's sentence, blast radius, pass and fail conditions and run order; which screens get a figure and what each caption says to look at; a drawing's boxes, zones, segments, and whether it has flows. Reads what the human pasted, opens every image, judges a verdict set by hand, decides the Results | lets the audit decide for it: a split, a dropped row, a reworded claim is the Lead's call |
 | **Sonnet agent, or equivalent** | **Builder** | turns the brief into a deliverable that audits clean: `flowviz new`, every slot written in the template's shape, regexes anchored, emits declared, figures placed and captioned, boxes placed until nothing crosses, depth sections, `fold`, `relabel`; fixes every OVER and FAIL **whose fix leaves the meaning unchanged** | changes a claim, drops a row, splits a report, moves a step after handover, renames an id, or works around the runtime |
 | **Haiku agent, or equivalent** | **Runner** | runs what it is given, exactly as written, and returns the output word for word: `build`, `audit --browser` (`--json` when asked), the parse checks, `serve`, `captures`, `shot` of a named address into a named file, screenshots in light, dark and print, counts | decides, summarises, retries with a variation, edits a file, or runs a step of the human's playbook |
 
@@ -101,7 +104,7 @@ Hard limits, not guidelines. `flowviz audit` measures all of them; screens at re
 | Next | ≤4 items, ≤14 words each, imperative, **each tagged `read-only` or `write`** |
 | Diagram | exactly 1 in the spine: a drawing (≤9 boxes) or a hand-written `div.dia` SVG |
 | Detail | optional: exactly 1 drawing directly under the spine (≤20 boxes, ≤2 flows of ≤20 steps) |
-| Rows | ≤6, each summary a claim with a verb in ≤14 words |
+| Rows | ≤6 — a ceiling: as few as the argument needs (below). Each summary a claim with a verb in ≤14 words |
 | Section headers | ≤3, ≤4 words each, saying what the rows below are for; no row before the first |
 | Row kind | every row has `data-kind` (below) |
 | Open at load | ≤1 row. Zero is the norm |
@@ -131,6 +134,23 @@ The page keeps **≤3 screens at rest**. A report with a detail drawing usually 
 and a shorter verdict** to fit; if it still does not fit, split it into two reports — never cut the detail
 down to a spine, and never move it into a row to dodge the count. Mark what a change did to each class
 with `"status"` (Drawings, below), not with a symbol typed into its label.
+
+### As few rows as it takes
+
+Start from what the human asked for, not from the budget:
+
+| They asked for | Hand back |
+|---|---|
+| a diagram, a picture of a system | a **drawing** page: no card, no rows, no steps |
+| an answer, an explanation, a root cause | a report with **one** row (`context` or `finding`) and **no playbook** |
+| something to do, run or check | a report with one `context` row and **one** action row holding the playbook |
+| more than that | one more row per idea they need, never one per heading you could write |
+
+`flowviz new report` scaffolds exactly that: one row, or two with `--steps`. Before adding a row, name what
+the human would lose without it; if nothing new, it goes inside a row already there. Never add a row to
+fill a letter: no `finding` that restates the verdict, no `record` when nothing was done, no `decision`
+when there is nothing to choose, no `rollback` without a write. One context row and one action row is a
+complete report, and often the better one.
 
 ### Every row says what it is for
 
@@ -361,7 +381,7 @@ All exist in the stylesheet. Use the class; never write CSS.
 
 A drawing shows a whole system, or one segment of it, with its connections moving in their direction.
 The human **looks** (boxes, zones, motion), **hovers** (a one-sentence peek) and **clicks** (the drawer:
-everything you know about that box, and a note box that reaches you). You write the **spec** and the
+everything you know about that box, and a note box that reaches you; the same click again closes it). You write the **spec** and the
 **depth**; the runtime lays out, routes, animates and wires the rest.
 
 **Flows are off by default.** Leave `"flows": []` unless the human asked for a walkthrough of the order of
@@ -385,7 +405,7 @@ walks each flow, one caption per step), plus a Sequence view.
 | Zone `label` | ≤28 chars |
 | Words on canvas at rest | ≤60 |
 | Crossings, connections through boxes, labels shrunk to fit, zone labels crossed | 0 (measured by `--browser`, which names each one) |
-| Peeks cut off, clicks that open no drawer, labels covered or covering | 0 (measured by `--browser`; a failure is the toolkit's, not yours: report it) |
+| Peeks cut off, clicks that open no drawer, second clicks that keep it open, labels covered or covering | 0 (measured by `--browser`; a failure is the toolkit's, not yours: report it) |
 | Screens at rest | ≤2 for a drawing page |
 
 ### The spec
@@ -612,21 +632,23 @@ why; *the output changed after it was set* means they have not looked again.
 No sidecar means they opened the file from Finder. Don't guess: ask them to `flowviz serve` the folder,
 or to press **Copy captures for agent** and paste the block to you.
 
-## Nine things not to do
+## Ten things not to do
 
-1. **Don't hand-roll the page.** Scaffold with `flowviz new`; fill slots, don't invent structure.
-2. **Don't paste CSS or JS into a deliverable**, and don't write layout coordinates in a drawing. Inlining
+1. **Don't pad.** Six rows, nine steps and three flows are ceilings. Asked for a diagram, hand back a
+   drawing; asked for an answer, no playbook; one row per idea, not one per letter.
+2. **Don't hand-roll the page.** Scaffold with `flowviz new`; fill slots, don't invent structure.
+3. **Don't paste CSS or JS into a deliverable**, and don't write layout coordinates in a drawing. Inlining
    is `build`'s job; drawing is the runtime's.
-3. **Don't hard-code a colour, font or radius.** Tokens only; box colours come from `kind`. Check light
+4. **Don't hard-code a colour, font or radius.** Tokens only; box colours come from `kind`. Check light
    **and** dark — both are designed.
-4. **Don't open anything at load**: at most one report row, no drawer, no layer.
-5. **Don't rename an id** after handover — doc, row, step, drawing, box, connection or flow step. It
+5. **Don't open anything at load**: at most one report row, no drawer, no layer.
+6. **Don't rename an id** after handover — doc, row, step, drawing, box, connection or flow step. It
    orphans what the human typed. (`flowviz relabel` is the one safe move: it takes the state with it.)
-6. **Don't write a second sentence** into a step, a `say` or a peek. It goes one layer down.
-7. **Don't use a CDN, web font or remote image.** Deliverables render offline and in print; a picture is a
+7. **Don't write a second sentence** into a step, a `say` or a peek. It goes one layer down.
+8. **Don't use a CDN, web font or remote image.** Deliverables render offline and in print; a picture is a
    file beside the source that `build` inlines.
-8. **Don't skip the audit**, and don't raise a cap to pass it. Split the report; make a segment.
-9. **Don't overwrite a document your deliverable replaces** — an older write-up, a verbose page. Give yours
+9. **Don't skip the audit**, and don't raise a cap to pass it. Split the report; make a segment.
+10. **Don't overwrite a document your deliverable replaces** — an older write-up, a verbose page. Give yours
    another name beside it, so the two can be read together. Rebuilding your own deliverable in place is
    fine: `build` keeps each previous output in `.flowviz/history/`.
 

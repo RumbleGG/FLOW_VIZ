@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """flowviz new — scaffold a report or a drawing into the folder the work is in.
 
-    flowviz new report  "<claim with a verb>" --dir DIR [--name NAME] [--rows 4] [--steps 3] [--boxes 4] [--flows 0]
+    flowviz new report  "<claim with a verb>" --dir DIR [--name NAME] [--rows N] [--steps 0] [--boxes 4] [--flows 0]
                         [--detail [BOXES]]
     flowviz new drawing "<claim with a verb>" --dir DIR [--name NAME] [--boxes 6] [--flows 0] [--steps N]
+
+Make only what was asked for. Asked for a diagram? That is a drawing, not a report around one.
+
+Reports start lean: one context row and no playbook. Add --steps N only when the human will run
+commands; the steps go in one action row, so the report has two. Add --rows only for another idea the
+human needs: six is a ceiling, never a target.
 
 Drawings start without flows: boxes and connections, no walkthrough. Add --flows N only when the human
 asked for a step-by-step walkthrough of the order of events.
@@ -133,8 +139,8 @@ def report(a, title, doc):
         r = row.replace('{{ROW_ID}}', chr(ord('a') + i - 1)).replace('{{ROW_N}}', chr(ord('a') + i - 1))
         r = r.replace('{{ROW_KIND}}', 'test' if runs else 'context')
         r = r.replace('<!-- playbook -->\n', playbook if runs else '')
-        # a header opens the rows, and another opens the playbook when it has company
-        if i == 1 or (runs and a.rows > 1):
+        # a header opens the rows, and another opens the playbook when two or more rows sit above it
+        if i == 1 or (runs and a.rows > 2):
             r = sec + r
         rows.append(r)
 
@@ -175,9 +181,11 @@ def main():
     ap.add_argument('claim', help='the title: a claim with a verb, 70 characters at most')
     ap.add_argument('--dir', required=True, help='the folder the work is in')
     ap.add_argument('--name', help='file name without .src.html (default: the folder name, upper-cased)')
-    ap.add_argument('--rows', type=int, default=4, help='report rows, 1-6 (default 4)')
+    ap.add_argument('--rows', type=int, default=None,
+                    help='report rows, 1-6 (default: 1, or 2 with steps: one context row, one action row)')
     ap.add_argument('--steps', type=int, default=None,
-                    help='report: playbook steps (default 3); drawing: steps per flow (default boxes-1, max 9)')
+                    help='report: playbook steps (default 0: no playbook unless the human will run commands); '
+                         'drawing: steps per flow (default boxes-1, max 9)')
     ap.add_argument('--boxes', type=int, default=None, help='drawing boxes (default 6, max 12); report spine (default 4, max 9)')
     ap.add_argument('--flows', type=int, default=0,
                     help='flows, 0-3 (default 0: no walkthrough unless the human asked for one)')
@@ -188,7 +196,8 @@ def main():
 
     title = ' '.join(a.claim.split())
     if a.kind == 'report':
-        a.steps = 3 if a.steps is None else a.steps
+        a.steps = 0 if a.steps is None else a.steps
+        a.rows = (2 if a.steps else 1) if a.rows is None else a.rows
         a.boxes = 4 if a.boxes is None else a.boxes
         if not 1 <= a.rows <= 6:
             die('--rows must be 1-6: seven ideas is two reports')
@@ -203,6 +212,8 @@ def main():
     else:
         if a.detail:
             die('--detail is a report slot; a drawing page is one drawing')
+        if a.rows is not None:
+            die('--rows is a report slot; a drawing page has no rows')
         a.boxes = 6 if a.boxes is None else a.boxes
         if not 2 <= a.boxes <= 12:
             die('--boxes must be 2-12: a 13th box means a segment')
@@ -228,8 +239,9 @@ def main():
     with open(src, 'w', encoding='utf-8') as f:
         f.write(body)
 
-    what = ('%d row%s · %d step%s · spine drawing %d boxes%s' % (a.rows, '' if a.rows == 1 else 's', a.steps,
-            '' if a.steps == 1 else 's', a.boxes, ' · detail drawing %d boxes' % a.detail if a.detail else '')
+    what = ('%d row%s · %s · spine drawing %d boxes%s' % (a.rows, '' if a.rows == 1 else 's',
+            '%d step%s' % (a.steps, '' if a.steps == 1 else 's') if a.steps else 'no playbook',
+            a.boxes, ' · detail drawing %d boxes' % a.detail if a.detail else '')
             if a.kind == 'report'
             else '%d boxes · %s' % (a.boxes, '%d flow%s' % (a.flows, '' if a.flows == 1 else 's') if a.flows else 'no flows'))
     print('created %s  (%s · doc %s · %s)' % (src, a.kind, doc, what))
