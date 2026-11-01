@@ -139,6 +139,8 @@ A playbook step is **a checkbox, its id, and one sentence.** That is all that is
 | Verdict | `data-pass` / `data-fail` regexes flip the chip on paste. Every literal is **word-anchored** (`\bFull\b`, never `Full`). |
 | Re-run | Files the current capture into `runs[]` and clears the box. A second attempt never destroys the first. |
 | Injected, never written | The `Done ☐` button at the foot of every step, the second verdict chip beside it, the status pill, and every displayed time. `flow.js` adds them, so a rebuild gives old reports new affordances. |
+| Done and next | **⌘↩** (Ctrl+Enter off a Mac) anywhere in a step does what `Done` does, then opens the next step to run and focuses it: its gate if it is a write step not yet acknowledged, else its paste box. Next is the next step not done, in page order, in the same place (Results or the playbook, never across) and never a `rollback` row unless the step is in one. The paste box's placeholder says so. The `?audit=1` row **hotkey ⌘↩: step not done or next not opened** presses it in the first unfinished step and puts everything back. |
+| File panel | **file**, last in the pill, opens a panel under it: the page's absolute path and `flowviz archive <path>`, each with a copy button, and the folder it will land in. The path is the page's own when opened from disk, else the one the build stamped (`FLOW.path`). Inside the archive it says so instead of offering the command. On every page kind; never printed. The `?audit=1` row **file panel: cut off or wrong** opens it and fails when it leaves the window, cuts a line, or names another file. |
 
 ### 1.3a Emits — a value one step prints, used by a later step's command
 
@@ -303,7 +305,7 @@ written — and never overwrites one that exists.
 | Summary | ≤50 words: what ran, what the output proved, where it stopped |
 | Diagram | exactly 1 drawing, ≤9 boxes, marking the point: `"result": "pass" \| "fail" \| "error"` on a box, connection or flow step, agreeing with the outcome |
 | Next | 1 to 4 items, ≤14 words, each tagged `read-only` or `write` |
-| Archive | exactly 1 gated write step (`li.step[data-archive]`) that moves the finished folder into the archive |
+| Archive | exactly 1 gated write step (`li.step[data-archive]`) that moves the finished folder into the archive (the root `flowviz archive` uses: `$FLOWVIZ_ARCHIVE`, else `~/Archive`) |
 | Words at rest | ≤150 |
 | Height | ≤1.5 screens; the report's own ≤3 screens is measured without it |
 
@@ -517,6 +519,12 @@ The snippet's styles are scoped to its wrapper (`.fvx`), so it cannot restyle th
 snippets on one page, or one on a FLOW_VIZ page, share one runtime and never mount twice. The build
 provides the scoped stylesheet as `script#fvEmbedCss`; the runtime assembles the rest.
 
+Beside it, **Copy image** puts the same still picture on the clipboard as a PNG at 2× (at most 8192 px a side),
+for a chat, a slide or a document: the root canvas at rest, in the theme the page shows. Shift-click, or a
+browser with no image clipboard, saves `<drawing id>.png` instead. The picture must stand alone as an `<img>`,
+where no stylesheet reaches, so the audit renders it in both themes and fails **picture copy: needs page
+styles** on any `var()` left in it, any icon whose symbol was not copied, or SVG that does not parse.
+
 ### 2.8 Views
 
 One spec, three views: **Map** (the drawing), **Sequence** (the selected flow laid out in time: one
@@ -658,10 +666,20 @@ captures on every load; `relabel` is present only once `flowviz relabel` has mov
 | `localStorage` | always, debounced 700 ms | — |
 | Sidecar on disk | served over localhost: `PUT <page dir>/_flow/state/<doc>` | green, `saved 21:14 PDT` |
 | Manual export | opened via `file://` | amber `local only` + a state button |
+| Send to agent | served, the human presses **send to agent**: `POST <page dir>/_flow/send/<doc>` | green, `sent 21:14 PDT` |
 
 On load both are read; the newer `savedAt` wins, then both are brought level. The merge is a union at
 key level, so a sparse sidecar never deletes something held locally. The server copies the previous
 sidecar to `.flowviz/state-backup/<doc>.<ts>.json` the first time each doc is overwritten in a run.
+
+**Send to agent** hands the page back. Only a served page shows it, in the pill. The POST carries the state and
+is saved exactly as a PUT (the same `409`, the same carried-over keys); then serve writes `<doc>.send.json`
+(`{doc, at, n, waiting}`) beside the page and answers with it. `flowviz wait <page>.html`, which the agent runs
+in the background, leaves its pid in `.flowviz/wait/<doc>.pid` while it waits, takes the file when it appears
+(moving it to `.flowviz/sent/<doc>/<UTC>.json`, so each send is read once and one made while nobody waited is
+read by the next wait at once) and exits 0 with the `flowviz captures` readout. `waiting` says whether a live
+pid was there, and the page tells the human which: the agent has it now, or gets it when it next waits. A serve
+older than 3.8.0 answers `405`, and the page says to restart it.
 
 Every input is keyed by a **stable id** — the doc id, row and step ids, drawing ids, box, edge and step
 ids — so an agent may regenerate the HTML freely and the human's input re-attaches. Ids are part of the
@@ -686,7 +704,7 @@ server answers `409` to a tab still carrying the old ids instead of letting it w
 | Bump | Means |
 |---|---|
 | patch | CSS, wording, bug fix |
-| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand; 3.3.0 put playbooks in run order; 3.4.0 added figures the author shows, with their own caps, and `flowviz shot`; 3.5.0 added the detail slot with its own cap tier, a box's `status`, and PR helpers with `flowviz pr`; 3.6.0 gave every drawing one outlined, illustrated look; 3.7.0 closed the drawer on a second click and scaffolded reports lean, with no playbook unless asked) |
+| minor | new component, caps unchanged (0.6.0 added drawings; 2.1.0 added Copy HTML; emits arrived in 3.0.0 beside a major change; 3.1.0 added steps and to-dos the human writes into the page; 3.2.0 added images and verdicts set by hand; 3.3.0 put playbooks in run order; 3.4.0 added figures the author shows, with their own caps, and `flowviz shot`; 3.5.0 added the detail slot with its own cap tier, a box's `status`, and PR helpers with `flowviz pr`; 3.6.0 gave every drawing one outlined, illustrated look; 3.7.0 closed the drawer on a second click and scaffolded reports lean, with no playbook unless asked; 3.8.0 added the pill's **file** panel, `flowviz archive`, ⌘↩ to finish a step and open the next, **send to agent** with `flowviz wait`, and **Copy image** on every drawing) |
 | major | a cap changes, or the card or spine shape changes, or the audit starts failing reports it passed (1.0.0 labelled every row; 2.0.0 made flows optional; 3.0.0 named rows and steps by letter and number) |
 
 Two things roll back independently: **the standard** (`git -C ~/Projects/FLOW_VIZ checkout v<ver>`, then
@@ -708,6 +726,7 @@ $F build ~/work/sto/STO.src.html        # inline css + js + icons, stamp, snapsh
 $F audit ~/work/sto/STO.html            # every static cap + author checks; exit 1 on any OVER/FAIL
 $F audit --browser ~/work/sto/STO.html  # also the layout caps, via headless Chrome
 $F serve ~/work/sto --open              # so what the human types reaches disk
+$F wait ~/work/sto/STO.html             # in the background: exits with the captures when they press send to agent
 $F captures ~/work/sto/STO.html         # read back captures, notes, added steps and to-dos
 $F fold ~/work/sto/STO.src.html         # steps the human added, into the source under the same ids
 $F results ~/work/sto/STO.src.html      # once it has run: start the Results section

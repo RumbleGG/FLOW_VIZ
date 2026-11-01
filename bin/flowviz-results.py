@@ -39,6 +39,13 @@ def captures_module():
     return m
 
 
+def _archive_module():
+    spec = importlib.util.spec_from_file_location('fvarchive', os.path.join(ROOT, 'bin', 'flowviz-archive.py'))
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
 def tilde(path):
     home = os.path.expanduser('~')
     if path == home:
@@ -51,7 +58,7 @@ def tilde(path):
 def main():
     ap = argparse.ArgumentParser(prog='flowviz results', description=__doc__.split('\n')[0])
     ap.add_argument('src', help='the report .src.html whose playbook the human has run')
-    ap.add_argument('--archive-to', help='where finished work goes (default: ~/Archive, else ~/Archives)')
+    ap.add_argument('--archive-to', help='where finished work goes (default: $FLOWVIZ_ARCHIVE, else ~/Archive, else ~/Archives)')
     a = ap.parse_args()
 
     src_path = os.path.abspath(a.src)
@@ -138,9 +145,8 @@ def main():
     else:
         spec = placeholders['fallback']
     fmt = _loader_fmt()
-    archive = os.path.abspath(os.path.expanduser(a.archive_to)) if a.archive_to else next(
-        (p for p in (os.path.expanduser('~/Archive'), os.path.expanduser('~/Archives')) if os.path.isdir(p)),
-        os.path.expanduser('~/Archive'))
+    archive = (os.path.abspath(os.path.expanduser(a.archive_to)) if a.archive_to
+               else _archive_module().archive_root())      # the one place that decides it
     name = os.path.basename(folder)
     dest = os.path.join(archive, name)
     cmd = 'mv %s %s && ls -d %s' % (tilde(folder), tilde(dest), tilde(dest))

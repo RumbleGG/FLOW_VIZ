@@ -556,6 +556,7 @@
 .fvx-details details>:last-child{margin-bottom:10px}
 .fvx-details p,.fvx-details ul,.fvx-details ol{margin:6px 0}
 .fv-copyhtml{margin-left:2px}
+.fv-copyimg{margin-left:-6px}   /* sits with Copy HTML as one pair */
 /* motion off inside an embed is a class on the figure, never on the host's <html> */
 .fv-drawing.fv-still .edge .line,.fv-drawing.fv-still .stepno.now circle{animation:none!important}
 
@@ -583,7 +584,7 @@
 
 /* ── print: a still picture and the steps it walks ────────────────────────── */
 @media print{
-  .fv-copyhtml,.fv-tools,.fv-views,.fv-layers,.fv-play,.fv-navs,.fv-dots,.fv-drawer,.fv-scrim,.fv-peek,.fv-key,.fv-toast,.fv-strip .fv-flow[aria-checked="false"]{display:none!important}
+  .fv-copyhtml,.fv-copyimg,.fv-tools,.fv-views,.fv-layers,.fv-play,.fv-navs,.fv-dots,.fv-drawer,.fv-scrim,.fv-peek,.fv-key,.fv-toast,.fv-strip .fv-flow[aria-checked="false"]{display:none!important}
   .fv-hd-top{padding-right:0}
   .fv-stage{box-shadow:none;break-inside:avoid}
   /* the title, the lede and the canvas are one figure: never let a page break separate them */

@@ -5,7 +5,7 @@ import sys
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(BIN)
-COMMANDS = ('new', 'build', 'audit', 'serve', 'captures', 'fold', 'results', 'relabel', 'shot', 'pr')
+COMMANDS = ('new', 'build', 'audit', 'serve', 'captures', 'fold', 'results', 'relabel', 'shot', 'pr', 'archive', 'wait')
 
 
 def version():
@@ -37,6 +37,8 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
     5  parse-check every command yourself: bash -n · python3 -m py_compile · Parser::ParseFile;
        SQL has no parse check here: run it read-only against the real database before handover
     6  $F serve <dir> --open                    hand over served; from Finder nothing reaches disk
+       $F wait <dir>/<NAME>.html                run it IN THE BACKGROUND: it exits with the captures when they
+                                                press send to agent in the pill, which wakes you; again for more
     7  $F captures <dir>/<NAME>.html            what they pasted, per step, every note, every step they
                                                 added (+ b3a, in place) and every to-do
     8  $F fold <dir>/<NAME>.src.html            steps they added, into the source under the same ids;
@@ -44,6 +46,9 @@ SHEET = r'''FLOW_VIZ {v} — reports and drawings an agent hands back to one hum
     9  $F results <dir>/<NAME>.src.html         once they have run it: a Results section on top (outcome,
                                                 a diagram marking where it passed or failed, summary, next,
                                                 a gated archive step); write it, rebuild, audit, hand back
+   10  $F archive <dir>/<NAME>.html            when it is done: page, source, state, figures -> ~/Archive/
+                                                <date>-<project>-<doc>/ (never pick another place unless
+                                                asked; every page shows this under file in the pill)
 
   DETAIL   a system and the code inside it: $F new report "<claim>" --dir <dir> --detail 12
            one more drawing under the spine, one box per class: boxes <=20, flows <=2 of <=20 steps;

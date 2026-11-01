@@ -7,7 +7,7 @@
 <meta name="flowviz-kind" content="report">
 <meta name="flowviz-pr" content='{"url": "https://git.example.test/shop/shop-api/pull/418", "number": 418, "head": "8021405c657a8e0ff2f76bcc0b2f8273006ea6b9", "pr": "pr/pr.json", "diff": "pr/pr.diff", "checkout": "checkout"}'>
 <title>Refunds ride the payment path and change three things it shares</title>
-<script>window.FLOW={"doc": "pr-418", "version": "3.7.0", "kind": "report", "built": "2026-10-26T22:54:38Z"};
+<script>window.FLOW={"doc": "pr-418", "version": "3.8.0", "kind": "report", "built": "2026-11-01T22:10:59Z", "path": "/Users/anthoz/Projects/FLOW_VIZ/examples/pr/PR-418.html", "bin": "/Users/anthoz/Projects/FLOW_VIZ/bin/flowviz", "archive": "/Users/anthoz/Archive", "stem": "flow-viz-pr-418"};
 (function(){var h=document.documentElement;h.setAttribute("data-kind",FLOW.kind);try{var q=(location.search.match(/[?&]theme=(light|dark)/)||[])[1];var s=JSON.parse(localStorage.getItem("flowviz:"+FLOW.doc)||"{}"),u=s.ui||{};var t=q||u.theme||"auto";var d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);h.setAttribute("data-theme",d?"dark":"light");if(u.motion===false)h.classList.add("still");}catch(e){h.setAttribute("data-theme","light");}})();</script>
 <style>
 /* ===========================================================================
@@ -125,6 +125,24 @@ pre code{background:none;border:none;padding:0;font-size:12.5px}
   font:11.5px var(--f-ui);cursor:pointer;padding:1px 5px;border-radius:4px}
 .pill button:hover{border-color:var(--line2)}
 .pill .sep{width:1px;height:13px;background:var(--line)}
+.pill #flowSend{font-weight:600}
+.pill #flowSend.busy{opacity:.55;cursor:progress}
+/* the pill's **file** panel: this page's absolute path and the command that archives
+   it, under the pill, opened on demand. On <body>, fixed; flow.js sets its top. */
+.filep{position:fixed;right:14px;z-index:61;width:min(500px,calc(100vw - 28px));box-sizing:border-box;
+  background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:10px 12px 11px;
+  box-shadow:var(--sh);font:12px var(--f-ui);color:var(--dim);
+  animation:filep-in .16s cubic-bezier(.2,.8,.2,1)}
+.filep[hidden]{display:none}
+.filep .k{margin:0 0 4px}
+.filep .cmd{padding:7px 10px;margin:0 0 9px}
+.filep .cmd pre{margin:0;padding-right:44px;white-space:pre-wrap;overflow-wrap:anywhere;
+  font:11.5px/1.45 var(--f-mono);color:var(--fg)}
+.filep .at{margin:0;font:11px/1.45 var(--f-ui);color:var(--dim2)}
+.filep .at code{font:10.5px var(--f-mono);overflow-wrap:anywhere}
+@keyframes filep-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.filep{animation:filep-fade .12s linear}}
+@keyframes filep-fade{from{opacity:0}to{opacity:1}}
 
 /* ── LAYER 1 · the card ───────────────────────────────────────────────────── */
 .card{position:relative;background:var(--paper);border:1px solid var(--line2);
@@ -812,7 +830,7 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
   @page{margin:14mm}
   /* .fin repeats the row header's done-box and verdict chip, and paper does not
      scroll — one tick mark and one verdict per step is enough */
-  .pill,.ctl,.audit,.copy,.gate,.rr,.fin{display:none!important}
+  .pill,.filep,.ctl,.audit,.copy,.gate,.rr,.fin{display:none!important}
   body{background:var(--print-bg);padding:0;max-width:none;font-size:10.5pt}
   .card,.dia,.box,.cmd,li.step,.phase,.foot,tr,section.results .top,section.results h2{break-inside:avoid}
   .card{box-shadow:none;break-after:avoid}
@@ -1402,6 +1420,7 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 .fvx-details details>:last-child{margin-bottom:10px}
 .fvx-details p,.fvx-details ul,.fvx-details ol{margin:6px 0}
 .fv-copyhtml{margin-left:2px}
+.fv-copyimg{margin-left:-6px}   /* sits with Copy HTML as one pair */
 /* motion off inside an embed is a class on the figure, never on the host's <html> */
 .fv-drawing.fv-still .edge .line,.fv-drawing.fv-still .stepno.now circle{animation:none!important}
 
@@ -1429,7 +1448,7 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 
 /* ── print: a still picture and the steps it walks ────────────────────────── */
 @media print{
-  .fv-copyhtml,.fv-tools,.fv-views,.fv-layers,.fv-play,.fv-navs,.fv-dots,.fv-drawer,.fv-scrim,.fv-peek,.fv-key,.fv-toast,.fv-strip .fv-flow[aria-checked="false"]{display:none!important}
+  .fv-copyhtml,.fv-copyimg,.fv-tools,.fv-views,.fv-layers,.fv-play,.fv-navs,.fv-dots,.fv-drawer,.fv-scrim,.fv-peek,.fv-key,.fv-toast,.fv-strip .fv-flow[aria-checked="false"]{display:none!important}
   .fv-hd-top{padding-right:0}
   .fv-stage{box-shadow:none;break-inside:avoid}
   /* the title, the lede and the canvas are one figure: never let a page break separate them */
@@ -2558,8 +2577,8 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 </details>
 
 <div class="foot">
-<span class="v">FLOW-VIZ v3.7.0</span> · doc <code>pr-418</code> · template <code>report@3.7.0</code> · built 2026-10-26 · sha <code>29aea3e</code> · state <code>pr-418.flow.json</code>
-<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.7.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
+<span class="v">FLOW-VIZ v3.8.0</span> · doc <code>pr-418</code> · template <code>report@3.8.0</code> · built 2026-11-01 · sha <code>1e74b39+dirty</code> · state <code>pr-418.flow.json</code>
+<div class="rb">Roll back the standard to this version: <span class="inl"><code id="flowRb">git -C ~/Projects/FLOW_VIZ checkout v3.8.0</code><button class="copy" data-for="flowRb">copy</button></span></div>
 </div>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true" focusable="false">
 <!-- FLOW_VIZ icon sprite.
@@ -2649,6 +2668,7 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 <symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></g></symbol>
 <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></g></symbol>
 <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.5" r="1.6"/><path d="M20.5 15.5l-4.5-4.5-8.5 8.5"/></g></symbol>
 <symbol id="i-zoom" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"/></g></symbol>
 </svg>
 
@@ -3323,6 +3343,7 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 .fvx-details details>:last-child{margin-bottom:10px}
 .fvx-details p,.fvx-details ul,.fvx-details ol{margin:6px 0}
 .fv-copyhtml{margin-left:2px}
+.fv-copyimg{margin-left:-6px}
 .fv-drawing.fv-still .edge .line,.fv-drawing.fv-still .stepno.now circle{animation:none!important}
 .still .fv-drawing .edge .line,.still .fv-drawing .stepno.now circle{animation:none!important}
 @media (prefers-reduced-motion:reduce){.fv-drawing .edge .line,.fv-drawing .stepno.now circle{animation:none!important}
@@ -3337,7 +3358,7 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
 .fv-drawer.on{transform:none}
 .fv-scrim.on{opacity:1;pointer-events:auto}
 .fv-key{bottom:auto;top:52px}}
-@media print{.fv-copyhtml,.fv-tools,.fv-views,.fv-layers,.fv-play,.fv-navs,.fv-dots,.fv-drawer,.fv-scrim,.fv-peek,.fv-key,.fv-toast,.fv-strip .fv-flow[aria-checked="false"]{display:none!important}
+@media print{.fv-copyhtml,.fv-copyimg,.fv-tools,.fv-views,.fv-layers,.fv-play,.fv-navs,.fv-dots,.fv-drawer,.fv-scrim,.fv-peek,.fv-key,.fv-toast,.fv-strip .fv-flow[aria-checked="false"]{display:none!important}
 .fv-hd-top{padding-right:0}
 .fv-stage{box-shadow:none;break-inside:avoid}
 figure.fv-drawing{break-inside:avoid}
@@ -4054,6 +4075,7 @@ figure.fv-drawing{break-inside:avoid}
      depth stops competing with the next one. Injected here rather than in every
      report's markup, so old reports gain it on the next build. hydrate() paints
      it but never collapses or animates — persisted open state wins there.      */
+  var HOTKEY = /Mac|iP(hone|ad|od)/.test(navigator.platform || '') ? '⌘↩' : 'Ctrl+Enter';   // see doneAndNext()
   var BOX = '☐', TICK = '✅';   // an open box, then the green check
   var COLLAPSE_MS = 300;                 // long enough to see the tick land
   function collapseStep(li) {
@@ -4069,7 +4091,8 @@ figure.fv-drawing{break-inside:avoid}
     b.classList.toggle('on', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
     b.title = on ? 'Marked done — press again if that was wrong'
-                 : 'Mark this step done — it collapses, so the next step is where you are looking';
+                 : 'Mark this step done — it collapses, so the next step is where you are looking (' +
+                   HOTKEY + ' from anywhere in the step also opens the next one)';
     if (!bx) return;
     bx.textContent = on ? TICK : BOX;
     bx.classList.remove('pop');
@@ -4086,6 +4109,7 @@ figure.fv-drawing{break-inside:avoid}
      the page as it is drawn, so both behave alike in every respect */
   function bindStep(li) {
     var id = li.dataset.step;
+    hotkeyHints(li);
     var sd = $('details.sd', li);
     var inb = $('.sd>.in', li);      // the step body, not the `why this step` .in
     if (inb && !$('.fin', inb)) {
@@ -4126,6 +4150,84 @@ figure.fv-drawing{break-inside:avoid}
     if (sd) sd.addEventListener('toggle', function () { st.open['step:' + id] = sd.open; save(); });
   }
   $$('li.step').forEach(bindStep);
+
+  /* ⌘↩ (Ctrl+Enter off a Mac) inside a step: the Done button, then the next
+     step. The usual moment is just after a paste, with the caret still in the
+     box, so the hand never leaves the keyboard. The tick pops as it does for a
+     click; the next step that is not done (in page order, added steps included)
+     opens at once, its row with it, and takes the focus: its gate when a write
+     step's gate is still unticked, else its paste box, else its Done. The
+     finished step folds 300 ms later, and only then is the next one scrolled to,
+     so the fold and the scroll never fight. A step already done just moves on.
+     The last one ticks and folds, as Done does. Returns the next step, or null. */
+  var nextTimer = null;
+  function stepFocus(li) {
+    var ak = $('input.ack', li);
+    if (li.dataset.risk === 'w' && ak && !ak.checked) return ak;
+    return $('textarea[data-cap]', li) || $('.fin>button', li);
+  }
+  /* next means the next thing to run: in the same place (a Results step never
+     sends you back into the playbook below it, nor the reverse), never a
+     rollback unless you are already rolling back — a rollback runs only when
+     something failed, so passing an action must not open it               */
+  function inRollback(x) { var r = x.closest('details.row'); return !!(r && r.dataset.kind === 'rollback'); }
+  function nextStep(li) {
+    var all = $$('li.step[data-step]'), res = !!li.closest('section.results'), rb = inRollback(li);
+    return all.slice(all.indexOf(li) + 1).filter(function (x) {
+      return !step(x.dataset.step).done && !!x.closest('section.results') === res && (rb || !inRollback(x));
+    })[0] || null;
+  }
+  function doneAndNext(li) {
+    var next = nextStep(li);
+    if (!step(li.dataset.step).done) {
+      setDone(li, true, false);
+      paintFin(li, true);
+    }
+    clearTimeout(nextTimer);
+    if (!next) {                       // the last one folds, as Done would fold it
+      nextTimer = setTimeout(function () { collapseStep(li); }, COLLAPSE_MS);
+      if (sendBtn) toast('That was the last step. Press send to agent, top right, when you are ready.');
+      return null;
+    }
+    for (var p = next.parentElement; p; p = p.parentElement) if (p.tagName === 'DETAILS') p.open = true;
+    var sd = $('details.sd', next); if (sd) sd.open = true;
+    var f = stepFocus(next); if (f) f.focus({ preventScroll: true });
+    nextTimer = setTimeout(function () {
+      var od = $('details.sd', li); if (od) od.open = false;
+      next.scrollIntoView({ block: 'nearest' });
+    }, COLLAPSE_MS);
+    return next;
+  }
+  var lastStepLi = null;      // where the pointer last was, for when nothing in a step has focus
+  document.addEventListener('pointerdown', function (e) {
+    lastStepLi = (e.target && e.target.closest && e.target.closest('li.step[data-step]')) || null;
+  }, true);
+  function hotkeyStep(e) {
+    if (e.key !== 'Enter' || !(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.isComposing) return null;
+    var t = e.target || {};
+    if (comp && comp.li.contains(t)) return null;                 // the composer's Enter saves it
+    if (quick && quick.contains && quick.contains(t)) return null;
+    var li = t.closest && t.closest('li.step[data-step]');
+    if (!li && (t === document.body || t === document.documentElement) && lastStepLi && document.contains(lastStepLi)) {
+      var lsd = $('details.sd', lastStepLi);
+      if (!lsd || lsd.open) li = lastStepLi;
+    }
+    return li || null;
+  }
+  document.addEventListener('keydown', function (e) {
+    var li = hotkeyStep(e);
+    if (!li) return;
+    e.preventDefault();
+    doneAndNext(li);
+  });
+  // say so where the human is looking when it matters: the paste box and Done
+  function hotkeyHints(root) {
+    $$('textarea[data-cap]', root).forEach(function (ta) {
+      if (ta.dataset.hk) return;
+      ta.dataset.hk = '1';
+      ta.placeholder = (ta.placeholder || 'paste what it printed') + ' · ' + HOTKEY + ' marks it done and opens the next step';
+    });
+  }
 
   function bindCaptureIn(root) {
   $$('textarea[data-cap]', root).forEach(function (ta) {
@@ -5635,6 +5737,128 @@ figure.fv-drawing{break-inside:avoid}
     document.body.classList.remove('printing');
   });
 
+  /* ── file: where this page lives, and the command that archives it ────────
+     One button in the pill; its panel opens under the pill and covers nothing
+     until asked for. The path is the page's own when it is opened from disk (it
+     may have moved since the build), else the one the build stamped. The command
+     names that path; `flowviz archive` picks the folder, and the panel names the
+     one it will pick today: <archive>/<date>-<stem>. A page already inside the
+     archive says so instead. The panel lives on <body>, not in the pill, so the
+     pill's button styles never reach its copy buttons.                       */
+  var FL = window.FLOW || {};
+  function pagePath() {
+    if (location.protocol === 'file:') {
+      try { return decodeURIComponent(location.pathname); } catch (e) { return location.pathname; }
+    }
+    return FL.path || '';
+  }
+  function shq(s) { return /^[A-Za-z0-9_\/.,:@%+=-]+$/.test(s) ? s : "'" + s.replace(/'/g, "'\\''") + "'"; }
+  function isoDay() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  // a long path breaks after a slash, never mid-name; <wbr> adds no text, so a copy is unchanged
+  function slashBreaks(s) { return escHtml(s).replace(/\//g, '/<wbr>'); }
+  function fileFacts() {
+    var p = pagePath(), root = FL.archive || '';
+    return { path: p, archived: !!(root && p.indexOf(root + '/') === 0),
+             cmd: shq(FL.bin || 'flowviz') + ' archive ' + shq(p),
+             dest: root + '/' + isoDay() + '-' + (FL.stem || FL.doc || 'page') + '/' };
+  }
+  /* ── send to agent: only when served, since only then is there a server to
+     hand it to. One press saves now (no 700 ms debounce) by POSTing the state
+     to _flow/send/<doc>; serve writes the sidecar exactly as a save would, then
+     leaves <doc>.send.json for `flowviz wait`, which the agent runs in the
+     background and which exits with the captures. The answer says whether a
+     waiter was alive, and the human is told which: the agent has it now, or it
+     gets it the next time it waits. A serve older than 3.8.0 answers 405.    */
+  var sendBtn = null;
+  function sendButton() {
+    if (!pill || !served) return;
+    var sep = document.createElement('span'); sep.className = 'sep';
+    sendBtn = document.createElement('button');
+    sendBtn.id = 'flowSend'; sendBtn.textContent = 'send to agent';
+    sendBtn.title = 'Hand everything you have pasted, noted and added to the agent that is serving this page';
+    pill.appendChild(sep); pill.appendChild(sendBtn);
+    sendBtn.addEventListener('click', sendToAgent);
+  }
+  function sendToAgent() {
+    var b = sendBtn;
+    if (!b || b.disabled) return;
+    b.disabled = true; b.classList.add('busy');
+    clearTimeout(timer);                       // this send is the save
+    st.savedAt = new Date().toISOString();
+    try { localStorage.setItem(LSKEY, JSON.stringify(st)); } catch (e) {}
+    function done(label, words) { b.disabled = false; b.classList.remove('busy'); flash(b, label); toast(words); }
+    fetch('_flow/send/' + DOC, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(st, null, 2)
+    }).then(function (r) {
+      if (r.status === 405) return { old: true };
+      return r.json().catch(function () { return {}; }).then(function (j) { j.status = r.status; j.ok = r.ok; return j; });
+    }).then(function (j) {
+      if (j.old) return done('restart serve', 'This flowviz serve predates send to agent: stop it and start it again.');
+      if (!j.ok) {
+        setPill('err', j.status === 409 ? 'ids moved: reload' : 'send rejected');
+        return done(j.status === 409 ? 'reload' : 'not sent', j.error || 'The server refused it.');
+      }
+      setPill('disk', 'sent ' + ptTime(j.at));
+      done(j.waiting ? 'sent ✓' : 'saved',
+        j.waiting ? 'Sent. Your agent was waiting and has it now.'
+                  : 'Saved to disk. No agent is waiting right now: it gets this the next time it runs flowviz wait.');
+    }).catch(function () {
+      setPill('err', 'serve unreachable');
+      done('not sent', 'Could not reach flowviz serve. Is it still running?');
+    });
+  }
+
+  var fileBtn = null, filePanel = null;
+  function fileButton() {
+    if (!pill || !pagePath()) return;
+    var sep = document.createElement('span'); sep.className = 'sep';
+    fileBtn = document.createElement('button');
+    fileBtn.id = 'flowFile'; fileBtn.textContent = 'file';
+    fileBtn.title = 'This file’s path, and the command that archives it';
+    fileBtn.setAttribute('aria-expanded', 'false');
+    pill.appendChild(sep); pill.appendChild(fileBtn);
+    fileBtn.addEventListener('click', function (e) { e.stopPropagation(); fileOpen(!filePanel || filePanel.hidden); });
+    document.addEventListener('click', function (e) {
+      if (filePanel && !filePanel.hidden && !filePanel.contains(e.target)) fileOpen(false);
+    });
+    // capture phase, so Esc closes this panel and not a drawing's drawer behind it
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && filePanel && !filePanel.hidden) { e.stopPropagation(); fileOpen(false); fileBtn.focus(); }
+    }, true);
+  }
+  function fileOpen(on) {
+    if (!fileBtn) return;
+    if (on) {
+      var f = fileFacts();
+      if (!filePanel) {
+        filePanel = document.createElement('div');
+        filePanel.className = 'filep'; filePanel.id = 'flowFilePanel';
+        filePanel.setAttribute('role', 'dialog'); filePanel.setAttribute('aria-label', 'This file');
+        document.body.appendChild(filePanel);
+      }
+      filePanel.innerHTML =
+        '<span class="k">this file</span>' +
+        '<div class="cmd fig"><button class="copy" title="Copy this file’s absolute path">copy</button>' +
+        '<pre><code id="flowFilePath">' + slashBreaks(f.path) + '</code></pre></div>' +
+        (f.archived
+          ? '<p class="at">This page is in the archive already.</p>'
+          : '<span class="k">archive it</span>' +
+            '<div class="cmd"><button class="copy" title="Copy the command that archives this page">copy</button>' +
+            '<pre><code id="flowFileCmd">' + slashBreaks(f.cmd) + '</code></pre></div>' +
+            '<p class="at">Moves the page, its source, its state and its figures to <code>' +
+            slashBreaks(f.dest) + '</code></p>');
+      filePanel.style.top = Math.round(pill.getBoundingClientRect().bottom + 6) + 'px';
+      filePanel.hidden = false;
+    } else if (filePanel) {
+      filePanel.hidden = true;
+    }
+    fileBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+  }
+
   /* ── pill wiring ───────────────────────────────────────────────────────── */
   pill = $('#flowPill'); pillTxt = $('#flowPillTxt');
   var tb = $('#flowTheme');
@@ -5644,6 +5868,8 @@ figure.fv-drawing{break-inside:avoid}
     st.ui.theme = order[(order.indexOf(st.ui.theme || 'auto') + 1) % 3];
     applyTheme(); save();
   });
+  sendButton();
+  fileButton();
   renderAdditions();
   renderShots();
   hydrate();
@@ -5752,6 +5978,57 @@ figure.fv-drawing{break-inside:avoid}
       var tot = fb.reduce(function (x, y) { return x + y; }, 0), big = Math.max.apply(null, fb);
       rows.push(['largest figure', kb(big), '≤ 1 MB', big <= 1048576]);
       rows.push(['figure bytes', kb(tot) + ' (' + shots.length + ')', '≤ 6 MB', tot <= 6291456]);
+    }
+
+    /* the file panel, opened for real: it must sit inside the window, show the
+       page's own path whole and, unless archived, a command naming that path */
+    if (fileBtn) {
+      var fbad = [];
+      fileOpen(true);
+      var fr = filePanel.getBoundingClientRect(), ff = fileFacts();
+      if (fr.left < 0 || fr.top < 0 || fr.right > window.innerWidth || fr.bottom > window.innerHeight) fbad.push('outside the window');
+      $$('pre', filePanel).forEach(function (p) { if (p.scrollWidth > p.clientWidth + 1) fbad.push('a line cut off'); });
+      var fp = $('#flowFilePath', filePanel), fc = $('#flowFileCmd', filePanel);
+      if (!fp || fp.textContent !== ff.path) fbad.push('not this page’s path');
+      if (!ff.archived && (!fc || fc.textContent.indexOf(shq(ff.path)) < 0)) fbad.push('command names another file');
+      fileOpen(false);
+      rows.push(['file panel: cut off or wrong', fbad.length ? fbad.join(', ') : 0, '0', !fbad.length]);
+    }
+
+    /* the step hotkey, pressed for real in the first unfinished step's paste box:
+       that step must end done, and the next unfinished one open with the focus.
+       Everything it touched is put back: done, open, focus, scroll, timer.   */
+    var hkLi = $$('li.step[data-step]').filter(function (x) {
+      return !step(x.dataset.step).done && $('textarea[data-cap]', x) && nextStep(x);
+    })[0];
+    if (KIND !== 'drawing' && hkLi) {
+      var hkWas = JSON.stringify({ steps: st.steps, open: st.open }), hkY = window.scrollY,
+          hkFocus = document.activeElement,
+          hkOpen = $$('details').map(function (d) { return [d, d.open]; });
+      var hkTa = $('textarea[data-cap]', hkLi), hkBad = [];
+      hkTa.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, ctrlKey: true, bubbles: true, cancelable: true }));
+      var hkNext = nextStep(hkLi);
+      if (!step(hkLi.dataset.step).done) hkBad.push(hkLi.dataset.step + ' not done');
+      if (hkNext) {
+        var hkSd = $('details.sd', hkNext);
+        if (hkSd && !hkSd.open) hkBad.push(hkNext.dataset.step + ' not opened');
+        if (!hkNext.contains(document.activeElement)) hkBad.push(hkNext.dataset.step + ' not focused');
+        for (var hp = hkNext.parentElement; hp; hp = hp.parentElement) {
+          if (hp.tagName === 'DETAILS' && !hp.open) { hkBad.push(hkNext.dataset.step + '’s row shut'); break; }
+        }
+      }
+      clearTimeout(nextTimer);
+      var hkW = JSON.parse(hkWas);
+      st.steps = hkW.steps; st.open = hkW.open;
+      hkOpen.forEach(function (o) { o[0].open = o[1]; });
+      $$('li.step[data-step]').forEach(function (x) {
+        var dn = $('input.done', x); if (dn) dn.checked = !!step(x.dataset.step).done;
+        paintFin(x, false);
+      });
+      repaintAll();
+      if (hkFocus && hkFocus.focus) hkFocus.focus({ preventScroll: true }); else hkTa.blur();
+      window.scrollTo(0, hkY);
+      rows.push(['hotkey ' + HOTKEY + ': step not done or next not opened', hkBad.length ? hkBad.join(', ') : 0, '0', !hkBad.length]);
     }
 
     // drawings (and anything else that registered) add their own rows
@@ -6578,6 +6855,11 @@ figure.fv-drawing{break-inside:avoid}
           var b = ev.currentTarget, html = embedHtml();
           copyText(html, b, 'Copied ' + kb(html) + ' KB of HTML for a wiki page');
         });
+        R.copyImg = h('button', 'fv-btn fv-copyimg', icon('image') + 'Copy image', R.strip);
+        R.copyImg.type = 'button';
+        R.copyImg.title = 'Copy this drawing as a picture, at rest, in the theme you are looking at: paste it anywhere ' +
+          '(Shift-click saves it as a PNG instead)';
+        R.copyImg.addEventListener('click', function (ev) { copyImage(ev.currentTarget, ev.shiftKey); });
       }
 
       fig.appendChild(R.head); fig.appendChild(R.strip); fig.appendChild(R.stage); fig.appendChild(R.print);
@@ -7635,6 +7917,23 @@ figure.fv-drawing{break-inside:avoid}
         add(pre + 'boxes with a status', marked + ' of ' + real.length + ' (' + Object.keys(STATUS).filter(function (k) { return byS[k]; })
           .map(function (k) { return byS[k] + ' ' + k; }).join(' · ') + ')', 'reported', true);
       }
+      /* Copy image renders snapshotSvg() as a bare <img>, where no stylesheet reaches:
+         anything still pointing at CSS (a var(), a class) or an icon whose symbol was
+         not copied draws black or not at all. Checked in both themes.            */
+      var pic = [];
+      ['light', 'dark'].forEach(function (th) {
+        var sv = snapshotSvg(embedCss(), th), doc = new DOMParser().parseFromString(sv, 'image/svg+xml');
+        if (doc.getElementsByTagName('parsererror').length) { pic.push(th + ': not valid SVG'); return; }
+        var vars = (sv.match(/var\(--[\w-]+/g) || []);
+        if (vars.length) pic.push(th + ': ' + vars.length + ' unresolved (' + vars.slice(0, 3).join(', ') + ')');
+        var ids = {};
+        Array.prototype.forEach.call(doc.querySelectorAll('[id]'), function (x) { ids[x.getAttribute('id')] = 1; });
+        var lost = Array.prototype.filter.call(doc.querySelectorAll('use'), function (u) {
+          return !ids[(u.getAttribute('href') || '').replace(/^#/, '')];
+        }).length;
+        if (lost) pic.push(th + ': ' + lost + ' icon' + (lost === 1 ? '' : 's') + ' missing');
+      });
+      add(pre + 'picture copy: needs page styles', pic.length ? pic.join('; ') : 0, '0', !pic.length);
       gestures(add, pre);
     }
     /* The two gestures, tried for real on the root canvas: every box and connection is
@@ -7827,9 +8126,9 @@ figure.fv-drawing{break-inside:avoid}
              ['letterSpacing', 'letter-spacing'], ['textAnchor', 'text-anchor'], ['dominantBaseline', 'dominant-baseline']],
       use: [['color', 'color']]
     };
-    function snapshotSvg(css) {
+    function snapshotSvg(css, theme) {
       var host = h('div', 'fvx', null, document.body);
-      host.setAttribute('data-theme', 'light'); host.setAttribute('data-fvx-snap', ''); host.setAttribute('aria-hidden', 'true');
+      host.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light'); host.setAttribute('data-fvx-snap', ''); host.setAttribute('aria-hidden', 'true');
       host.style.cssText = 'position:absolute;left:-20000px;top:0;width:1400px;visibility:hidden;pointer-events:none';
       var st = document.createElement('style'); st.textContent = css; host.appendChild(st);
       var tf = h('figure', 'fv-drawing', null, host);
@@ -7884,6 +8183,56 @@ figure.fv-drawing{break-inside:avoid}
         '" role="img" aria-label="' + esc((ROOT.title || ROOT.name || ID) + '. ' + ROOT.nodes.length + ' boxes, ' +
         ROOT.edges.length + ' connections.') + '" style="display:block;max-width:100%;height:auto">' + defs +
         '<rect x="0" y="0" width="' + vb[2] + '" height="' + vb[3] + '" rx="18" fill="' + bg + '"/>' + inner + '</svg>';
+    }
+    /* ── Copy image: the same still picture, as a PNG on the clipboard ──────
+       snapshotSvg() already bakes every look into attributes and copies the icons
+       it uses into its own defs, with their paints resolved, so the SVG renders
+       alone as an <img>: drawn onto a canvas at 2× (capped at 8192 px a side) and
+       put on the clipboard as image/png. The picture is the root canvas at rest,
+       in the theme the page shows. ClipboardItem gets a promise, so Safari still
+       sees the click as the gesture. Where the clipboard refuses, or on
+       Shift-click, the PNG downloads as <id>.png instead.                     */
+    function pageTheme() { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+    function stillPng() {
+      var svg = snapshotSvg(embedCss(), pageTheme());
+      var m = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg) || [0, 1000, 600];
+      var w = +m[1], hh = +m[2], k = Math.min(2, 8192 / Math.max(w, hh));
+      return new Promise(function (res, rej) {
+        var img = new Image();
+        img.onload = function () {
+          var c = document.createElement('canvas');
+          c.width = Math.round(w * k); c.height = Math.round(hh * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          c.toBlob(function (b) { if (b) res({ blob: b, w: c.width, h: c.height }); else rej(new Error('no PNG')); }, 'image/png');
+        };
+        img.onerror = function () { rej(new Error('the picture did not render')); };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      });
+    }
+    function savePng(r) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(r.blob); a.download = ID + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+    }
+    function copyImage(btn, save) {
+      var p = stillPng(), size = function (r) { return r.w + '×' + r.h + ' PNG'; };
+      function fail() { toast('The picture did not render — Copy HTML still has it'); }
+      function saveIt(why) {
+        p.then(function (r) { savePng(r); toast((why ? why + ', so ' : '') + 'saved ' + ID + '.png (' + size(r) + ')'); }, fail);
+      }
+      if (save || !(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write)) {
+        saveIt(save ? '' : 'No image clipboard here'); return;
+      }
+      var item;
+      try { item = new ClipboardItem({ 'image/png': p.then(function (r) { return r.blob; }) }); }
+      catch (e) { saveIt('The clipboard refused the picture'); return; }
+      navigator.clipboard.write([item]).then(function () {
+        p.then(function (r) {
+          toast('Copied a ' + size(r) + ' of this drawing — paste it anywhere');
+          if (FV && FV.flash) FV.flash(btn, 'copied');
+        });
+      }, function () { saveIt('The clipboard refused the picture'); });
     }
     function embedHtml() {
       var css = embedCss(), ver = (window.FLOW && window.FLOW.version) || '', T = 'script';

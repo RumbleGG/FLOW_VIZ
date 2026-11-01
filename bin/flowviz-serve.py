@@ -25,10 +25,22 @@ FLOW_BLOB_RE = re.compile(r'window\.FLOW\s*=\s*\{(.*?)\}', re.S)
 TITLE_RE = re.compile(r'<title[^>]*>(.*?)</title>', re.S | re.I)
 MAX_BODY = 4 * 1024 * 1024  # 4 MB
 PUT_SUFFIX = '_flow/state/'
+# the human pressing **send to agent**: POST <page dir>/_flow/send/<doc> with the state as its body
+SEND_SUFFIX = '_flow/send/'
 # an image a report's paste box took: <page dir>/_flow/asset/<doc>/<sha256>.<ext> -> <doc>.assets/<sha256>.<ext>
 ASSET_SUFFIX = '_flow/asset/'
 ASSET_MAX = 10 * 1024 * 1024       # the page compresses anything larger before it sends it
 ASSET_NAME = re.compile(r'^([0-9a-f]{64})\.(png|jpg|gif|webp)$')
+
+
+def waiter_alive(target_dir, doc):
+    """The pid of a `flowviz wait` watching this page, if one is alive, else None."""
+    try:
+        pid = int(open(os.path.join(target_dir, '.flowviz', 'wait', doc + '.pid')).read().split()[0])
+        os.kill(pid, 0)
+        return pid
+    except (OSError, ValueError, IndexError):
+        return None
 
 
 def field_from_blob(blob, name):
@@ -326,7 +338,51 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if PUT_SUFFIX not in raw_path:
             self.send_error(404, 'not a sidecar save path')
             return
-        prefix, _, doc = raw_path.rpartition(PUT_SUFFIX)
+        if self._save_state(raw_path, PUT_SUFFIX, 'PUT') is None:
+            return
+        self.send_response(204)
+        self.send_header('Content-Length', '0')
+        self.end_headers()
+
+    # ---- POST send: the human hands the page back to the agent -----------
+
+    def do_POST(self):
+        """_flow/send/<doc>: save the state the body carries exactly as a PUT would, then leave
+        <doc>.send.json beside the page. `flowviz wait` is watching for that file: it exits with the
+        captures, and the agent that ran it in the background wakes up holding them. The answer says
+        whether a waiter is alive, so the page can tell the human the agent has it, or will."""
+        raw_path = urllib.parse.unquote(self.path.split('?', 1)[0])
+        if SEND_SUFFIX not in raw_path:
+            self._method_not_allowed()
+            return
+        saved = self._save_state(raw_path, SEND_SUFFIX, 'SEND')
+        if saved is None:
+            return
+        target_dir, doc, data = saved
+        root = self.server.fv_root
+        send_path = os.path.join(target_dir, doc + '.send.json')
+        at = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        with self.server.fv_lock:
+            try:
+                n = int(json.load(open(send_path, encoding='utf-8')).get('n', 0)) + 1
+            except (OSError, ValueError, AttributeError):
+                n = 1
+            waiter = waiter_alive(target_dir, doc)
+            rec = {'doc': doc, 'at': at, 'n': n, 'waiting': bool(waiter)}
+            fd, tmp = tempfile.mkstemp(prefix='.%s.' % doc, suffix='.send.tmp', dir=target_dir)
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                json.dump(rec, f, indent=2)
+            os.chmod(tmp, 0o644)
+            os.replace(tmp, send_path)
+        print('SEND %s  %s' % (os.path.relpath(send_path, root).replace(os.sep, '/'),
+              'flowviz wait (pid %d) has it' % waiter if waiter else 'no agent waiting: it stays until flowviz wait runs'),
+              flush=True)
+        self._json(200, rec)
+
+    def _save_state(self, raw_path, suffix, verb):
+        """Write the state a request body carries to <doc>.flow.json. Returns (dir, doc, data), or
+        None once an error has been sent."""
+        prefix, _, doc = raw_path.rpartition(suffix)
         dir_part = prefix.strip('/')
 
         if not DOC_RE.match(doc or ''):
@@ -381,10 +437,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 except (OSError, ValueError, AttributeError):
                     moved_at = ''
                 if moved_at and str(data.get('relabel') or '') < moved_at:
-                    print('PUT refused %s: this tab predates flowviz relabel %s; reload it'
-                          % (os.path.relpath(sidecar_path, root).replace(os.sep, '/'), moved_at), flush=True)
+                    print('%s refused %s: this tab predates flowviz relabel %s; reload it'
+                          % (verb, os.path.relpath(sidecar_path, root).replace(os.sep, '/'), moved_at), flush=True)
                     self.send_error(409, 'the ids moved (flowviz relabel %s): reload the page' % moved_at)
-                    return
+                    return None
             # an older page knows fewer keys (to-dos and added steps arrived in schema 5): carry over any
             # top-level key the body leaves out, so its save never erases what a newer page wrote
             if os.path.exists(sidecar_path):
@@ -426,27 +482,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         todo_n, add_n = additions_stats(data)
         rel_sidecar = os.path.relpath(sidecar_path, root).replace(os.sep, '/')
         plural = lambda n, w: '%d %s%s' % (n, w, '' if n == 1 else 's')
-        print('PUT %s  %s · %d done · %s%s%s · %s'
-              % (rel_sidecar, plural(cap_n, 'capture'), done_n, plural(note_n, 'note'),
+        print('%s %s  %s · %d done · %s%s%s · %s'
+              % (verb, rel_sidecar, plural(cap_n, 'capture'), done_n, plural(note_n, 'note'),
                  ' · %d added' % add_n if add_n else '', ' · %s open' % plural(todo_n, 'to-do') if todo_n else '',
                  fmt_kb(len(body))), flush=True)
-
-        self.send_response(204)
-        self.send_header('Content-Length', '0')
-        self.end_headers()
+        return target_dir, doc, data
 
     # ---- everything else is 405 ------------------------------------------
 
     def _method_not_allowed(self):
         self.send_response(405)
-        self.send_header('Allow', 'GET, HEAD, PUT')
+        self.send_header('Allow', 'GET, HEAD, PUT, POST')
         body = json.dumps({'error': 'method not allowed'}).encode('utf-8')
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
-    do_POST = _method_not_allowed
     do_DELETE = _method_not_allowed
     do_PATCH = _method_not_allowed
     do_OPTIONS = _method_not_allowed

@@ -29,7 +29,7 @@ equivalent, may run the test block at the end and relay it word for word.
 | `template/drawing.src.html` | drawing skeleton | `flowviz new drawing` fills it |
 | `template/pr.src.html` | a PR helper's blocks: vitals, rows, one file's disclosure | `flowviz pr` cuts from it; the audit reads its words |
 | `bin/flowviz` | the one entry point; bare = cheat sheet, with paths computed from where it lives | pure passthroughs |
-| `bin/flowviz-*.py` | new, build, audit, serve, captures, fold, results, relabel, shot, pr | stdlib Python 3 only; `shot` and `audit --browser` drive the Chrome on this Mac |
+| `bin/flowviz-*.py` | new, build, audit, serve, captures, fold, results, relabel, shot, pr, archive, wait | stdlib Python 3 only; `shot` and `audit --browser` drive the Chrome on this Mac |
 | `PLAN.src.html` → `PLAN.html` | the toolkit's own plan, written to the standard | must audit clean |
 | `examples/` | reference deliverables: checkout (drawing), deploy (Results), pr (a PR helper, with its `pr/` inputs and `checkout/`) | rebuilt and audited with every change |
 
@@ -183,6 +183,26 @@ instance variable `--flow`, set on the figure — never `--acc`, which is the pa
   discs) and `S.mobs` (result marks). Anything new drawn on the canvas must join one of them, and a new flow
   must place the chips again (`applyFlow()` does). The chip carries its connection's `hov sel near hot`
   through `edgeOn()`, never through the edge set it used to sit in.
+- **The archive is decided once**, in `archive_root()` and `archive_stem()` in `flowviz-archive.py`. The build
+  imports them to stamp `FLOW.path`, `FLOW.bin`, `FLOW.archive` and `FLOW.stem` (flat, after `doc` and `kind`:
+  serve and captures read `window.FLOW` with a regex that stops at the first `}`), `flowviz results` imports the
+  root for its archive step, and `fileFacts()` in `flow.js` puts the local date in front of the stem exactly as
+  the script does. Change the folder name in both. The file panel lives on `<body>`, never inside the pill,
+  whose `button` rules would restyle its copy buttons; `browser_rows()` relays its row because the regex names
+  `file panel`.
+- **Send to agent is three pieces in step**: `sendToAgent()` in `flow.js` POSTs the state to the **relative**
+  `_flow/send/<doc>`; `do_POST()` in serve saves it through `_save_state()` (the PUT's own path: never fork it)
+  and writes `<doc>.send.json`; `flowviz wait` takes that file and reads `.flowviz/wait/<doc>.pid` liveness the
+  other way round. Rename the file, the folder or the key in all three, and in `flowviz archive`, which moves
+  them. The button exists only when `served`, so the `?audit=1` panel (file://) never sees it: test it served.
+- **`snapshotSvg()` feeds two buttons.** Copy HTML puts it inside the snippet, where the `.fvx` styles still
+  reach it; Copy image (`stillPng()`) renders it as a bare `<img>`, where nothing does. So everything it draws
+  must be baked into attributes and every icon copied into its own defs with its paints resolved. A new canvas
+  element with a look from CSS alone, or a new icon paint outside `PAINTS`, fails **picture copy: needs page
+  styles** (relayed because `browser_rows()`'s regex names `picture`): fix the snapshot, never the check.
+- **Next means the next step to run**, decided once by `nextStep()` in `flow.js`: not done, same place (Results
+  or the playbook), never a `rollback` row unless already in one. ⌘↩ (`doneAndNext()`) and its audit row both
+  read it; the row is relayed because `browser_rows()`'s regex names `hotkey`. A new caller of "next" uses it.
 - **What the human adds is never the agent's budget.** `buildAudit()` in `flow.js` leaves out
   `li.step.added`, `.row-mark` and `section.todo`; anything new the page draws from state must be left
   out the same way, or a busy run pushes a clean report over its caps.

@@ -785,6 +785,11 @@
           var b = ev.currentTarget, html = embedHtml();
           copyText(html, b, 'Copied ' + kb(html) + ' KB of HTML for a wiki page');
         });
+        R.copyImg = h('button', 'fv-btn fv-copyimg', icon('image') + 'Copy image', R.strip);
+        R.copyImg.type = 'button';
+        R.copyImg.title = 'Copy this drawing as a picture, at rest, in the theme you are looking at: paste it anywhere ' +
+          '(Shift-click saves it as a PNG instead)';
+        R.copyImg.addEventListener('click', function (ev) { copyImage(ev.currentTarget, ev.shiftKey); });
       }
 
       fig.appendChild(R.head); fig.appendChild(R.strip); fig.appendChild(R.stage); fig.appendChild(R.print);
@@ -1842,6 +1847,23 @@
         add(pre + 'boxes with a status', marked + ' of ' + real.length + ' (' + Object.keys(STATUS).filter(function (k) { return byS[k]; })
           .map(function (k) { return byS[k] + ' ' + k; }).join(' · ') + ')', 'reported', true);
       }
+      /* Copy image renders snapshotSvg() as a bare <img>, where no stylesheet reaches:
+         anything still pointing at CSS (a var(), a class) or an icon whose symbol was
+         not copied draws black or not at all. Checked in both themes.            */
+      var pic = [];
+      ['light', 'dark'].forEach(function (th) {
+        var sv = snapshotSvg(embedCss(), th), doc = new DOMParser().parseFromString(sv, 'image/svg+xml');
+        if (doc.getElementsByTagName('parsererror').length) { pic.push(th + ': not valid SVG'); return; }
+        var vars = (sv.match(/var\(--[\w-]+/g) || []);
+        if (vars.length) pic.push(th + ': ' + vars.length + ' unresolved (' + vars.slice(0, 3).join(', ') + ')');
+        var ids = {};
+        Array.prototype.forEach.call(doc.querySelectorAll('[id]'), function (x) { ids[x.getAttribute('id')] = 1; });
+        var lost = Array.prototype.filter.call(doc.querySelectorAll('use'), function (u) {
+          return !ids[(u.getAttribute('href') || '').replace(/^#/, '')];
+        }).length;
+        if (lost) pic.push(th + ': ' + lost + ' icon' + (lost === 1 ? '' : 's') + ' missing');
+      });
+      add(pre + 'picture copy: needs page styles', pic.length ? pic.join('; ') : 0, '0', !pic.length);
       gestures(add, pre);
     }
     /* The two gestures, tried for real on the root canvas: every box and connection is
@@ -2034,9 +2056,9 @@
              ['letterSpacing', 'letter-spacing'], ['textAnchor', 'text-anchor'], ['dominantBaseline', 'dominant-baseline']],
       use: [['color', 'color']]
     };
-    function snapshotSvg(css) {
+    function snapshotSvg(css, theme) {
       var host = h('div', 'fvx', null, document.body);
-      host.setAttribute('data-theme', 'light'); host.setAttribute('data-fvx-snap', ''); host.setAttribute('aria-hidden', 'true');
+      host.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light'); host.setAttribute('data-fvx-snap', ''); host.setAttribute('aria-hidden', 'true');
       host.style.cssText = 'position:absolute;left:-20000px;top:0;width:1400px;visibility:hidden;pointer-events:none';
       var st = document.createElement('style'); st.textContent = css; host.appendChild(st);
       var tf = h('figure', 'fv-drawing', null, host);
@@ -2091,6 +2113,56 @@
         '" role="img" aria-label="' + esc((ROOT.title || ROOT.name || ID) + '. ' + ROOT.nodes.length + ' boxes, ' +
         ROOT.edges.length + ' connections.') + '" style="display:block;max-width:100%;height:auto">' + defs +
         '<rect x="0" y="0" width="' + vb[2] + '" height="' + vb[3] + '" rx="18" fill="' + bg + '"/>' + inner + '</svg>';
+    }
+    /* ── Copy image: the same still picture, as a PNG on the clipboard ──────
+       snapshotSvg() already bakes every look into attributes and copies the icons
+       it uses into its own defs, with their paints resolved, so the SVG renders
+       alone as an <img>: drawn onto a canvas at 2× (capped at 8192 px a side) and
+       put on the clipboard as image/png. The picture is the root canvas at rest,
+       in the theme the page shows. ClipboardItem gets a promise, so Safari still
+       sees the click as the gesture. Where the clipboard refuses, or on
+       Shift-click, the PNG downloads as <id>.png instead.                     */
+    function pageTheme() { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+    function stillPng() {
+      var svg = snapshotSvg(embedCss(), pageTheme());
+      var m = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg) || [0, 1000, 600];
+      var w = +m[1], hh = +m[2], k = Math.min(2, 8192 / Math.max(w, hh));
+      return new Promise(function (res, rej) {
+        var img = new Image();
+        img.onload = function () {
+          var c = document.createElement('canvas');
+          c.width = Math.round(w * k); c.height = Math.round(hh * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          c.toBlob(function (b) { if (b) res({ blob: b, w: c.width, h: c.height }); else rej(new Error('no PNG')); }, 'image/png');
+        };
+        img.onerror = function () { rej(new Error('the picture did not render')); };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      });
+    }
+    function savePng(r) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(r.blob); a.download = ID + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+    }
+    function copyImage(btn, save) {
+      var p = stillPng(), size = function (r) { return r.w + '×' + r.h + ' PNG'; };
+      function fail() { toast('The picture did not render — Copy HTML still has it'); }
+      function saveIt(why) {
+        p.then(function (r) { savePng(r); toast((why ? why + ', so ' : '') + 'saved ' + ID + '.png (' + size(r) + ')'); }, fail);
+      }
+      if (save || !(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write)) {
+        saveIt(save ? '' : 'No image clipboard here'); return;
+      }
+      var item;
+      try { item = new ClipboardItem({ 'image/png': p.then(function (r) { return r.blob; }) }); }
+      catch (e) { saveIt('The clipboard refused the picture'); return; }
+      navigator.clipboard.write([item]).then(function () {
+        p.then(function (r) {
+          toast('Copied a ' + size(r) + ' of this drawing — paste it anywhere');
+          if (FV && FV.flash) FV.flash(btn, 'copied');
+        });
+      }, function () { saveIt('The clipboard refused the picture'); });
     }
     function embedHtml() {
       var css = embedCss(), ver = (window.FLOW && window.FLOW.version) || '', T = 'script';

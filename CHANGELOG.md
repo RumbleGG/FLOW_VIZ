@@ -3,6 +3,78 @@
 Semver for the standard. A cap change, or a change to the card's shape, is a **major** bump. Every
 deliverable's footer names the version that built it.
 
+## 3.8.0 — 2026-11-01 · send to agent, ⌘↩ finishes a step, Copy image, and every page knows where it lives
+
+**Why.** The human wanted to copy a deliverable's absolute path from the page itself, and to retire a
+finished one with a single command to a place nobody has to choose: not each agent, not each time. After
+pasting a step's output, to finish it and move on without reaching for the mouse. And, on a served page, to
+hand what they did straight back to the agent serving it, instead of telling it in another window.
+
+**Copy image** (`stillPng()`, `copyImage()` in `template/draw.js`, `i-image` in `template/icons.svg`). Every drawing's
+strip gains **Copy image** beside Copy HTML. It renders the drawing at rest through `snapshotSvg()` — the still
+picture Copy HTML already carried, every look baked into attributes, the icons copied in with their paints
+resolved — now in the theme the page shows, draws it onto a canvas at 2× (capped at 8192 px a side) and writes
+it to the clipboard as `image/png`, handing `ClipboardItem` a promise so Safari still counts the click.
+Shift-click, a refusing clipboard, or a browser without one, saves `<drawing id>.png` instead. The audit renders
+the picture in both themes and fails **picture copy: needs page styles** on an unresolved `var()`, a missing
+icon or unparseable SVG; with the paints left unresolved, or the copied icons misnamed, a copy of `checkout`
+fails it (44 unresolved; 10 icons missing). Tested in Chrome: the click put a 2488×1128 PNG of `checkout` (dark)
+and a 2008×600 PNG of `PLAN`'s spine (light) on the clipboard, read back intact; Shift-click saved the file.
+
+**Send to agent** (`sendToAgent()` in `template/flow.js`, `do_POST()` in `bin/flowviz-serve.py`, `bin/flowviz-wait.py`).
+A served page's pill gains **send to agent**. A press saves at once, through `POST _flow/send/<doc>`, which serve
+writes exactly as a PUT (the PUT's code moved into `_save_state()`, which both use), then leaves `<doc>.send.json`
+beside the page. The new `flowviz wait <page>.html`, run by the agent in the background, watches for that file,
+takes it (into `.flowviz/sent/<doc>/`, so each send is read once) and exits 0 with the `captures` readout, which
+wakes an agent whose harness reports a finished background command, as Claude Code does. A send made while
+nothing waited is kept, and the next `wait` returns it at once; `--timeout MIN` gives up with exit 3. While it
+waits it leaves its pid in `.flowviz/wait/<doc>.pid`, so the page can say *Sent. Your agent was waiting and has
+it now*, or *Saved to disk. No agent is waiting right now*. A serve older than 3.8.0 answers 405, and the page
+says to restart it. ⌘↩ on the last step points at the button. `flowviz archive` moves the send records with the
+page. Tested served, end to end: a real click in Chrome on a page in a subfolder woke a background `wait`, which
+printed the pasted capture; with no waiter the page said so and the next `wait` returned in 0.2 s.
+
+**⌘↩ finishes a step** (`doneAndNext()`, `nextStep()` in `template/flow.js`). ⌘↩, or Ctrl+Enter off a Mac,
+anywhere in a step does what `Done` does — the tick pops, the step folds 300 ms later — and opens the next step
+to run, its row with it, with the focus in it: on the gate of a write step not yet acknowledged, else in the
+paste box, so the next paste needs no click. Next is the next step not done in page order, in the same place (a
+Results step never sends you into the playbook, nor the reverse), and never a `rollback` row unless you are in
+one: a rollback runs only when something failed. The next step is scrolled to after the fold, so the two never
+fight. A step already done just moves on; the last one folds. The composer and the to-do form keep their own
+Enter. Every paste box's placeholder ends *· ⌘↩ marks it done and opens the next step*, and `Done`'s title
+says so. The audit presses it (**hotkey ⌘↩: step not done or next not opened**) in the first unfinished step
+and puts back done, open, focus, scroll and the pending fold; with the listener, the focus or the row opening
+removed, a copy of `DEPLOY.html` fails it each time with the step named. Real keys, through Chrome's
+DevTools, walk `DEPLOY` from b1 to b4 and skip its rollback.
+
+
+**The file panel** (`template/flow.js`, `template/flow.css`). The pill gains **file**, last. It opens a panel
+under the pill with this page's absolute path and `flowviz archive '<path>'`, each with a copy button, and the
+folder the page will land in today. Opened from disk the path is the page's own (`location`), so a page moved
+since its build still names itself; served, it is the path the build stamped. A page already inside the archive
+says so instead of offering the command. Esc and a click elsewhere close it; it never prints. Long paths
+break after a slash, never mid-name.
+
+**`flowviz archive`** (`bin/flowviz-archive.py`). Moves the page, its `.src.html`, `<doc>.flow.json`,
+`<doc>.assets/`, `.flowviz/history/<doc>/` and every figure its source names into
+`<root>/<YYYY-MM-DD>-<project>-<doc>/`: root is `$FLOWVIZ_ARCHIVE`, else `~/Archive` (`~/Archives` when only
+that exists), project is the folder under `~/Projects`, and a doc id that already names its project is not
+prefixed twice. A figure another source in the folder also names is copied, so that page still builds; a taken
+name gets `-2`; `--to` names the folder outright; `--dry-run` lists what would move. Folders it leaves empty
+go; the page's own folder stays. The archived source rebuilds where it lands.
+
+**One root** (`bin/flowviz-build.py`, `bin/flowviz-results.py`). The build stamps `path`, `bin`, `archive` and
+`stem` into `window.FLOW` (flat, after `doc` and `kind`, so serve's and captures' loose readers are unchanged).
+The Results archive step reads the same root, so `$FLOWVIZ_ARCHIVE` moves both. It still moves the whole work
+folder, as before.
+
+**The audit opens it** (`buildAudit()` in `flow.js`, `browser_rows()` in the audit). **file panel: cut off or
+wrong** opens the panel for real and fails when it leaves the window, cuts a line, shows another path or offers
+a command naming another file. Pushed off the window, given a truncated path, or given a command for
+`/elsewhere.html`, a copy of `PLAN.html` fails it each time with that cause named.
+
+Minor: no cap, state or spec field changed. A page built before 3.8.0 gains **file** on its next build.
+
 ## 3.7.0 — 2026-10-26 · a second click closes the drawer, and reports start lean
 
 **Why.** Two things the human kept meeting. A click on a box opened its drawer, and a second click on the

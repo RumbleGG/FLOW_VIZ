@@ -15,6 +15,7 @@ import base64
 import datetime
 import hashlib
 import html
+import importlib.util
 import json
 import os
 import re
@@ -299,8 +300,22 @@ def inline_images(src, base):
     return ''.join(out), count, total
 
 
-def boot(doc, version, kind, built):
-    flow = json.dumps({'doc': doc, 'version': version, 'kind': kind, 'built': built})
+def archive_module():
+    spec = importlib.util.spec_from_file_location('flowviz_archive', os.path.join(ROOT, 'bin', 'flowviz-archive.py'))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def boot(doc, version, kind, built, out_path):
+    """window.FLOW, then the theme before first paint. FLOW stays flat (serve and captures read it with a
+    loose regex that stops at the first `}`) and doc and kind stay first. path, bin, archive and stem feed
+    the pill's **file** panel: where this page lives, and the `flowviz archive` command that retires it."""
+    ar = archive_module()
+    flow = json.dumps({'doc': doc, 'version': version, 'kind': kind, 'built': built,
+                       'path': out_path, 'bin': os.path.join(ROOT, 'bin', 'flowviz'),
+                       'archive': ar.archive_root(), 'stem': ar.archive_stem(out_path, doc)})
+    flow = flow.replace('<', '\\u003c')   # a path can never end the script early
     return ('<script>window.FLOW=%s;\n'
             '(function(){var h=document.documentElement;h.setAttribute("data-kind",FLOW.kind);'
             'try{var q=(location.search.match(/[?&]theme=(light|dark)/)||[])[1];'
@@ -362,7 +377,7 @@ def main():
 
     built = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     sha = git_sha()
-    head = boot(doc, version, kind, built) + '\n<style>\n' + asset('flow.css') + '\n' + asset('draw.css') + '\n</style>'
+    head = boot(doc, version, kind, built, out_path) + '\n<style>\n' + asset('flow.css') + '\n' + asset('draw.css') + '\n</style>'
     fcss, dcss = asset('flow.css'), asset('draw.css')
     js = (asset('icons.svg') + '\n<script type="text/plain" id="fvEmbedCss">\n' + embed_css(fcss, dcss)
           + '\n</script>\n<script>\n' + asset('flow.js') + '\n</script>\n<script>\n' + asset('draw.js') + '\n</script>')

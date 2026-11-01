@@ -1383,7 +1383,7 @@ def browser_rows(a, path):
     if not panel:
         a.check(S, 'the ?audit=1 panel rendered', ['Chrome loaded the page but no #flowAudit panel appeared'])
         return
-    layout = re.compile(r'screens|cross|through box|shrunk|covered|peek|click', re.I)
+    layout = re.compile(r'screens|cross|through box|shrunk|covered|peek|click|file panel|hotkey|picture', re.I)
     for tr in panel.find(lambda e: e.tag == 'tr' and 'data-k' in e.attrs):
         label = tr.attrs['data-k']
         if not layout.search(label):

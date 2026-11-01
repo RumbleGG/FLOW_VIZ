@@ -113,6 +113,24 @@ pre code{background:none;border:none;padding:0;font-size:12.5px}
   font:11.5px var(--f-ui);cursor:pointer;padding:1px 5px;border-radius:4px}
 .pill button:hover{border-color:var(--line2)}
 .pill .sep{width:1px;height:13px;background:var(--line)}
+.pill #flowSend{font-weight:600}
+.pill #flowSend.busy{opacity:.55;cursor:progress}
+/* the pill's **file** panel: this page's absolute path and the command that archives
+   it, under the pill, opened on demand. On <body>, fixed; flow.js sets its top. */
+.filep{position:fixed;right:14px;z-index:61;width:min(500px,calc(100vw - 28px));box-sizing:border-box;
+  background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:10px 12px 11px;
+  box-shadow:var(--sh);font:12px var(--f-ui);color:var(--dim);
+  animation:filep-in .16s cubic-bezier(.2,.8,.2,1)}
+.filep[hidden]{display:none}
+.filep .k{margin:0 0 4px}
+.filep .cmd{padding:7px 10px;margin:0 0 9px}
+.filep .cmd pre{margin:0;padding-right:44px;white-space:pre-wrap;overflow-wrap:anywhere;
+  font:11.5px/1.45 var(--f-mono);color:var(--fg)}
+.filep .at{margin:0;font:11px/1.45 var(--f-ui);color:var(--dim2)}
+.filep .at code{font:10.5px var(--f-mono);overflow-wrap:anywhere}
+@keyframes filep-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.filep{animation:filep-fade .12s linear}}
+@keyframes filep-fade{from{opacity:0}to{opacity:1}}
 
 /* ── LAYER 1 · the card ───────────────────────────────────────────────────── */
 .card{position:relative;background:var(--paper);border:1px solid var(--line2);
@@ -800,7 +818,7 @@ figure.shot .shot-mt{display:none;font:10.5px var(--f-mono);color:var(--dim2);ma
   @page{margin:14mm}
   /* .fin repeats the row header's done-box and verdict chip, and paper does not
      scroll — one tick mark and one verdict per step is enough */
-  .pill,.ctl,.audit,.copy,.gate,.rr,.fin{display:none!important}
+  .pill,.filep,.ctl,.audit,.copy,.gate,.rr,.fin{display:none!important}
   body{background:var(--print-bg);padding:0;max-width:none;font-size:10.5pt}
   .card,.dia,.box,.cmd,li.step,.phase,.foot,tr,section.results .top,section.results h2{break-inside:avoid}
   .card{box-shadow:none;break-after:avoid}

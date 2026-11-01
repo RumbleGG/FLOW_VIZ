@@ -36,16 +36,31 @@ $F build ~/work/sto/STO.src.html          # 3. one self-contained .html (rebuild
                                           #    output is kept in .flowviz/history/ beside it)
 $F audit --browser ~/work/sto/STO.html    # 4. fix every OVER and FAIL
 $F serve ~/work/sto --open                # 5. hand over, served
+$F wait ~/work/sto/STO.html               # 6. in the background: exits with their captures when they press send to agent
 $F captures ~/work/sto/STO.html           # later: what they pasted (text and images), every note and override, every step or to-do they added
 $F fold ~/work/sto/STO.src.html           # the steps they added in the page, into the source, same ids
 $F results ~/work/sto/STO.src.html        # once they have run it all: start the Results section
 $F relabel ~/work/sto/STO.src.html        # an older report onto a, b, c and b1, b2: what was pasted moves too
 $F shot https://host/admin --out ~/work/sto/shots/ready.png   # a screenshot for a figure, by headless Chrome
+$F archive ~/work/sto/STO.html            # when they are done with it: page, source, state, figures -> the archive
 ```
 
 The deliverable lives in **the folder the work is in**; this repository is only the toolkit. Nothing is
 installed, nothing is on `PATH`, no network, stdlib Python only. **Serve it** — opened from Finder, what
 the human types stays in their browser and never reaches you.
+
+**Wait for them to send it back.** Right after `serve`, run `$F wait <page>.html` as a **background**
+command (in Claude Code, `run_in_background`; never in the foreground, where it blocks you). It exits when
+the human presses **send to agent** in the pill, printing when they sent it and the whole `captures` readout,
+and your harness wakes you with it. Read it as you would `captures`, act, and start another `wait` if you
+expect more. A send made while nothing waited is kept, and the next `wait` returns it at once. Tell the
+human in your handover: *press send to agent, top right, when you are done.*
+
+**Archiving is decided for you.** `$F archive <page>.html` moves the page, its source, its state, its
+pasted images, its snapshots and its figures into `~/Archive/<YYYY-MM-DD>-<project>-<doc>/`
+(`$FLOWVIZ_ARCHIVE` overrides the root). Never choose another place unless the human names one (`--to`).
+Every page shows that command, with its own absolute path, under **file** in the pill, so when the human
+says they are done, suggest it; never move anything yourself unless asked.
 
 ## Which agent does which step
 
@@ -239,8 +254,10 @@ reads as an omission.
 `FullyQualifiedErrorId` and turns a crashed command into a green `pass`. The audit fails you for it.
 
 **You do not write these** — `flow.js` injects them, so a rebuild gives every old report the newest:
-the `Done ☐` button at the foot of each step (it ticks, then folds the step away), a second verdict chip
-beside it, the status pill (save state, theme, motion), and every displayed time (Pacific, labelled;
+the `Done ☐` button at the foot of each step (it ticks, then folds the step away; **⌘↩** in the step does the
+same and opens the next one), a second verdict chip
+beside it, the status pill (save state, theme, motion, and **file**: the page's absolute path and its
+`flowviz archive` command, each with a copy button), and every displayed time (Pacific, labelled;
 stored as UTC).
 
 ### Order: they run it once, top to bottom
@@ -509,7 +526,9 @@ The grid is the layout; you never write coordinates. `at: [col, row]`, zero-base
 Every drawing has a **Copy HTML** button the human uses to paste the drawing into a wiki page. You write
 nothing for it: the copied snippet carries its own scoped styles, runtime and a still fallback, so it is fully
 interactive where the wiki allows scripts and still shows the picture and every box's details where it does
-not. Write depth sections knowing they may be read there too.
+not. Write depth sections knowing they may be read there too. **Copy image**, beside it, puts the drawing on
+the clipboard as a PNG (Shift-click saves the file): if the human asks for a picture of a drawing, point them
+there rather than taking a screenshot yourself.
 
 ### Depth
 

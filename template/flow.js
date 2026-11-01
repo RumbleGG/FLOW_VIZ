@@ -703,6 +703,7 @@
      depth stops competing with the next one. Injected here rather than in every
      report's markup, so old reports gain it on the next build. hydrate() paints
      it but never collapses or animates — persisted open state wins there.      */
+  var HOTKEY = /Mac|iP(hone|ad|od)/.test(navigator.platform || '') ? '⌘↩' : 'Ctrl+Enter';   // see doneAndNext()
   var BOX = '☐', TICK = '✅';   // an open box, then the green check
   var COLLAPSE_MS = 300;                 // long enough to see the tick land
   function collapseStep(li) {
@@ -718,7 +719,8 @@
     b.classList.toggle('on', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
     b.title = on ? 'Marked done — press again if that was wrong'
-                 : 'Mark this step done — it collapses, so the next step is where you are looking';
+                 : 'Mark this step done — it collapses, so the next step is where you are looking (' +
+                   HOTKEY + ' from anywhere in the step also opens the next one)';
     if (!bx) return;
     bx.textContent = on ? TICK : BOX;
     bx.classList.remove('pop');
@@ -735,6 +737,7 @@
      the page as it is drawn, so both behave alike in every respect */
   function bindStep(li) {
     var id = li.dataset.step;
+    hotkeyHints(li);
     var sd = $('details.sd', li);
     var inb = $('.sd>.in', li);      // the step body, not the `why this step` .in
     if (inb && !$('.fin', inb)) {
@@ -775,6 +778,84 @@
     if (sd) sd.addEventListener('toggle', function () { st.open['step:' + id] = sd.open; save(); });
   }
   $$('li.step').forEach(bindStep);
+
+  /* ⌘↩ (Ctrl+Enter off a Mac) inside a step: the Done button, then the next
+     step. The usual moment is just after a paste, with the caret still in the
+     box, so the hand never leaves the keyboard. The tick pops as it does for a
+     click; the next step that is not done (in page order, added steps included)
+     opens at once, its row with it, and takes the focus: its gate when a write
+     step's gate is still unticked, else its paste box, else its Done. The
+     finished step folds 300 ms later, and only then is the next one scrolled to,
+     so the fold and the scroll never fight. A step already done just moves on.
+     The last one ticks and folds, as Done does. Returns the next step, or null. */
+  var nextTimer = null;
+  function stepFocus(li) {
+    var ak = $('input.ack', li);
+    if (li.dataset.risk === 'w' && ak && !ak.checked) return ak;
+    return $('textarea[data-cap]', li) || $('.fin>button', li);
+  }
+  /* next means the next thing to run: in the same place (a Results step never
+     sends you back into the playbook below it, nor the reverse), never a
+     rollback unless you are already rolling back — a rollback runs only when
+     something failed, so passing an action must not open it               */
+  function inRollback(x) { var r = x.closest('details.row'); return !!(r && r.dataset.kind === 'rollback'); }
+  function nextStep(li) {
+    var all = $$('li.step[data-step]'), res = !!li.closest('section.results'), rb = inRollback(li);
+    return all.slice(all.indexOf(li) + 1).filter(function (x) {
+      return !step(x.dataset.step).done && !!x.closest('section.results') === res && (rb || !inRollback(x));
+    })[0] || null;
+  }
+  function doneAndNext(li) {
+    var next = nextStep(li);
+    if (!step(li.dataset.step).done) {
+      setDone(li, true, false);
+      paintFin(li, true);
+    }
+    clearTimeout(nextTimer);
+    if (!next) {                       // the last one folds, as Done would fold it
+      nextTimer = setTimeout(function () { collapseStep(li); }, COLLAPSE_MS);
+      if (sendBtn) toast('That was the last step. Press send to agent, top right, when you are ready.');
+      return null;
+    }
+    for (var p = next.parentElement; p; p = p.parentElement) if (p.tagName === 'DETAILS') p.open = true;
+    var sd = $('details.sd', next); if (sd) sd.open = true;
+    var f = stepFocus(next); if (f) f.focus({ preventScroll: true });
+    nextTimer = setTimeout(function () {
+      var od = $('details.sd', li); if (od) od.open = false;
+      next.scrollIntoView({ block: 'nearest' });
+    }, COLLAPSE_MS);
+    return next;
+  }
+  var lastStepLi = null;      // where the pointer last was, for when nothing in a step has focus
+  document.addEventListener('pointerdown', function (e) {
+    lastStepLi = (e.target && e.target.closest && e.target.closest('li.step[data-step]')) || null;
+  }, true);
+  function hotkeyStep(e) {
+    if (e.key !== 'Enter' || !(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.isComposing) return null;
+    var t = e.target || {};
+    if (comp && comp.li.contains(t)) return null;                 // the composer's Enter saves it
+    if (quick && quick.contains && quick.contains(t)) return null;
+    var li = t.closest && t.closest('li.step[data-step]');
+    if (!li && (t === document.body || t === document.documentElement) && lastStepLi && document.contains(lastStepLi)) {
+      var lsd = $('details.sd', lastStepLi);
+      if (!lsd || lsd.open) li = lastStepLi;
+    }
+    return li || null;
+  }
+  document.addEventListener('keydown', function (e) {
+    var li = hotkeyStep(e);
+    if (!li) return;
+    e.preventDefault();
+    doneAndNext(li);
+  });
+  // say so where the human is looking when it matters: the paste box and Done
+  function hotkeyHints(root) {
+    $$('textarea[data-cap]', root).forEach(function (ta) {
+      if (ta.dataset.hk) return;
+      ta.dataset.hk = '1';
+      ta.placeholder = (ta.placeholder || 'paste what it printed') + ' · ' + HOTKEY + ' marks it done and opens the next step';
+    });
+  }
 
   function bindCaptureIn(root) {
   $$('textarea[data-cap]', root).forEach(function (ta) {
@@ -2284,6 +2365,128 @@
     document.body.classList.remove('printing');
   });
 
+  /* ── file: where this page lives, and the command that archives it ────────
+     One button in the pill; its panel opens under the pill and covers nothing
+     until asked for. The path is the page's own when it is opened from disk (it
+     may have moved since the build), else the one the build stamped. The command
+     names that path; `flowviz archive` picks the folder, and the panel names the
+     one it will pick today: <archive>/<date>-<stem>. A page already inside the
+     archive says so instead. The panel lives on <body>, not in the pill, so the
+     pill's button styles never reach its copy buttons.                       */
+  var FL = window.FLOW || {};
+  function pagePath() {
+    if (location.protocol === 'file:') {
+      try { return decodeURIComponent(location.pathname); } catch (e) { return location.pathname; }
+    }
+    return FL.path || '';
+  }
+  function shq(s) { return /^[A-Za-z0-9_\/.,:@%+=-]+$/.test(s) ? s : "'" + s.replace(/'/g, "'\\''") + "'"; }
+  function isoDay() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  // a long path breaks after a slash, never mid-name; <wbr> adds no text, so a copy is unchanged
+  function slashBreaks(s) { return escHtml(s).replace(/\//g, '/<wbr>'); }
+  function fileFacts() {
+    var p = pagePath(), root = FL.archive || '';
+    return { path: p, archived: !!(root && p.indexOf(root + '/') === 0),
+             cmd: shq(FL.bin || 'flowviz') + ' archive ' + shq(p),
+             dest: root + '/' + isoDay() + '-' + (FL.stem || FL.doc || 'page') + '/' };
+  }
+  /* ── send to agent: only when served, since only then is there a server to
+     hand it to. One press saves now (no 700 ms debounce) by POSTing the state
+     to _flow/send/<doc>; serve writes the sidecar exactly as a save would, then
+     leaves <doc>.send.json for `flowviz wait`, which the agent runs in the
+     background and which exits with the captures. The answer says whether a
+     waiter was alive, and the human is told which: the agent has it now, or it
+     gets it the next time it waits. A serve older than 3.8.0 answers 405.    */
+  var sendBtn = null;
+  function sendButton() {
+    if (!pill || !served) return;
+    var sep = document.createElement('span'); sep.className = 'sep';
+    sendBtn = document.createElement('button');
+    sendBtn.id = 'flowSend'; sendBtn.textContent = 'send to agent';
+    sendBtn.title = 'Hand everything you have pasted, noted and added to the agent that is serving this page';
+    pill.appendChild(sep); pill.appendChild(sendBtn);
+    sendBtn.addEventListener('click', sendToAgent);
+  }
+  function sendToAgent() {
+    var b = sendBtn;
+    if (!b || b.disabled) return;
+    b.disabled = true; b.classList.add('busy');
+    clearTimeout(timer);                       // this send is the save
+    st.savedAt = new Date().toISOString();
+    try { localStorage.setItem(LSKEY, JSON.stringify(st)); } catch (e) {}
+    function done(label, words) { b.disabled = false; b.classList.remove('busy'); flash(b, label); toast(words); }
+    fetch('_flow/send/' + DOC, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(st, null, 2)
+    }).then(function (r) {
+      if (r.status === 405) return { old: true };
+      return r.json().catch(function () { return {}; }).then(function (j) { j.status = r.status; j.ok = r.ok; return j; });
+    }).then(function (j) {
+      if (j.old) return done('restart serve', 'This flowviz serve predates send to agent: stop it and start it again.');
+      if (!j.ok) {
+        setPill('err', j.status === 409 ? 'ids moved: reload' : 'send rejected');
+        return done(j.status === 409 ? 'reload' : 'not sent', j.error || 'The server refused it.');
+      }
+      setPill('disk', 'sent ' + ptTime(j.at));
+      done(j.waiting ? 'sent ✓' : 'saved',
+        j.waiting ? 'Sent. Your agent was waiting and has it now.'
+                  : 'Saved to disk. No agent is waiting right now: it gets this the next time it runs flowviz wait.');
+    }).catch(function () {
+      setPill('err', 'serve unreachable');
+      done('not sent', 'Could not reach flowviz serve. Is it still running?');
+    });
+  }
+
+  var fileBtn = null, filePanel = null;
+  function fileButton() {
+    if (!pill || !pagePath()) return;
+    var sep = document.createElement('span'); sep.className = 'sep';
+    fileBtn = document.createElement('button');
+    fileBtn.id = 'flowFile'; fileBtn.textContent = 'file';
+    fileBtn.title = 'This file’s path, and the command that archives it';
+    fileBtn.setAttribute('aria-expanded', 'false');
+    pill.appendChild(sep); pill.appendChild(fileBtn);
+    fileBtn.addEventListener('click', function (e) { e.stopPropagation(); fileOpen(!filePanel || filePanel.hidden); });
+    document.addEventListener('click', function (e) {
+      if (filePanel && !filePanel.hidden && !filePanel.contains(e.target)) fileOpen(false);
+    });
+    // capture phase, so Esc closes this panel and not a drawing's drawer behind it
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && filePanel && !filePanel.hidden) { e.stopPropagation(); fileOpen(false); fileBtn.focus(); }
+    }, true);
+  }
+  function fileOpen(on) {
+    if (!fileBtn) return;
+    if (on) {
+      var f = fileFacts();
+      if (!filePanel) {
+        filePanel = document.createElement('div');
+        filePanel.className = 'filep'; filePanel.id = 'flowFilePanel';
+        filePanel.setAttribute('role', 'dialog'); filePanel.setAttribute('aria-label', 'This file');
+        document.body.appendChild(filePanel);
+      }
+      filePanel.innerHTML =
+        '<span class="k">this file</span>' +
+        '<div class="cmd fig"><button class="copy" title="Copy this file’s absolute path">copy</button>' +
+        '<pre><code id="flowFilePath">' + slashBreaks(f.path) + '</code></pre></div>' +
+        (f.archived
+          ? '<p class="at">This page is in the archive already.</p>'
+          : '<span class="k">archive it</span>' +
+            '<div class="cmd"><button class="copy" title="Copy the command that archives this page">copy</button>' +
+            '<pre><code id="flowFileCmd">' + slashBreaks(f.cmd) + '</code></pre></div>' +
+            '<p class="at">Moves the page, its source, its state and its figures to <code>' +
+            slashBreaks(f.dest) + '</code></p>');
+      filePanel.style.top = Math.round(pill.getBoundingClientRect().bottom + 6) + 'px';
+      filePanel.hidden = false;
+    } else if (filePanel) {
+      filePanel.hidden = true;
+    }
+    fileBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+  }
+
   /* ── pill wiring ───────────────────────────────────────────────────────── */
   pill = $('#flowPill'); pillTxt = $('#flowPillTxt');
   var tb = $('#flowTheme');
@@ -2293,6 +2496,8 @@
     st.ui.theme = order[(order.indexOf(st.ui.theme || 'auto') + 1) % 3];
     applyTheme(); save();
   });
+  sendButton();
+  fileButton();
   renderAdditions();
   renderShots();
   hydrate();
@@ -2401,6 +2606,57 @@
       var tot = fb.reduce(function (x, y) { return x + y; }, 0), big = Math.max.apply(null, fb);
       rows.push(['largest figure', kb(big), '≤ 1 MB', big <= 1048576]);
       rows.push(['figure bytes', kb(tot) + ' (' + shots.length + ')', '≤ 6 MB', tot <= 6291456]);
+    }
+
+    /* the file panel, opened for real: it must sit inside the window, show the
+       page's own path whole and, unless archived, a command naming that path */
+    if (fileBtn) {
+      var fbad = [];
+      fileOpen(true);
+      var fr = filePanel.getBoundingClientRect(), ff = fileFacts();
+      if (fr.left < 0 || fr.top < 0 || fr.right > window.innerWidth || fr.bottom > window.innerHeight) fbad.push('outside the window');
+      $$('pre', filePanel).forEach(function (p) { if (p.scrollWidth > p.clientWidth + 1) fbad.push('a line cut off'); });
+      var fp = $('#flowFilePath', filePanel), fc = $('#flowFileCmd', filePanel);
+      if (!fp || fp.textContent !== ff.path) fbad.push('not this page’s path');
+      if (!ff.archived && (!fc || fc.textContent.indexOf(shq(ff.path)) < 0)) fbad.push('command names another file');
+      fileOpen(false);
+      rows.push(['file panel: cut off or wrong', fbad.length ? fbad.join(', ') : 0, '0', !fbad.length]);
+    }
+
+    /* the step hotkey, pressed for real in the first unfinished step's paste box:
+       that step must end done, and the next unfinished one open with the focus.
+       Everything it touched is put back: done, open, focus, scroll, timer.   */
+    var hkLi = $$('li.step[data-step]').filter(function (x) {
+      return !step(x.dataset.step).done && $('textarea[data-cap]', x) && nextStep(x);
+    })[0];
+    if (KIND !== 'drawing' && hkLi) {
+      var hkWas = JSON.stringify({ steps: st.steps, open: st.open }), hkY = window.scrollY,
+          hkFocus = document.activeElement,
+          hkOpen = $$('details').map(function (d) { return [d, d.open]; });
+      var hkTa = $('textarea[data-cap]', hkLi), hkBad = [];
+      hkTa.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, ctrlKey: true, bubbles: true, cancelable: true }));
+      var hkNext = nextStep(hkLi);
+      if (!step(hkLi.dataset.step).done) hkBad.push(hkLi.dataset.step + ' not done');
+      if (hkNext) {
+        var hkSd = $('details.sd', hkNext);
+        if (hkSd && !hkSd.open) hkBad.push(hkNext.dataset.step + ' not opened');
+        if (!hkNext.contains(document.activeElement)) hkBad.push(hkNext.dataset.step + ' not focused');
+        for (var hp = hkNext.parentElement; hp; hp = hp.parentElement) {
+          if (hp.tagName === 'DETAILS' && !hp.open) { hkBad.push(hkNext.dataset.step + '’s row shut'); break; }
+        }
+      }
+      clearTimeout(nextTimer);
+      var hkW = JSON.parse(hkWas);
+      st.steps = hkW.steps; st.open = hkW.open;
+      hkOpen.forEach(function (o) { o[0].open = o[1]; });
+      $$('li.step[data-step]').forEach(function (x) {
+        var dn = $('input.done', x); if (dn) dn.checked = !!step(x.dataset.step).done;
+        paintFin(x, false);
+      });
+      repaintAll();
+      if (hkFocus && hkFocus.focus) hkFocus.focus({ preventScroll: true }); else hkTa.blur();
+      window.scrollTo(0, hkY);
+      rows.push(['hotkey ' + HOTKEY + ': step not done or next not opened', hkBad.length ? hkBad.join(', ') : 0, '0', !hkBad.length]);
     }
 
     // drawings (and anything else that registered) add their own rows
